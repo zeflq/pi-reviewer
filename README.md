@@ -19,6 +19,16 @@ Then add your API key to your repo secrets:
 
 Every pull request triggers an automatic review comment posted by `github-actions[bot]`.
 
+### Inputs
+
+| Input | Required | Description |
+|---|---|---|
+| `github-token` | yes | GitHub token to post PR comments |
+| `anthropic-api-key` | one of | Anthropic API key for Claude models |
+| `copilot-api-key` | one of | GitHub Copilot API key |
+| `model` | no | Model to use in `provider/modelId` format (e.g. `anthropic/claude-opus-4-6`) |
+| `post-comment` | no | Post review as a GitHub PR comment (default: `true`) |
+
 ## Local review (pi extension)
 
 Install the extension once:
@@ -59,7 +69,7 @@ Reviewing feature/my-branch vs origin/develop...
 
 ## Project conventions
 
-Create `AGENTS.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
+Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
 
 ```markdown
 # Project Conventions
@@ -104,3 +114,7 @@ steps:
 ```
 
 The review comment will then appear under your GitHub App's name (e.g. `my-bot[bot]`).
+
+---
+
+See [TODO.md](./TODO.md) for the full roadmap.

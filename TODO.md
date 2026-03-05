@@ -134,3 +134,23 @@ tests/
 - [x] Update `action.yml` run step: `node ${{ github.action_path }}/dist/src/review.js`
 - [x] `dist/` compiled and tracked in git (commit before tagging)
 - [ ] Publish to GitHub Marketplace as `zeflq/pi-reviewer`
+
+### 6. Multi-provider API key support
+
+- [ ] Accept pi mono API key in CI (not just `anthropic-api-key` / `copilot-api-key`)
+- [ ] Add `pi-api-key` input to `action.yml`
+- [ ] Route to correct provider based on `model` input prefix or key type
+- [ ] Update README inputs table
+
+### 7. Project conventions file support
+
+- [ ] Read `CLAUDE.md` in addition to `AGENTS.md` when loading project context
+- [ ] Priority order: `AGENTS.md` → `CLAUDE.md` (first found wins, or merge both)
+- [ ] Update docs + tests
+
+### 8. Custom system prompt
+
+- [ ] Add `system-prompt` input to `action.yml` (file path relative to project root)
+- [ ] If file exists, use its content as-is instead of `buildSystemPrompt`
+- [ ] `AGENTS.md` / `CLAUDE.md` context is still appended unless the custom prompt already includes it
+- [ ] Update README inputs table + add usage example
