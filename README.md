@@ -39,10 +39,23 @@ Then inside the pi TUI, use the `/review` command:
 
 | Option | Description | Example |
 |---|---|---|
-| `--branch <name>` | Compare HEAD against this branch (default: auto-detected from `origin/HEAD`) | `--branch dev` |
+| `--branch <name>` | Compare current branch against this branch (default: auto-detected from `origin/HEAD`) | `--branch dev` |
 | `--pr <number>` | Fetch and review a specific PR diff via `gh` CLI | `--pr 42` |
 | `--diff <ref>` | Review changes since a specific git ref | `--diff HEAD~1` |
 | `--dry-run` | Print the diff and prompt without calling the agent | |
+
+The review output is saved to `pi-review.md` in your project root.
+
+**What gets included in the diff**
+
+`/review` and `--branch` use `git merge-base` to diff from the point where your branch diverged — this includes committed changes, staged files, and unstaged edits. You don't need to commit before reviewing.
+
+`--diff` and `--pr` use the exact ref or remote diff as-is (no working tree changes).
+
+The status bar shows which branches are being compared:
+```
+Reviewing feature/my-branch vs origin/develop...
+```
 
 ## Project conventions
 

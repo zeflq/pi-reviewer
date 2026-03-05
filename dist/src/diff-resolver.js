@@ -20,6 +20,10 @@ function detectCurrentBranch(cwd) {
         return "HEAD";
     }
 }
+function mergeBaseDiff(base, cwd) {
+    const mergeBase = run(`git merge-base ${base} HEAD`, cwd).trim();
+    return run(`git diff ${mergeBase}`, cwd);
+}
 function detectOriginBase(cwd) {
     try {
         return execSync("git symbolic-ref refs/remotes/origin/HEAD --short", {
@@ -46,21 +50,19 @@ export async function resolveDiff(options) {
     }
     const currentBranch = detectCurrentBranch(cwd);
     if (options.branch) {
-        const range = `${options.branch}...${currentBranch}`;
-        const diff = run(`git diff ${options.branch}...HEAD`, cwd);
+        const diff = mergeBaseDiff(options.branch, cwd);
         ensureNonEmptyDiff(diff);
-        return { diff, source: `git diff ${range}` };
+        return { diff, source: `${currentBranch} vs ${options.branch}` };
     }
     if (process.env.GITHUB_ACTIONS === "true") {
         const baseRef = process.env.GITHUB_BASE_REF ?? "main";
-        const range = `origin/${baseRef}...${currentBranch}`;
-        const diff = run(`git diff origin/${baseRef}...HEAD`, cwd);
+        const base = `origin/${baseRef}`;
+        const diff = run(`git diff ${base}...HEAD`, cwd);
         ensureNonEmptyDiff(diff);
-        return { diff, source: `git diff ${range}` };
+        return { diff, source: `${currentBranch} vs ${base}` };
     }
     const base = detectOriginBase(cwd);
-    const range = `${base}...${currentBranch}`;
-    const diff = run(`git diff ${base}...HEAD`, cwd);
+    const diff = mergeBaseDiff(base, cwd);
     ensureNonEmptyDiff(diff);
-    return { diff, source: `git diff ${range}` };
+    return { diff, source: `${currentBranch} vs ${base}` };
 }
