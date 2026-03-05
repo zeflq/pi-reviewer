@@ -87,7 +87,10 @@ export async function review(options) {
                     return;
                 if (event.type !== "agent_end")
                     return;
-                finalResponse = extractAssistantText(event.messages);
+                const messages = event.messages;
+                console.log("[pi-reviewer] agent_end messages:", JSON.stringify(messages));
+                finalResponse = extractAssistantText(messages);
+                console.log("[pi-reviewer] extracted response:", JSON.stringify(finalResponse));
                 resolve();
             });
         });
@@ -100,6 +103,7 @@ export async function review(options) {
             githubToken,
             prNumber: options.pr,
             repo,
+            commitId: options.commitId,
         });
     }
     finally {

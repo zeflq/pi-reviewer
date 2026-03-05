@@ -17,6 +17,7 @@ export interface ReviewOptions {
   githubToken?: string;
   anthropicApiKey?: string;
   repo?: string;
+  commitId?: string;
   model?: string; // format: "provider/modelId" e.g. "anthropic/claude-opus-4-6"
 }
 
@@ -114,7 +115,10 @@ export async function review(options: ReviewOptions): Promise<void> {
         if (!event || typeof event !== "object") return;
         if ((event as { type?: string }).type !== "agent_end") return;
 
-        finalResponse = extractAssistantText((event as { messages?: unknown }).messages);
+        const messages = (event as { messages?: unknown }).messages;
+        console.log("[pi-reviewer] agent_end messages:", JSON.stringify(messages));
+        finalResponse = extractAssistantText(messages);
+        console.log("[pi-reviewer] extracted response:", JSON.stringify(finalResponse));
         resolve();
       });
     });
@@ -129,6 +133,7 @@ export async function review(options: ReviewOptions): Promise<void> {
       githubToken,
       prNumber: options.pr,
       repo,
+      commitId: options.commitId,
     });
   } finally {
     unsubscribe?.();

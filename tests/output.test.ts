@@ -13,6 +13,13 @@ async function createTempDir(): Promise<string> {
   return dir;
 }
 
+function okFetch() {
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    text: vi.fn().mockResolvedValue(""),
+  });
+}
+
 describe("parseAgentResponse", () => {
   it("returns parsed ReviewResult for valid JSON", () => {
     const result = parseAgentResponse(
@@ -67,8 +74,8 @@ describe("sendOutput", () => {
     expect(logSpy).toHaveBeenCalledWith("== Review Summary ==\nhello review");
   });
 
-  it("posts review with correct request", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+  it("posts to Issues API when no commitId is provided", async () => {
+    const fetchMock = okFetch();
     vi.stubGlobal("fetch", fetchMock);
 
     await sendOutput({
@@ -80,24 +87,20 @@ describe("sendOutput", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.github.com/repos/owner/repo/pulls/42/reviews",
+      "https://api.github.com/repos/owner/repo/issues/42/comments",
       {
         method: "POST",
         headers: {
           Authorization: "Bearer token123",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          body: "LGTM",
-          event: "COMMENT",
-          comments: [],
-        }),
+        body: JSON.stringify({ body: "LGTM" }),
       }
     );
   });
 
-  it("posts review with inline comments when content is valid JSON", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+  it("posts to Reviews API with inline comments when commitId is provided", async () => {
+    const fetchMock = okFetch();
     vi.stubGlobal("fetch", fetchMock);
 
     await sendOutput({
@@ -111,12 +114,14 @@ describe("sendOutput", () => {
       githubToken: "token123",
       prNumber: 42,
       repo: "owner/repo",
+      commitId: "abc123",
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.github.com/repos/owner/repo/pulls/42/reviews",
       expect.objectContaining({
         body: JSON.stringify({
+          commit_id: "abc123",
           body: "Needs fixes",
           event: "COMMENT",
           comments: [
@@ -127,8 +132,34 @@ describe("sendOutput", () => {
     );
   });
 
-  it("uses plain text fallback for review body with no inline comments", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+  it("falls back to Issues API when Reviews API returns 422", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 422, statusText: "Unprocessable Entity", text: vi.fn().mockResolvedValue("") })
+      .mockResolvedValueOnce({ ok: true, text: vi.fn().mockResolvedValue("") });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await sendOutput({
+      target: "comment",
+      content: JSON.stringify({
+        summary: "Needs fixes",
+        comments: [{ file: "src/auth.ts", line: 42, side: "RIGHT", body: "Missing null check" }],
+      }),
+      githubToken: "token123",
+      prNumber: 42,
+      repo: "owner/repo",
+      commitId: "abc123",
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("falling back"));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe(
+      "https://api.github.com/repos/owner/repo/issues/42/comments"
+    );
+  });
+
+  it("uses Issues API with summary only when content has no inline comments", async () => {
+    const fetchMock = okFetch();
     vi.stubGlobal("fetch", fetchMock);
 
     await sendOutput({
@@ -137,16 +168,13 @@ describe("sendOutput", () => {
       githubToken: "token123",
       prNumber: 42,
       repo: "owner/repo",
+      commitId: "abc123",
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.github.com/repos/owner/repo/pulls/42/reviews",
+      "https://api.github.com/repos/owner/repo/issues/42/comments",
       expect.objectContaining({
-        body: JSON.stringify({
-          body: "Looks mostly good",
-          event: "COMMENT",
-          comments: [],
-        }),
+        body: JSON.stringify({ body: "Looks mostly good" }),
       })
     );
   });
@@ -189,6 +217,7 @@ describe("sendOutput", () => {
       ok: false,
       status: 403,
       statusText: "Forbidden",
+      text: vi.fn().mockResolvedValue("Forbidden"),
     });
     vi.stubGlobal("fetch", fetchMock);
 

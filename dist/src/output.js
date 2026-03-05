@@ -58,7 +58,6 @@ export async function sendOutput(options) {
         if (!options.repo) {
             throw new Error("Repository (owner/repo) is required to post a comment");
         }
-        const reviewUrl = `https://api.github.com/repos/${options.repo}/pulls/${options.prNumber}/reviews`;
         const headers = {
             Authorization: `Bearer ${options.githubToken}`,
             "Content-Type": "application/json",
@@ -69,21 +68,34 @@ export async function sendOutput(options) {
             side: comment.side,
             body: comment.body,
         }));
-        let response = await fetch(reviewUrl, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ body: result.summary, event: "COMMENT", comments: inlineComments }),
-        });
-        if (!response.ok && response.status === 422 && inlineComments.length > 0) {
-            console.warn("Inline comments rejected (422) — retrying without inline comments.");
-            response = await fetch(reviewUrl, {
+        // Try PR Reviews API first (supports inline comments)
+        if (inlineComments.length > 0 && options.commitId) {
+            const reviewResponse = await fetch(`https://api.github.com/repos/${options.repo}/pulls/${options.prNumber}/reviews`, {
                 method: "POST",
                 headers,
-                body: JSON.stringify({ body: result.summary, event: "COMMENT", comments: [] }),
+                body: JSON.stringify({
+                    commit_id: options.commitId,
+                    body: result.summary,
+                    event: "COMMENT",
+                    comments: inlineComments,
+                }),
             });
+            if (reviewResponse.ok)
+                return;
+            console.warn("PR Reviews API failed — falling back to issue comment.");
         }
-        if (!response.ok) {
-            throw new Error(`Failed to post GitHub comment: ${response.status} ${response.statusText}`);
+        // Fallback: Issues Comments API (always works, no inline comments)
+        const commentBody = inlineComments.length > 0
+            ? `${result.summary}\n\n${formatReviewResult(result)}`
+            : result.summary;
+        const issueResponse = await fetch(`https://api.github.com/repos/${options.repo}/issues/${options.prNumber}/comments`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ body: commentBody }),
+        });
+        if (!issueResponse.ok) {
+            const body = await issueResponse.text().catch(() => "(unreadable)");
+            throw new Error(`Failed to post GitHub comment: ${issueResponse.status} ${issueResponse.statusText}\n${body}`);
         }
         return;
     }
