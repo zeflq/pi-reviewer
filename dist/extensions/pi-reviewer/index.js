@@ -46,29 +46,24 @@ function parseArgs(rawArgs) {
     }
     return parsed;
 }
-function extractAssistantText(messages) {
-    if (!Array.isArray(messages))
+function extractAssistantText(message) {
+    const msg = message;
+    if (msg?.role !== "assistant")
         return "";
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-        const message = messages[i];
-        if (message.role !== "assistant")
-            continue;
-        if (typeof message.content === "string")
-            return message.content;
-        if (Array.isArray(message.content)) {
-            return message.content
-                .map((part) => {
-                if (typeof part === "string")
-                    return part;
-                if (part && typeof part === "object" && "type" in part && part.type === "text") {
-                    return part.text ?? "";
-                }
-                return "";
-            })
-                .join("")
-                .trim();
-        }
-        return "";
+    if (typeof msg.content === "string")
+        return msg.content;
+    if (Array.isArray(msg.content)) {
+        return msg.content
+            .map((part) => {
+            if (typeof part === "string")
+                return part;
+            if (part && typeof part === "object" && "type" in part && part.type === "text") {
+                return part.text ?? "";
+            }
+            return "";
+        })
+            .join("")
+            .trim();
     }
     return "";
 }
@@ -118,9 +113,9 @@ export default function (pi) {
                             ctx.ui.notify(`[pi-reviewer] unexpected output: ${line}`, "error");
                             return;
                         }
-                        if (event?.type === "agent_end") {
+                        if (event?.type === "turn_end") {
                             agentEndReceived = true;
-                            const text = extractAssistantText(event.messages);
+                            const text = extractAssistantText(event.message);
                             ctx.ui.setStatus("pi-reviewer", undefined);
                             if (!text) {
                                 ctx.ui.notify("Review completed but agent returned no text.", "error");

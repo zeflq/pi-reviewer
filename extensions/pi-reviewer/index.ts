@@ -60,29 +60,23 @@ function parseArgs(rawArgs: string): ReviewCommandArgs {
   return parsed;
 }
 
-function extractAssistantText(messages: unknown): string {
-  if (!Array.isArray(messages)) return "";
+function extractAssistantText(message: unknown): string {
+  const msg = message as { role?: string; content?: unknown };
+  if (msg?.role !== "assistant") return "";
 
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    const message = messages[i] as { role?: string; content?: unknown };
-    if (message.role !== "assistant") continue;
+  if (typeof msg.content === "string") return msg.content;
 
-    if (typeof message.content === "string") return message.content;
-
-    if (Array.isArray(message.content)) {
-      return message.content
-        .map((part) => {
-          if (typeof part === "string") return part;
-          if (part && typeof part === "object" && "type" in part && (part as { type?: string }).type === "text") {
-            return (part as { text?: string }).text ?? "";
-          }
-          return "";
-        })
-        .join("")
-        .trim();
-    }
-
-    return "";
+  if (Array.isArray(msg.content)) {
+    return msg.content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part === "object" && "type" in part && (part as { type?: string }).type === "text") {
+          return (part as { text?: string }).text ?? "";
+        }
+        return "";
+      })
+      .join("")
+      .trim();
   }
 
   return "";
@@ -145,9 +139,9 @@ export default function (pi: ExtensionAPI): void {
               return;
             }
 
-            if (event?.type === "agent_end") {
+            if (event?.type === "turn_end") {
               agentEndReceived = true;
-              const text = extractAssistantText(event.messages);
+              const text = extractAssistantText(event.message);
               ctx.ui.setStatus("pi-reviewer", undefined);
               if (!text) {
                 ctx.ui.notify("Review completed but agent returned no text.", "error");
