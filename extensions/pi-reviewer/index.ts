@@ -86,6 +86,7 @@ export default function (pi: ExtensionAPI): void {
   pi.registerCommand("review", {
     description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --dry-run)",
     async handler(args, ctx) {
+      let stopLoader: () => void = () => {};
       try {
         const parsed = parseArgs(args);
         const { diff, source } = await resolveDiff({
@@ -106,7 +107,18 @@ export default function (pi: ExtensionAPI): void {
           return;
         }
 
-        ctx.ui.setStatus("pi-reviewer", `Reviewing ${source}...`);
+        const dots = [".", "..", "..."];
+        let dotIndex = 0;
+        const loader = setInterval(() => {
+          dotIndex = (dotIndex + 1) % dots.length;
+          ctx.ui.setStatus("pi-reviewer", `Reviewing ${source}${dots[dotIndex]}`);
+        }, 500);
+        ctx.ui.setStatus("pi-reviewer", `Reviewing ${source}.`);
+
+        stopLoader = () => {
+          clearInterval(loader);
+          ctx.ui.setStatus("pi-reviewer", undefined);
+        };
 
         const tempPath = path.join(tmpdir(), `pi-reviewer-system-prompt-${randomUUID()}.md`);
         await writeFile(tempPath, systemPrompt, { encoding: "utf-8", mode: 0o600 });
@@ -142,13 +154,15 @@ export default function (pi: ExtensionAPI): void {
             if (event?.type === "turn_end") {
               agentEndReceived = true;
               const text = extractAssistantText(event.message);
-              ctx.ui.setStatus("pi-reviewer", undefined);
+              stopLoader();
               if (!text) {
                 ctx.ui.notify("Review completed but agent returned no text.", "error");
                 return;
               }
+              const date = new Date().toISOString().replace("T", " ").slice(0, 19);
+              const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${text}\n`;
               const outPath = path.join(ctx.cwd, "pi-review.md");
-              writeFile(outPath, text, "utf-8")
+              writeFile(outPath, markdown, "utf-8")
                 .then(() => ctx.ui.notify(`Review saved → pi-review.md`))
                 .catch((err) => ctx.ui.notify(`Failed to write pi-review.md: ${err.message}`, "error"));
             }
@@ -182,7 +196,7 @@ export default function (pi: ExtensionAPI): void {
                 parseLine(stdoutBuffer);
               }
 
-              ctx.ui.setStatus("pi-reviewer", undefined);
+              stopLoader();
 
               if (code && code !== 0) {
                 reject(new Error(`pi process exited with code ${code}${stderr ? `: ${stderr.trim()}` : ""}`));
@@ -204,7 +218,7 @@ export default function (pi: ExtensionAPI): void {
           await unlink(tempPath).catch(() => undefined);
         }
       } catch (error) {
-        ctx.ui.setStatus("pi-reviewer", undefined);
+        stopLoader();
         const message = error instanceof Error ? error.message : String(error);
         ctx.ui.notify(`Review failed: ${message}`, "error");
       }
