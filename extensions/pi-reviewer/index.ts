@@ -89,8 +89,8 @@ function extractAssistantText(messages: unknown): string {
 }
 
 export default function (pi: ExtensionAPI): void {
-  pi.registerCommand("review", {
-    description: "Review a diff with pi-reviewer (flags: --diff, --branch, --pr, --dry-run)",
+  pi.registerCommand("pr-review", {
+    description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --dry-run)",
     async handler(args, ctx) {
       try {
         const parsed = parseArgs(args);

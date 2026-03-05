@@ -27,14 +27,14 @@ Install the extension once:
 pi install https://github.com/zeflq/pi-reviewer
 ```
 
-Then inside the pi TUI, use the `/review` command:
+Then inside the pi TUI, use the `/pr-review` command:
 
 ```
-/review
-/review --branch dev
-/review --pr 42
-/review --diff HEAD~1
-/review --dry-run
+/pr-review
+/pr-review --branch dev
+/pr-review --pr 42
+/pr-review --diff HEAD~1
+/pr-review --dry-run
 ```
 
 | Option | Description | Example |
@@ -46,7 +46,16 @@ Then inside the pi TUI, use the `/review` command:
 
 ## Project conventions
 
-Create `AGENTS.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before reviewing every PR.
+Create `AGENTS.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
+
+```markdown
+# Project Conventions
+
+## Function Naming
+- Prefix async data fetchers with `fetch` (e.g. `fetchUser`, `fetchOrders`)
+- Prefix boolean functions with `is`, `has`, or `can`
+- Prefix mutations with a verb: `update`, `delete`, `create`, `reset`
+```
 
 ## Bot identity
 
