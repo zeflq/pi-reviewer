@@ -105,6 +105,7 @@ export default function (pi) {
                     });
                     let stderr = "";
                     let stdoutBuffer = "";
+                    let agentEndReceived = false;
                     const parseLine = (line) => {
                         if (!line.trim())
                             return;
@@ -113,10 +114,12 @@ export default function (pi) {
                             event = JSON.parse(line);
                         }
                         catch {
-                            ctx.ui.notify(`Failed to parse subprocess JSON line: ${line}`, "error");
+                            // not JSON — log raw line for debugging
+                            ctx.ui.notify(`[pi-reviewer] unexpected output: ${line}`, "error");
                             return;
                         }
                         if (event?.type === "agent_end") {
+                            agentEndReceived = true;
                             const text = extractAssistantText(event.messages);
                             ctx.ui.setStatus("pi-reviewer", undefined);
                             if (!text) {
@@ -152,8 +155,14 @@ export default function (pi) {
                             if (stdoutBuffer.trim()) {
                                 parseLine(stdoutBuffer);
                             }
+                            ctx.ui.setStatus("pi-reviewer", undefined);
                             if (code && code !== 0) {
                                 reject(new Error(`pi process exited with code ${code}${stderr ? `: ${stderr.trim()}` : ""}`));
+                                return;
+                            }
+                            if (!agentEndReceived) {
+                                const hint = stderr.trim() ? `\n${stderr.trim()}` : "";
+                                reject(new Error(`pi process exited without producing a review.${hint}`));
                                 return;
                             }
                             resolve();
