@@ -27,14 +27,14 @@ Install the extension once:
 pi install https://github.com/zeflq/pi-reviewer
 ```
 
-Then inside the pi TUI, use the `/pr-review` command:
+Then inside the pi TUI, use the `/review` command:
 
 ```
-/pr-review
-/pr-review --branch dev
-/pr-review --pr 42
-/pr-review --diff HEAD~1
-/pr-review --dry-run
+/review
+/review --branch dev
+/review --pr 42
+/review --diff HEAD~1
+/review --dry-run
 ```
 
 | Option | Description | Example |

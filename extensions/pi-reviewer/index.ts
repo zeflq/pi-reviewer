@@ -89,7 +89,7 @@ function extractAssistantText(messages: unknown): string {
 }
 
 export default function (pi: ExtensionAPI): void {
-  pi.registerCommand("pr-review", {
+  pi.registerCommand("review", {
     description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --dry-run)",
     async handler(args, ctx) {
       try {
@@ -111,6 +111,8 @@ export default function (pi: ExtensionAPI): void {
           ctx.ui.notify(`User prompt:\n\n${userPrompt}`);
           return;
         }
+
+        ctx.ui.setStatus("pi-reviewer", `Reviewing ${source}...`);
 
         const tempPath = path.join(tmpdir(), `pi-reviewer-system-prompt-${randomUUID()}.md`);
         await writeFile(tempPath, systemPrompt, { encoding: "utf-8", mode: 0o600 });
@@ -143,6 +145,7 @@ export default function (pi: ExtensionAPI): void {
 
             if (event?.type === "agent_end") {
               const text = extractAssistantText(event.messages);
+              ctx.ui.setStatus("pi-reviewer", undefined);
               ctx.ui.notify(text || "Review completed (no assistant text returned).");
             }
           };
@@ -188,8 +191,9 @@ export default function (pi: ExtensionAPI): void {
           await unlink(tempPath).catch(() => undefined);
         }
       } catch (error) {
+        ctx.ui.setStatus("pi-reviewer", undefined);
         const message = error instanceof Error ? error.message : String(error);
-        ctx.ui.notify(`Review command failed: ${message}`, "error");
+        ctx.ui.notify(`Review failed: ${message}`, "error");
       }
     },
   });
