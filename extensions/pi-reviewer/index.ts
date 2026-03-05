@@ -146,7 +146,14 @@ export default function (pi: ExtensionAPI): void {
             if (event?.type === "agent_end") {
               const text = extractAssistantText(event.messages);
               ctx.ui.setStatus("pi-reviewer", undefined);
-              ctx.ui.notify(text || "Review completed (no assistant text returned).");
+              if (!text) {
+                ctx.ui.notify("Review completed but agent returned no text.", "error");
+                return;
+              }
+              const outPath = path.join(ctx.cwd, "pi-review.md");
+              writeFile(outPath, text, "utf-8")
+                .then(() => ctx.ui.notify(`Review saved → pi-review.md`))
+                .catch((err) => ctx.ui.notify(`Failed to write pi-review.md: ${err.message}`, "error"));
             }
           };
 
