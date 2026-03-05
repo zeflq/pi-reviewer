@@ -41,40 +41,60 @@ describe("resolveDiff", () => {
   });
 
   it("uses git diff <branch>...HEAD for --branch", async () => {
-    execSyncMock.mockReturnValue("some-diff");
+    execSyncMock
+      .mockReturnValueOnce("feature-branch\n") // detectCurrentBranch
+      .mockReturnValueOnce("some-diff");        // git diff dev...HEAD
 
     const result = await resolveDiff({ branch: "dev", cwd: "/repo" });
 
-    expect(execSyncMock).toHaveBeenCalledWith("git diff dev...HEAD", {
+    expect(execSyncMock).toHaveBeenNthCalledWith(1, "git rev-parse --abbrev-ref HEAD", {
+      cwd: "/repo",
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    expect(execSyncMock).toHaveBeenNthCalledWith(2, "git diff dev...HEAD", {
       cwd: "/repo",
       encoding: "utf-8",
     });
-    expect(result.source).toBe("git diff dev...HEAD");
+    expect(result.source).toBe("git diff dev...feature-branch");
   });
 
   it("uses CI base branch when in GitHub Actions", async () => {
     process.env.GITHUB_ACTIONS = "true";
     process.env.GITHUB_BASE_REF = "main";
-    execSyncMock.mockReturnValue("some-diff");
+    execSyncMock
+      .mockReturnValueOnce("feature-branch\n") // detectCurrentBranch
+      .mockReturnValueOnce("some-diff");        // git diff origin/main...HEAD
 
     const result = await resolveDiff({ cwd: "/repo" });
 
-    expect(execSyncMock).toHaveBeenCalledWith("git diff origin/main...HEAD", {
+    expect(execSyncMock).toHaveBeenNthCalledWith(1, "git rev-parse --abbrev-ref HEAD", {
+      cwd: "/repo",
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    expect(execSyncMock).toHaveBeenNthCalledWith(2, "git diff origin/main...HEAD", {
       cwd: "/repo",
       encoding: "utf-8",
     });
-    expect(result.source).toBe("git diff origin/main...HEAD");
+    expect(result.source).toBe("git diff origin/main...feature-branch");
   });
 
   it("auto-detects local base branch from origin/HEAD", async () => {
     execSyncMock
-      .mockReturnValueOnce("origin/main\n")
-      .mockReturnValueOnce("some-diff");
+      .mockReturnValueOnce("feature-branch\n") // detectCurrentBranch
+      .mockReturnValueOnce("origin/main\n")    // detectOriginBase
+      .mockReturnValueOnce("some-diff");        // git diff origin/main...HEAD
 
     const result = await resolveDiff({ cwd: "/repo" });
 
+    expect(execSyncMock).toHaveBeenNthCalledWith(1, "git rev-parse --abbrev-ref HEAD", {
+      cwd: "/repo",
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     expect(execSyncMock).toHaveBeenNthCalledWith(
-      1,
+      2,
       "git symbolic-ref refs/remotes/origin/HEAD --short",
       {
         cwd: "/repo",
@@ -82,15 +102,16 @@ describe("resolveDiff", () => {
         stdio: ["pipe", "pipe", "pipe"],
       }
     );
-    expect(execSyncMock).toHaveBeenNthCalledWith(2, "git diff origin/main...HEAD", {
+    expect(execSyncMock).toHaveBeenNthCalledWith(3, "git diff origin/main...HEAD", {
       cwd: "/repo",
       encoding: "utf-8",
     });
-    expect(result.source).toBe("git diff origin/main...HEAD");
+    expect(result.source).toBe("git diff origin/main...feature-branch");
   });
 
   it("falls back to origin/main when base branch detection fails", async () => {
     execSyncMock
+      .mockReturnValueOnce("feature-branch\n") // detectCurrentBranch
       .mockImplementationOnce(() => {
         throw new Error("symbolic-ref failed");
       })
@@ -98,8 +119,13 @@ describe("resolveDiff", () => {
 
     const result = await resolveDiff({ cwd: "/repo" });
 
+    expect(execSyncMock).toHaveBeenNthCalledWith(1, "git rev-parse --abbrev-ref HEAD", {
+      cwd: "/repo",
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     expect(execSyncMock).toHaveBeenNthCalledWith(
-      1,
+      2,
       "git symbolic-ref refs/remotes/origin/HEAD --short",
       {
         cwd: "/repo",
@@ -107,11 +133,11 @@ describe("resolveDiff", () => {
         stdio: ["pipe", "pipe", "pipe"],
       }
     );
-    expect(execSyncMock).toHaveBeenNthCalledWith(2, "git diff origin/main...HEAD", {
+    expect(execSyncMock).toHaveBeenNthCalledWith(3, "git diff origin/main...HEAD", {
       cwd: "/repo",
       encoding: "utf-8",
     });
-    expect(result.source).toBe("git diff origin/main...HEAD");
+    expect(result.source).toBe("git diff origin/main...feature-branch");
   });
 
   it("throws when resolved diff is empty", async () => {

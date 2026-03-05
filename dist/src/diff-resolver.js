@@ -8,6 +8,18 @@ function ensureNonEmptyDiff(diff) {
         throw new Error(EMPTY_DIFF_ERROR);
     }
 }
+function detectCurrentBranch(cwd) {
+    try {
+        return execSync("git rev-parse --abbrev-ref HEAD", {
+            cwd,
+            encoding: "utf-8",
+            stdio: ["pipe", "pipe", "pipe"],
+        }).trim();
+    }
+    catch {
+        return "HEAD";
+    }
+}
 function detectOriginBase(cwd) {
     try {
         return execSync("git symbolic-ref refs/remotes/origin/HEAD --short", {
@@ -32,22 +44,23 @@ export async function resolveDiff(options) {
         ensureNonEmptyDiff(diff);
         return { diff, source: `git diff ${options.diff}` };
     }
+    const currentBranch = detectCurrentBranch(cwd);
     if (options.branch) {
-        const range = `${options.branch}...HEAD`;
-        const diff = run(`git diff ${range}`, cwd);
+        const range = `${options.branch}...${currentBranch}`;
+        const diff = run(`git diff ${options.branch}...HEAD`, cwd);
         ensureNonEmptyDiff(diff);
         return { diff, source: `git diff ${range}` };
     }
     if (process.env.GITHUB_ACTIONS === "true") {
         const baseRef = process.env.GITHUB_BASE_REF ?? "main";
-        const range = `origin/${baseRef}...HEAD`;
-        const diff = run(`git diff ${range}`, cwd);
+        const range = `origin/${baseRef}...${currentBranch}`;
+        const diff = run(`git diff origin/${baseRef}...HEAD`, cwd);
         ensureNonEmptyDiff(diff);
         return { diff, source: `git diff ${range}` };
     }
     const base = detectOriginBase(cwd);
-    const range = `${base}...HEAD`;
-    const diff = run(`git diff ${range}`, cwd);
+    const range = `${base}...${currentBranch}`;
+    const diff = run(`git diff ${base}...HEAD`, cwd);
     ensureNonEmptyDiff(diff);
     return { diff, source: `git diff ${range}` };
 }
