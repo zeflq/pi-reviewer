@@ -156,6 +156,7 @@ export default function (pi: ExtensionAPI): void {
           let stderr = "";
           let stdoutBuffer = "";
           let agentEndReceived = false;
+          let lastReviewText = "";
 
           const parseLine = (line: string) => {
             if (!line.trim()) return;
@@ -170,15 +171,19 @@ export default function (pi: ExtensionAPI): void {
             }
 
             if (event?.type === "turn_end") {
-              agentEndReceived = true;
               const text = extractAssistantText(event.message);
+              if (text) lastReviewText = text;
+            }
+
+            if (event?.type === "agent_end") {
+              agentEndReceived = true;
               stopLoader();
-              if (!text) {
+              if (!lastReviewText) {
                 ctx.ui.notify("Review completed but agent returned no text.", "error");
                 return;
               }
               const date = new Date().toISOString().replace("T", " ").slice(0, 19);
-              const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${text}\n`;
+              const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${lastReviewText}\n`;
               const outPath = path.join(ctx.cwd, "pi-review.md");
               writeFile(outPath, markdown, "utf-8")
                 .then(() => ctx.ui.notify(`Review saved → pi-review.md`))
