@@ -8,85 +8,9 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { loadContext } from "../../src/context.js";
 import { resolveDiff } from "../../src/diff-resolver.js";
 import { buildSSHUserPrompt, buildSystemPrompt, buildUserPrompt } from "../../src/prompt-builder.js";
-
-interface ReviewCommandArgs {
-  diff?: string;
-  branch?: string;
-  pr?: number;
-  dryRun: boolean;
-  ssh: boolean;
-}
-
-function parseArgs(rawArgs: string): ReviewCommandArgs {
-  const tokens = rawArgs.trim() ? rawArgs.trim().split(/\s+/) : [];
-  const parsed: ReviewCommandArgs = { dryRun: false, ssh: false };
-
-  for (let i = 0; i < tokens.length; i += 1) {
-    const token = tokens[i];
-
-    if (token === "--dry-run") {
-      parsed.dryRun = true;
-      continue;
-    }
-
-    if (token === "--ssh") {
-      parsed.ssh = true;
-      continue;
-    }
-
-    if (token === "--diff") {
-      const value = tokens[i + 1];
-      if (!value) throw new Error("Missing value for --diff");
-      parsed.diff = value;
-      i += 1;
-      continue;
-    }
-
-    if (token === "--branch") {
-      const value = tokens[i + 1];
-      if (!value) throw new Error("Missing value for --branch");
-      parsed.branch = value;
-      i += 1;
-      continue;
-    }
-
-    if (token === "--pr") {
-      const value = tokens[i + 1];
-      if (!value) throw new Error("Missing value for --pr");
-      const pr = Number.parseInt(value, 10);
-      if (Number.isNaN(pr)) throw new Error(`Invalid PR number: ${value}`);
-      parsed.pr = pr;
-      i += 1;
-      continue;
-    }
-
-    throw new Error(`Unknown argument: ${token}`);
-  }
-
-  return parsed;
-}
-
-function extractAssistantText(message: unknown): string {
-  const msg = message as { role?: string; content?: unknown };
-  if (msg?.role !== "assistant") return "";
-
-  if (typeof msg.content === "string") return msg.content;
-
-  if (Array.isArray(msg.content)) {
-    return msg.content
-      .map((part) => {
-        if (typeof part === "string") return part;
-        if (part && typeof part === "object" && "type" in part && (part as { type?: string }).type === "text") {
-          return (part as { text?: string }).text ?? "";
-        }
-        return "";
-      })
-      .join("")
-      .trim();
-  }
-
-  return "";
-}
+import { parseArgs } from "./args.js";
+import { createEventAccumulator } from "./events.js";
+import { setReviewFooter } from "./footer.js";
 
 export default function (pi: ExtensionAPI): void {
   pi.registerCommand("review", {
@@ -125,18 +49,7 @@ export default function (pi: ExtensionAPI): void {
           return;
         }
 
-        const dots = [".", "..", "..."];
-        let dotIndex = 0;
-        const loader = setInterval(() => {
-          dotIndex = (dotIndex + 1) % dots.length;
-          ctx.ui.setStatus("pi-reviewer", `Reviewing ${source}${dots[dotIndex]}`);
-        }, 500);
-        ctx.ui.setStatus("pi-reviewer", `Reviewing ${source}.`);
-
-        stopLoader = () => {
-          clearInterval(loader);
-          ctx.ui.setStatus("pi-reviewer", undefined);
-        };
+        stopLoader = setReviewFooter(ctx, source);
 
         const tempPath = path.join(tmpdir(), `pi-reviewer-system-prompt-${randomUUID()}.md`);
         await writeFile(tempPath, systemPrompt, { encoding: "utf-8", mode: 0o600 });
@@ -155,46 +68,16 @@ export default function (pi: ExtensionAPI): void {
 
           let stderr = "";
           let stdoutBuffer = "";
-          let agentEndReceived = false;
-
-          const parseLine = (line: string) => {
-            if (!line.trim()) return;
-
-            let event: any;
-            try {
-              event = JSON.parse(line);
-            } catch {
-              // not JSON — log raw line for debugging
-              ctx.ui.notify(`[pi-reviewer] unexpected output: ${line}`, "error");
-              return;
-            }
-
-            if (event?.type === "turn_end") {
-              agentEndReceived = true;
-              const text = extractAssistantText(event.message);
-              stopLoader();
-              if (!text) {
-                ctx.ui.notify("Review completed but agent returned no text.", "error");
-                return;
-              }
-              const date = new Date().toISOString().replace("T", " ").slice(0, 19);
-              const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${text}\n`;
-              const outPath = path.join(ctx.cwd, "pi-review.md");
-              writeFile(outPath, markdown, "utf-8")
-                .then(() => ctx.ui.notify(`Review saved → pi-review.md`))
-                .catch((err) => ctx.ui.notify(`Failed to write pi-review.md: ${err.message}`, "error"));
-            }
-          };
+          const accumulator = createEventAccumulator((line) => {
+            ctx.ui.notify(`[pi-reviewer] unexpected output: ${line}`, "error");
+          });
 
           const streamPromise = new Promise<void>((resolve, reject) => {
             proc.stdout.on("data", (chunk) => {
               stdoutBuffer += chunk.toString();
               const lines = stdoutBuffer.split("\n");
               stdoutBuffer = lines.pop() ?? "";
-
-              for (const line of lines) {
-                parseLine(line);
-              }
+              for (const line of lines) accumulator.process(line);
             });
 
             proc.stderr.on("data", (chunk) => {
@@ -210,10 +93,7 @@ export default function (pi: ExtensionAPI): void {
             });
 
             proc.on("close", (code) => {
-              if (stdoutBuffer.trim()) {
-                parseLine(stdoutBuffer);
-              }
-
+              if (stdoutBuffer.trim()) accumulator.process(stdoutBuffer);
               stopLoader();
 
               if (code && code !== 0) {
@@ -221,11 +101,19 @@ export default function (pi: ExtensionAPI): void {
                 return;
               }
 
-              if (!agentEndReceived) {
+              const reviewText = accumulator.getLastReviewText();
+              if (!reviewText) {
                 const hint = stderr.trim() ? `\n${stderr.trim()}` : "";
                 reject(new Error(`pi process exited without producing a review.${hint}`));
                 return;
               }
+
+              const date = new Date().toISOString().replace("T", " ").slice(0, 19);
+              const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${reviewText}\n`;
+              const outPath = path.join(ctx.cwd, "pi-review.md");
+              writeFile(outPath, markdown, "utf-8")
+                .then(() => ctx.ui.notify(`Review saved → pi-review.md`))
+                .catch((err) => ctx.ui.notify(`Failed to write pi-review.md: ${err.message}`, "error"));
 
               resolve();
             });

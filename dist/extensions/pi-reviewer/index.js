@@ -5,101 +5,46 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { loadContext } from "../../src/context.js";
 import { resolveDiff } from "../../src/diff-resolver.js";
-import { buildSystemPrompt, buildUserPrompt } from "../../src/prompt-builder.js";
-function parseArgs(rawArgs) {
-    const tokens = rawArgs.trim() ? rawArgs.trim().split(/\s+/) : [];
-    const parsed = { dryRun: false };
-    for (let i = 0; i < tokens.length; i += 1) {
-        const token = tokens[i];
-        if (token === "--dry-run") {
-            parsed.dryRun = true;
-            continue;
-        }
-        if (token === "--diff") {
-            const value = tokens[i + 1];
-            if (!value)
-                throw new Error("Missing value for --diff");
-            parsed.diff = value;
-            i += 1;
-            continue;
-        }
-        if (token === "--branch") {
-            const value = tokens[i + 1];
-            if (!value)
-                throw new Error("Missing value for --branch");
-            parsed.branch = value;
-            i += 1;
-            continue;
-        }
-        if (token === "--pr") {
-            const value = tokens[i + 1];
-            if (!value)
-                throw new Error("Missing value for --pr");
-            const pr = Number.parseInt(value, 10);
-            if (Number.isNaN(pr))
-                throw new Error(`Invalid PR number: ${value}`);
-            parsed.pr = pr;
-            i += 1;
-            continue;
-        }
-        throw new Error(`Unknown argument: ${token}`);
-    }
-    return parsed;
-}
-function extractAssistantText(message) {
-    const msg = message;
-    if (msg?.role !== "assistant")
-        return "";
-    if (typeof msg.content === "string")
-        return msg.content;
-    if (Array.isArray(msg.content)) {
-        return msg.content
-            .map((part) => {
-            if (typeof part === "string")
-                return part;
-            if (part && typeof part === "object" && "type" in part && part.type === "text") {
-                return part.text ?? "";
-            }
-            return "";
-        })
-            .join("")
-            .trim();
-    }
-    return "";
-}
+import { buildSSHUserPrompt, buildSystemPrompt, buildUserPrompt } from "../../src/prompt-builder.js";
+import { parseArgs } from "./args.js";
+import { createEventAccumulator } from "./events.js";
+import { setReviewFooter } from "./footer.js";
 export default function (pi) {
     pi.registerCommand("review", {
-        description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --dry-run)",
+        description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --ssh, --dry-run)",
         async handler(args, ctx) {
             let stopLoader = () => { };
             try {
                 const parsed = parseArgs(args);
-                const { diff, source } = await resolveDiff({
-                    cwd: ctx.cwd,
-                    diff: parsed.diff,
-                    branch: parsed.branch,
-                    pr: parsed.pr,
-                });
-                const context = await loadContext({ cwd: ctx.cwd });
-                const systemPrompt = buildSystemPrompt(context);
-                const userPrompt = buildUserPrompt(diff);
+                let systemPrompt;
+                let userPrompt;
+                let source;
+                if (parsed.ssh) {
+                    systemPrompt = buildSystemPrompt("");
+                    userPrompt = buildSSHUserPrompt({ branch: parsed.branch, diff: parsed.diff, pr: parsed.pr });
+                    source = "remote (ssh)";
+                }
+                else {
+                    const { diff, source: resolvedSource, warning } = await resolveDiff({
+                        cwd: ctx.cwd,
+                        diff: parsed.diff,
+                        branch: parsed.branch,
+                        pr: parsed.pr,
+                    });
+                    if (warning)
+                        ctx.ui.notify(warning, "warning");
+                    const context = await loadContext({ cwd: ctx.cwd });
+                    systemPrompt = buildSystemPrompt(context);
+                    userPrompt = buildUserPrompt(diff);
+                    source = resolvedSource;
+                }
                 if (parsed.dryRun) {
                     ctx.ui.notify(`Diff source: ${source}`);
                     ctx.ui.notify(`System prompt:\n\n${systemPrompt}`);
                     ctx.ui.notify(`User prompt:\n\n${userPrompt}`);
                     return;
                 }
-                const dots = [".", "..", "..."];
-                let dotIndex = 0;
-                const loader = setInterval(() => {
-                    dotIndex = (dotIndex + 1) % dots.length;
-                    ctx.ui.setStatus("pi-reviewer", `Reviewing ${source}${dots[dotIndex]}`);
-                }, 500);
-                ctx.ui.setStatus("pi-reviewer", `Reviewing ${source}.`);
-                stopLoader = () => {
-                    clearInterval(loader);
-                    ctx.ui.setStatus("pi-reviewer", undefined);
-                };
+                stopLoader = setReviewFooter(ctx, source);
                 const tempPath = path.join(tmpdir(), `pi-reviewer-system-prompt-${randomUUID()}.md`);
                 await writeFile(tempPath, systemPrompt, { encoding: "utf-8", mode: 0o600 });
                 try {
@@ -111,43 +56,16 @@ export default function (pi) {
                     });
                     let stderr = "";
                     let stdoutBuffer = "";
-                    let agentEndReceived = false;
-                    const parseLine = (line) => {
-                        if (!line.trim())
-                            return;
-                        let event;
-                        try {
-                            event = JSON.parse(line);
-                        }
-                        catch {
-                            // not JSON — log raw line for debugging
-                            ctx.ui.notify(`[pi-reviewer] unexpected output: ${line}`, "error");
-                            return;
-                        }
-                        if (event?.type === "turn_end") {
-                            agentEndReceived = true;
-                            const text = extractAssistantText(event.message);
-                            stopLoader();
-                            if (!text) {
-                                ctx.ui.notify("Review completed but agent returned no text.", "error");
-                                return;
-                            }
-                            const date = new Date().toISOString().replace("T", " ").slice(0, 19);
-                            const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${text}\n`;
-                            const outPath = path.join(ctx.cwd, "pi-review.md");
-                            writeFile(outPath, markdown, "utf-8")
-                                .then(() => ctx.ui.notify(`Review saved → pi-review.md`))
-                                .catch((err) => ctx.ui.notify(`Failed to write pi-review.md: ${err.message}`, "error"));
-                        }
-                    };
+                    const accumulator = createEventAccumulator((line) => {
+                        ctx.ui.notify(`[pi-reviewer] unexpected output: ${line}`, "error");
+                    });
                     const streamPromise = new Promise((resolve, reject) => {
                         proc.stdout.on("data", (chunk) => {
                             stdoutBuffer += chunk.toString();
                             const lines = stdoutBuffer.split("\n");
                             stdoutBuffer = lines.pop() ?? "";
-                            for (const line of lines) {
-                                parseLine(line);
-                            }
+                            for (const line of lines)
+                                accumulator.process(line);
                         });
                         proc.stderr.on("data", (chunk) => {
                             stderr += chunk.toString();
@@ -160,19 +78,25 @@ export default function (pi) {
                             reject(error);
                         });
                         proc.on("close", (code) => {
-                            if (stdoutBuffer.trim()) {
-                                parseLine(stdoutBuffer);
-                            }
+                            if (stdoutBuffer.trim())
+                                accumulator.process(stdoutBuffer);
                             stopLoader();
                             if (code && code !== 0) {
                                 reject(new Error(`pi process exited with code ${code}${stderr ? `: ${stderr.trim()}` : ""}`));
                                 return;
                             }
-                            if (!agentEndReceived) {
+                            const reviewText = accumulator.getLastReviewText();
+                            if (!reviewText) {
                                 const hint = stderr.trim() ? `\n${stderr.trim()}` : "";
                                 reject(new Error(`pi process exited without producing a review.${hint}`));
                                 return;
                             }
+                            const date = new Date().toISOString().replace("T", " ").slice(0, 19);
+                            const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${reviewText}\n`;
+                            const outPath = path.join(ctx.cwd, "pi-review.md");
+                            writeFile(outPath, markdown, "utf-8")
+                                .then(() => ctx.ui.notify(`Review saved → pi-review.md`))
+                                .catch((err) => ctx.ui.notify(`Failed to write pi-review.md: ${err.message}`, "error"));
                             resolve();
                         });
                     });

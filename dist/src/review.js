@@ -36,13 +36,15 @@ export async function review(options) {
     const cwd = options.cwd ?? process.cwd();
     const githubToken = options.githubToken ?? process.env.GITHUB_TOKEN;
     const repo = options.repo ?? process.env.GITHUB_REPOSITORY;
-    const { diff, source } = await resolveDiff({
+    const { diff, source, warning } = await resolveDiff({
         pr: options.pr,
         diff: options.diff,
         branch: options.branch,
         cwd,
     });
     console.log(`[pi-reviewer] diff resolved — source: ${source}, size: ${diff.length} chars`);
+    if (warning)
+        console.warn(`[pi-reviewer] ${warning}`);
     const context = await loadContext({ cwd });
     console.log(`[pi-reviewer] context: ${context ? "AGENTS.md loaded" : "no AGENTS.md found"}`);
     const systemPrompt = buildSystemPrompt(context);
