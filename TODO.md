@@ -148,7 +148,24 @@ tests/
 - [ ] Priority order: `AGENTS.md` → `CLAUDE.md` (first found wins, or merge both)
 - [ ] Update docs + tests
 
-### 8. Custom system prompt
+### 8. Diff size handling
+
+- [ ] Filter known noise files before diff reaches the agent (lockfiles, `dist/`, `build/`, generated files)
+- [ ] Add hard cap with warning when diff exceeds limit (e.g. 100k chars) — affects CLI, CI, and agent mode
+- [ ] Surface truncation warning to user (`⚠ Diff truncated — N files excluded`)
+- [ ] Add tests for filter rules and truncation behavior
+
+### 9. SSH support (`--ssh`)
+
+- [ ] Add `--ssh` flag to `/review` command
+- [ ] When set, skip `resolveDiff()` and `loadContext()` in the extension handler
+- [ ] Build user prompt as an instruction for the spawned pi subprocess to fetch the diff via its `Bash` tool (SSH-redirected by ssh.ts)
+- [ ] `AGENTS.md` / `CLAUDE.md` read via subprocess `Read` tool (also SSH-redirected)
+- [ ] System prompt unchanged — agent still returns same JSON review format
+- [ ] No runtime check for ssh.ts — document that `--ssh` requires an SSH extension (e.g. ssh.ts) to be installed; without it, falls back silently to local execution
+- [ ] Update README with `--ssh` usage example and prerequisite note
+
+### 10. Custom system prompt
 
 - [ ] Add `system-prompt` input to `action.yml` (file path relative to project root)
 - [ ] If file exists, use its content as-is instead of `buildSystemPrompt`
