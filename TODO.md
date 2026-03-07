@@ -148,12 +148,12 @@ tests/
 - [ ] Priority order: `AGENTS.md` → `CLAUDE.md` (first found wins, or merge both)
 - [ ] Update docs + tests
 
-### 8. Diff size handling
+### ✅ 8. Diff size handling
 
-- [ ] Filter known noise files before diff reaches the agent (lockfiles, `dist/`, `build/`, generated files)
-- [ ] Add hard cap with warning when diff exceeds limit (e.g. 100k chars) — affects CLI, CI, and agent mode
-- [ ] Surface truncation warning to user (`⚠ Diff truncated — N files excluded`)
-- [ ] Add tests for filter rules and truncation behavior
+- [x] Filter known noise files before diff reaches the agent (lockfiles, `dist/`, `build/`, generated files)
+- [x] Add hard cap with warning when diff exceeds limit (100k chars) — affects CLI, CI, and agent mode
+- [x] Surface truncation warning to user (`⚠ Diff truncated — N files excluded`)
+- [x] Add tests for filter rules and truncation behavior
 
 ### 9. SSH support (`--ssh`)
 

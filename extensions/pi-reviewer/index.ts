@@ -89,13 +89,14 @@ export default function (pi: ExtensionAPI): void {
       let stopLoader: () => void = () => {};
       try {
         const parsed = parseArgs(args);
-        const { diff, source } = await resolveDiff({
+        const { diff, source, warning } = await resolveDiff({
           cwd: ctx.cwd,
           diff: parsed.diff,
           branch: parsed.branch,
           pr: parsed.pr,
         });
 
+        if (warning) ctx.ui.notify(warning, "warning");
         const context = await loadContext({ cwd: ctx.cwd });
         const systemPrompt = buildSystemPrompt(context);
         const userPrompt = buildUserPrompt(diff);
