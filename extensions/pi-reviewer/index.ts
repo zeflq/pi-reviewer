@@ -7,24 +7,30 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 import { loadContext } from "../../src/context.js";
 import { resolveDiff } from "../../src/diff-resolver.js";
-import { buildSystemPrompt, buildUserPrompt } from "../../src/prompt-builder.js";
+import { buildSSHUserPrompt, buildSystemPrompt, buildUserPrompt } from "../../src/prompt-builder.js";
 
 interface ReviewCommandArgs {
   diff?: string;
   branch?: string;
   pr?: number;
   dryRun: boolean;
+  ssh: boolean;
 }
 
 function parseArgs(rawArgs: string): ReviewCommandArgs {
   const tokens = rawArgs.trim() ? rawArgs.trim().split(/\s+/) : [];
-  const parsed: ReviewCommandArgs = { dryRun: false };
+  const parsed: ReviewCommandArgs = { dryRun: false, ssh: false };
 
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
 
     if (token === "--dry-run") {
       parsed.dryRun = true;
+      continue;
+    }
+
+    if (token === "--ssh") {
+      parsed.ssh = true;
       continue;
     }
 
@@ -84,22 +90,33 @@ function extractAssistantText(message: unknown): string {
 
 export default function (pi: ExtensionAPI): void {
   pi.registerCommand("review", {
-    description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --dry-run)",
+    description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --ssh, --dry-run)",
     async handler(args, ctx) {
       let stopLoader: () => void = () => {};
       try {
         const parsed = parseArgs(args);
-        const { diff, source, warning } = await resolveDiff({
-          cwd: ctx.cwd,
-          diff: parsed.diff,
-          branch: parsed.branch,
-          pr: parsed.pr,
-        });
 
-        if (warning) ctx.ui.notify(warning, "warning");
-        const context = await loadContext({ cwd: ctx.cwd });
-        const systemPrompt = buildSystemPrompt(context);
-        const userPrompt = buildUserPrompt(diff);
+        let systemPrompt: string;
+        let userPrompt: string;
+        let source: string;
+
+        if (parsed.ssh) {
+          systemPrompt = buildSystemPrompt("");
+          userPrompt = buildSSHUserPrompt({ branch: parsed.branch, diff: parsed.diff, pr: parsed.pr });
+          source = "remote (ssh)";
+        } else {
+          const { diff, source: resolvedSource, warning } = await resolveDiff({
+            cwd: ctx.cwd,
+            diff: parsed.diff,
+            branch: parsed.branch,
+            pr: parsed.pr,
+          });
+          if (warning) ctx.ui.notify(warning, "warning");
+          const context = await loadContext({ cwd: ctx.cwd });
+          systemPrompt = buildSystemPrompt(context);
+          userPrompt = buildUserPrompt(diff);
+          source = resolvedSource;
+        }
 
         if (parsed.dryRun) {
           ctx.ui.notify(`Diff source: ${source}`);

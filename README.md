@@ -52,6 +52,7 @@ Then inside the pi TUI, use the `/review` command:
 | `--branch <name>` | Compare current branch against this branch (default: auto-detected from `origin/HEAD`) | `--branch dev` |
 | `--pr <number>` | Fetch and review a specific PR diff via `gh` CLI | `--pr 42` |
 | `--diff <ref>` | Review changes since a specific git ref | `--diff HEAD~1` |
+| `--ssh` | SSH mode: skip local diff resolution, let the agent fetch the diff and conventions via its tools (requires an SSH extension e.g. [ssh.ts](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/examples/extensions/ssh.ts)) | `--ssh` |
 | `--dry-run` | Print the diff and prompt without calling the agent | |
 
 The review output is saved to `pi-review.md` in your project root.
