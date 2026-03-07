@@ -155,15 +155,15 @@ tests/
 - [x] Surface truncation warning to user (`⚠ Diff truncated — N files excluded`)
 - [x] Add tests for filter rules and truncation behavior
 
-### 9. SSH support (`--ssh`)
+### ✅ 9. SSH support (`--ssh`)
 
-- [ ] Add `--ssh` flag to `/review` command
-- [ ] When set, skip `resolveDiff()` and `loadContext()` in the extension handler
-- [ ] Build user prompt as an instruction for the spawned pi subprocess to fetch the diff via its `Bash` tool (SSH-redirected by ssh.ts)
-- [ ] `AGENTS.md` / `CLAUDE.md` read via subprocess `Read` tool (also SSH-redirected)
-- [ ] System prompt unchanged — agent still returns same JSON review format
-- [ ] No runtime check for ssh.ts — document that `--ssh` requires an SSH extension (e.g. ssh.ts) to be installed; without it, falls back silently to local execution
-- [ ] Update README with `--ssh` usage example and prerequisite note
+- [x] Add `--ssh` flag to `/review` command
+- [x] When set, skip `resolveDiff()` and `loadContext()` in the extension handler
+- [x] Build user prompt as an instruction for the spawned pi subprocess to fetch the diff via its `Bash` tool (SSH-redirected by ssh.ts)
+- [x] `AGENTS.md` / `CLAUDE.md` read via subprocess `Read` tool (also SSH-redirected)
+- [x] System prompt unchanged — agent still returns same JSON review format
+- [x] No runtime check for ssh.ts — document that `--ssh` requires an SSH extension (e.g. ssh.ts) to be installed; without it, falls back silently to local execution
+- [x] Update README with `--ssh` usage example and prerequisite note
 
 ### 10. Custom system prompt
 

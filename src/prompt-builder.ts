@@ -40,3 +40,30 @@ export function buildSystemPrompt(context: string): string {
 export function buildUserPrompt(diff: string): string {
   return `Review this diff:\n\n${diff}`;
 }
+
+export interface SSHPromptOptions {
+  branch?: string;
+  diff?: string;
+  pr?: number;
+}
+
+export function buildSSHUserPrompt(options: SSHPromptOptions = {}): string {
+  let diffCommand: string;
+
+  if (typeof options.pr === "number") {
+    diffCommand = `gh pr diff ${options.pr}`;
+  } else if (options.diff) {
+    diffCommand = `git diff ${options.diff}`;
+  } else if (options.branch) {
+    diffCommand = `git diff $(git merge-base ${options.branch} HEAD)`;
+  } else {
+    diffCommand = `git diff $(git merge-base $(git symbolic-ref refs/remotes/origin/HEAD --short 2>/dev/null || echo origin/main) HEAD)`;
+  }
+
+  return [
+    "1. Run this command to get the diff:",
+    `   ${diffCommand}`,
+    "2. Read AGENTS.md or CLAUDE.md from the project root if either exists.",
+    "3. Review the diff following your instructions and return the JSON result.",
+  ].join("\n");
+}
