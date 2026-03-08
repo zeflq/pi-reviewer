@@ -154,6 +154,8 @@ tests/
 - [x] Add hard cap with warning when diff exceeds limit (100k chars) — affects CLI, CI, and agent mode
 - [x] Surface truncation warning to user (`⚠ Diff truncated — N files excluded`)
 - [x] Add tests for filter rules and truncation behavior
+- [x] Fix truncation to drop whole file sections instead of slicing the string mid-diff (section-boundary truncation)
+- [x] Append skipped file names to the user prompt so the agent acknowledges them in its summary
 
 ### ✅ 9. SSH support (`--ssh`)
 

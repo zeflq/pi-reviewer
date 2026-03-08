@@ -20,6 +20,7 @@ export const DEFAULT_MAX_CHARS = 100_000;
 export interface FilterResult {
   diff: string;
   warning?: string;
+  skippedFiles?: string[];
 }
 
 function isNoise(filePath: string): boolean {
@@ -47,20 +48,36 @@ export function filterDiff(raw: string, maxChars = DEFAULT_MAX_CHARS): FilterRes
     }
   }
 
-  let diff = kept.join("");
   const warnings: string[] = [];
 
   if (excluded.length > 0) {
     warnings.push(`${excluded.length} noise file${excluded.length > 1 ? "s" : ""} excluded (${excluded.join(", ")})`);
   }
 
-  if (diff.length > maxChars) {
-    diff = diff.slice(0, maxChars);
-    warnings.push(`diff truncated at ${maxChars.toLocaleString()} chars`);
+  const included: string[] = [];
+  const skippedFiles: string[] = [];
+  let totalChars = 0;
+
+  for (const section of kept) {
+    if (totalChars + section.length > maxChars) {
+      const firstLine = section.split("\n")[0];
+      const filePath = parseFilePath(firstLine);
+      skippedFiles.push(filePath ?? firstLine);
+    } else {
+      included.push(section);
+      totalChars += section.length;
+    }
+  }
+
+  if (skippedFiles.length > 0) {
+    warnings.push(
+      `${skippedFiles.length} file${skippedFiles.length > 1 ? "s" : ""} skipped — diff exceeded ${maxChars.toLocaleString()} chars (${skippedFiles.join(", ")})`
+    );
   }
 
   return {
-    diff,
+    diff: included.join(""),
     warning: warnings.length > 0 ? `⚠ ${warnings.join(" — ")}` : undefined,
+    skippedFiles: skippedFiles.length > 0 ? skippedFiles : undefined,
   };
 }

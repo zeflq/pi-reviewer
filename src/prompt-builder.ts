@@ -37,8 +37,39 @@ export function buildSystemPrompt(context: string): string {
   return `${basePrompt}\n\n--- Project conventions (AGENTS.md / CLAUDE.md) ---\n${context}\n---`;
 }
 
-export function buildUserPrompt(diff: string): string {
-  return `Review this diff:\n\n${diff}`;
+export function buildUserPrompt(diff: string, skippedFiles?: string[]): string {
+  let prompt = `Review this diff:\n\n${diff}`;
+  if (skippedFiles && skippedFiles.length > 0) {
+    prompt += `\n\n⚠ The following files were not included because the diff exceeded the size limit. Mention them explicitly in your summary as not reviewed:\n${skippedFiles.map((f) => `- ${f}`).join("\n")}`;
+  }
+  return prompt;
+}
+
+export interface SSHPromptOptions {
+  branch?: string;
+  diff?: string;
+  pr?: number;
+}
+
+export function buildSSHUserPrompt(options: SSHPromptOptions = {}): string {
+  let diffCommand: string;
+
+  if (typeof options.pr === "number") {
+    diffCommand = `gh pr diff ${options.pr}`;
+  } else if (options.diff) {
+    diffCommand = `git diff ${options.diff}`;
+  } else if (options.branch) {
+    diffCommand = `git diff $(git merge-base ${options.branch} HEAD)`;
+  } else {
+    diffCommand = `git diff $(git merge-base $(git symbolic-ref refs/remotes/origin/HEAD --short 2>/dev/null || echo origin/main) HEAD)`;
+  }
+
+  return [
+    "1. Run this command to get the diff:",
+    `   ${diffCommand}`,
+    "2. Read AGENTS.md or CLAUDE.md from the project root if either exists.",
+    "3. Review the diff following your instructions and return the JSON result.",
+  ].join("\n");
 }
 
 export interface SSHPromptOptions {
