@@ -25,6 +25,20 @@ describe("prompt-builder", () => {
     expect(prompt).toContain("some diff");
   });
 
+  it("buildUserPrompt appends skipped files notice when provided", () => {
+    const prompt = buildUserPrompt("some diff", ["src/big.ts", "src/huge.ts"]);
+
+    expect(prompt).toContain("not reviewed");
+    expect(prompt).toContain("src/big.ts");
+    expect(prompt).toContain("src/huge.ts");
+  });
+
+  it("buildUserPrompt does not append notice when skippedFiles is empty", () => {
+    const prompt = buildUserPrompt("some diff", []);
+
+    expect(prompt).not.toContain("not reviewed");
+  });
+
   it("system prompt includes JSON keys summary and comments", () => {
     const prompt = buildSystemPrompt("");
 

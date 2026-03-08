@@ -56,7 +56,7 @@ export async function review(options: ReviewOptions): Promise<void> {
   const githubToken = options.githubToken ?? process.env.GITHUB_TOKEN;
   const repo = options.repo ?? process.env.GITHUB_REPOSITORY;
 
-  const { diff, source, warning } = await resolveDiff({
+  const { diff, source, warning, skippedFiles } = await resolveDiff({
     pr: options.pr,
     diff: options.diff,
     branch: options.branch,
@@ -69,7 +69,7 @@ export async function review(options: ReviewOptions): Promise<void> {
   console.log(`[pi-reviewer] context: ${context ? "AGENTS.md loaded" : "no AGENTS.md found"}`);
 
   const systemPrompt = buildSystemPrompt(context);
-  const userPrompt = buildUserPrompt(diff);
+  const userPrompt = buildUserPrompt(diff, skippedFiles);
 
   const target: OutputTarget =
     options.output ?? (process.env.GITHUB_ACTIONS === "true" ? "comment" : "terminal");
