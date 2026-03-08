@@ -68,6 +68,6 @@ export async function resolveDiff(options) {
         }
     }
     ensureNonEmptyDiff(raw);
-    const { diff, warning } = filterDiff(raw);
-    return { diff, source, warning };
+    const { diff, warning, skippedFiles } = filterDiff(raw);
+    return { diff, source, warning, skippedFiles };
 }

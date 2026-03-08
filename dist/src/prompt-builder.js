@@ -34,8 +34,12 @@ export function buildSystemPrompt(context) {
     }
     return `${basePrompt}\n\n--- Project conventions (AGENTS.md / CLAUDE.md) ---\n${context}\n---`;
 }
-export function buildUserPrompt(diff) {
-    return `Review this diff:\n\n${diff}`;
+export function buildUserPrompt(diff, skippedFiles) {
+    let prompt = `Review this diff:\n\n${diff}`;
+    if (skippedFiles && skippedFiles.length > 0) {
+        prompt += `\n\n⚠ The following files were not included because the diff exceeded the size limit. Mention them explicitly in your summary as not reviewed:\n${skippedFiles.map((f) => `- ${f}`).join("\n")}`;
+    }
+    return prompt;
 }
 export function buildSSHUserPrompt(options = {}) {
     let diffCommand;
