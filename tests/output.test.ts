@@ -45,6 +45,18 @@ describe("parseAgentResponse", () => {
     expect(result).toEqual({ summary: "not-json", comments: [] });
   });
 
+  it("parses JSON wrapped in markdown code fences", () => {
+    const json = JSON.stringify({ summary: "looks good", comments: [] });
+    const result = parseAgentResponse("```json\n" + json + "\n```");
+    expect(result).toEqual({ summary: "looks good", comments: [] });
+  });
+
+  it("parses JSON wrapped in plain code fences", () => {
+    const json = JSON.stringify({ summary: "looks good", comments: [] });
+    const result = parseAgentResponse("```\n" + json + "\n```");
+    expect(result).toEqual({ summary: "looks good", comments: [] });
+  });
+
   it("falls back when JSON is missing required fields", () => {
     const result = parseAgentResponse(JSON.stringify({ summary: "Only summary" }));
 

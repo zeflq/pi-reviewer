@@ -12,7 +12,8 @@ function isReviewComment(value) {
 }
 export function parseAgentResponse(text) {
     try {
-        const parsed = JSON.parse(text);
+        const stripped = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+        const parsed = JSON.parse(stripped);
         if (parsed &&
             typeof parsed === "object" &&
             typeof parsed.summary === "string" &&
