@@ -36,17 +36,30 @@ export function filterDiff(raw, maxChars = DEFAULT_MAX_CHARS) {
             kept.push(section);
         }
     }
-    let diff = kept.join("");
     const warnings = [];
     if (excluded.length > 0) {
         warnings.push(`${excluded.length} noise file${excluded.length > 1 ? "s" : ""} excluded (${excluded.join(", ")})`);
     }
-    if (diff.length > maxChars) {
-        diff = diff.slice(0, maxChars);
-        warnings.push(`diff truncated at ${maxChars.toLocaleString()} chars`);
+    const included = [];
+    const skippedFiles = [];
+    let totalChars = 0;
+    for (const section of kept) {
+        if (totalChars + section.length > maxChars) {
+            const firstLine = section.split("\n")[0];
+            const filePath = parseFilePath(firstLine);
+            skippedFiles.push(filePath ?? firstLine);
+        }
+        else {
+            included.push(section);
+            totalChars += section.length;
+        }
+    }
+    if (skippedFiles.length > 0) {
+        warnings.push(`${skippedFiles.length} file${skippedFiles.length > 1 ? "s" : ""} skipped — diff exceeded ${maxChars.toLocaleString()} chars (${skippedFiles.join(", ")})`);
     }
     return {
-        diff,
+        diff: included.join(""),
         warning: warnings.length > 0 ? `⚠ ${warnings.join(" — ")}` : undefined,
+        skippedFiles: skippedFiles.length > 0 ? skippedFiles : undefined,
     };
 }

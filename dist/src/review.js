@@ -36,7 +36,7 @@ export async function review(options) {
     const cwd = options.cwd ?? process.cwd();
     const githubToken = options.githubToken ?? process.env.GITHUB_TOKEN;
     const repo = options.repo ?? process.env.GITHUB_REPOSITORY;
-    const { diff, source, warning } = await resolveDiff({
+    const { diff, source, warning, skippedFiles } = await resolveDiff({
         pr: options.pr,
         diff: options.diff,
         branch: options.branch,
@@ -48,7 +48,7 @@ export async function review(options) {
     const context = await loadContext({ cwd });
     console.log(`[pi-reviewer] context: ${context ? "AGENTS.md loaded" : "no AGENTS.md found"}`);
     const systemPrompt = buildSystemPrompt(context);
-    const userPrompt = buildUserPrompt(diff);
+    const userPrompt = buildUserPrompt(diff, skippedFiles);
     const target = options.output ?? (process.env.GITHUB_ACTIONS === "true" ? "comment" : "terminal");
     if (options.dryRun) {
         console.log(`Diff source: ${source}`);
