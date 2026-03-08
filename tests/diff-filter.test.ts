@@ -44,18 +44,33 @@ describe("filterDiff", () => {
     expect(warning).toMatch(/2 noise files excluded/);
   });
 
-  it("truncates diff exceeding maxChars", () => {
-    const big = makeDiffSection("src/index.ts") + "x".repeat(200);
-    const { diff, warning } = filterDiff(big, 50);
-    expect(diff.length).toBe(50);
-    expect(warning).toMatch(/truncated at 50 chars/);
+  it("skips whole sections when diff exceeds maxChars", () => {
+    const sectionA = makeDiffSection("src/a.ts");
+    const sectionB = makeDiffSection("src/b.ts");
+    const maxChars = sectionA.length + 1; // fits A, not B
+    const { diff, warning, skippedFiles } = filterDiff(sectionA + sectionB, maxChars);
+    expect(diff).toContain("src/a.ts");
+    expect(diff).not.toContain("src/b.ts");
+    expect(skippedFiles).toEqual(["src/b.ts"]);
+    expect(warning).toMatch(/1 file skipped/);
+    expect(warning).toContain("src/b.ts");
   });
 
-  it("combines noise exclusion and truncation warnings", () => {
-    const raw = makeDiffSection("package-lock.json") + makeDiffSection("src/index.ts") + "x".repeat(200);
-    const { warning } = filterDiff(raw, 50);
+  it("never slices a section mid-way", () => {
+    const section = makeDiffSection("src/index.ts");
+    const maxChars = Math.floor(section.length / 2); // smaller than one section
+    const { diff, skippedFiles } = filterDiff(section, maxChars);
+    expect(diff).toBe("");
+    expect(skippedFiles).toEqual(["src/index.ts"]);
+  });
+
+  it("combines noise exclusion and size-skip warnings", () => {
+    const sectionA = makeDiffSection("src/index.ts");
+    const raw = makeDiffSection("package-lock.json") + sectionA + makeDiffSection("src/big.ts");
+    const maxChars = sectionA.length + 1;
+    const { warning } = filterDiff(raw, maxChars);
     expect(warning).toMatch(/noise file/);
-    expect(warning).toMatch(/truncated/);
+    expect(warning).toMatch(/skipped/);
   });
 
   it("uses DEFAULT_MAX_CHARS by default", () => {

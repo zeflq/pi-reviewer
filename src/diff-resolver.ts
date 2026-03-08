@@ -13,6 +13,7 @@ export interface DiffResult {
   diff: string;
   source: string;
   warning?: string;
+  skippedFiles?: string[];
 }
 
 const EMPTY_DIFF_ERROR =
@@ -88,6 +89,6 @@ export async function resolveDiff(options: DiffOptions): Promise<DiffResult> {
   }
 
   ensureNonEmptyDiff(raw);
-  const { diff, warning } = filterDiff(raw);
-  return { diff, source, warning };
+  const { diff, warning, skippedFiles } = filterDiff(raw);
+  return { diff, source, warning, skippedFiles };
 }

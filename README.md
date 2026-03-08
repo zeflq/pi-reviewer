@@ -68,6 +68,17 @@ The status bar shows which branches are being compared:
 Reviewing feature/my-branch vs origin/develop...
 ```
 
+**Diff size handling**
+
+Before the diff reaches the agent, pi-reviewer automatically filters out noise files (lockfiles, `dist/`, `build/`, `.next/`, `node_modules/`, minified files, `.d.ts` files) to keep the review focused.
+
+If the remaining diff still exceeds 100k characters, whole file sections are dropped — never sliced mid-hunk — and the agent is explicitly told which files were skipped so it can mention them in its summary as not reviewed.
+
+A warning is surfaced in the console whenever files are excluded or skipped:
+```
+⚠ 1 noise file excluded (package-lock.json) — 2 files skipped — diff exceeded 100,000 chars (src/big.ts, src/huge.ts)
+```
+
 ## Project conventions
 
 Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
