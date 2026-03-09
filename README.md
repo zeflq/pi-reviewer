@@ -24,8 +24,7 @@ Every pull request triggers an automatic review comment posted by `github-action
 | Input | Required | Description |
 |---|---|---|
 | `github-token` | yes | GitHub token to post PR comments |
-| `anthropic-api-key` | one of | Anthropic API key for Claude models |
-| `copilot-api-key` | one of | GitHub Copilot API key |
+| `anthropic-api-key` | yes | Anthropic API key for Claude models |
 | `model` | no | Model to use in `provider/modelId` format (e.g. `anthropic/claude-opus-4-6`) |
 | `post-comment` | no | Post review as a GitHub PR comment (default: `true`) |
 
@@ -44,6 +43,7 @@ Then inside the pi TUI, use the `/review` command:
 /review --branch dev
 /review --pr 42
 /review --diff HEAD~1
+/review --ssh
 /review --dry-run
 ```
 
@@ -81,7 +81,7 @@ A warning is surfaced in the console whenever files are excluded or skipped:
 
 ## Project conventions
 
-Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
+Create `AGENTS.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
 
 ```markdown
 # Project Conventions
