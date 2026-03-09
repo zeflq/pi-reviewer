@@ -12,8 +12,9 @@ npx github:zeflq/pi-reviewer init
 
 This generates `.github/workflows/pi-review.yml`. Commit it to your default branch.
 
-Then add your API key to your repo secrets:
-- `ANTHROPIC_API_KEY` — required
+Then add your API key to your repo secrets (at least one required):
+- `ANTHROPIC_API_KEY` — for Claude models
+- `COPILOT_API_KEY` — for GitHub Copilot models
 
 ## CI usage
 
@@ -44,6 +45,7 @@ Then inside the pi TUI, use the `/review` command:
 /review --branch dev
 /review --pr 42
 /review --diff HEAD~1
+/review --ssh
 /review --dry-run
 ```
 
@@ -81,7 +83,7 @@ A warning is surfaced in the console whenever files are excluded or skipped:
 
 ## Project conventions
 
-Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
+Create `AGENTS.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
 
 ```markdown
 # Project Conventions
