@@ -58,15 +58,16 @@ export default function (pi: ExtensionAPI): void {
           // tools (Bash, Read, Write) are already SSH-redirected — no subprocess needed.
           // Single-turn: user prompt instructs the agent to fetch diff, review,
           // and write pi-review.md via the Write tool in one pass.
-          let fired = false;
+          let done = false;
 
           pi.on("before_agent_start", async () => {
-            if (fired) return {};
-            fired = true;
+            if (done) return {};
             return { systemPrompt };
           });
 
           pi.on("agent_end", async () => {
+            if (done) return;
+            done = true;
             stopLoader();
             ctx.ui.notify("Review saved → pi-review.md");
           });
