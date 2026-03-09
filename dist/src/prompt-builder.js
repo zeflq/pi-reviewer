@@ -83,7 +83,8 @@ export function buildSSHUserPrompt(options = {}) {
         "3. Review the diff. Write your findings as markdown with:",
         "   - A summary section with bullet points prefixed by CRITICAL / WARN / INFO",
         "   - An inline comments section listing file, line, and comment for each finding",
-        "4. Use the Write tool to save your markdown review to pi-review.md in the current working directory.",
+        "4. Run `git rev-parse --show-toplevel` to get the absolute project root path.",
+        "   Use the Write tool to save your markdown review to <project_root>/pi-review.md.",
         "   The file must contain readable markdown — not JSON, not code-fenced JSON.",
     ].join("\n");
 }
