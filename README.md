@@ -12,8 +12,9 @@ npx github:zeflq/pi-reviewer init
 
 This generates `.github/workflows/pi-review.yml`. Commit it to your default branch.
 
-Then add your API key to your repo secrets:
-- `ANTHROPIC_API_KEY` — required
+Then add your API key to your repo secrets (at least one required):
+- `ANTHROPIC_API_KEY` — for Claude models
+- `COPILOT_API_KEY` — for GitHub Copilot models
 
 ## CI usage
 
