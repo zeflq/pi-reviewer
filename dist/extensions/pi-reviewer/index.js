@@ -9,6 +9,29 @@ import { buildSSHUserPrompt, buildSystemPrompt, buildUserPrompt } from "../../sr
 import { parseArgs } from "./args.js";
 import { createEventAccumulator } from "./events.js";
 import { setReviewFooter } from "./footer.js";
+function extractLastAssistantText(messages) {
+    if (!Array.isArray(messages))
+        return "";
+    for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i];
+        if (msg?.role !== "assistant")
+            continue;
+        if (typeof msg.content === "string")
+            return msg.content.trim();
+        if (Array.isArray(msg.content)) {
+            return msg.content
+                .map((p) => {
+                if (typeof p === "string")
+                    return p;
+                const part = p;
+                return part?.type === "text" ? (part.text ?? "") : "";
+            })
+                .join("")
+                .trim();
+        }
+    }
+    return "";
+}
 export default function (pi) {
     pi.registerCommand("review", {
         description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --ssh, --dry-run)",
@@ -45,6 +68,34 @@ export default function (pi) {
                     return;
                 }
                 stopLoader = setReviewFooter(ctx, source);
+                if (parsed.ssh) {
+                    // In SSH mode, run the review inside the current session so the agent's
+                    // tools (Bash, Read) are already SSH-redirected — no subprocess needed.
+                    let fired = false;
+                    pi.on("before_agent_start", async () => {
+                        if (fired)
+                            return {};
+                        fired = true;
+                        return { systemPrompt };
+                    });
+                    pi.on("agent_end", async (event) => {
+                        stopLoader();
+                        const messages = event.messages;
+                        const text = extractLastAssistantText(messages);
+                        if (!text) {
+                            ctx.ui.notify("Review completed but agent returned no text.", "error");
+                            return;
+                        }
+                        const date = new Date().toISOString().replace("T", " ").slice(0, 19);
+                        const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${text}\n`;
+                        const outPath = path.join(ctx.cwd, "pi-review.md");
+                        writeFile(outPath, markdown, "utf-8")
+                            .then(() => ctx.ui.notify("Review saved → pi-review.md"))
+                            .catch((err) => ctx.ui.notify(`Failed to write pi-review.md: ${err.message}`, "error"));
+                    });
+                    pi.sendUserMessage(userPrompt);
+                    return;
+                }
                 const tempPath = path.join(tmpdir(), `pi-reviewer-system-prompt-${randomUUID()}.md`);
                 await writeFile(tempPath, systemPrompt, { encoding: "utf-8", mode: 0o600 });
                 try {
