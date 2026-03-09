@@ -81,7 +81,10 @@ A warning is surfaced in the console whenever files are excluded or skipped:
 
 ## Project conventions
 
-Create `AGENTS.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
+Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
+
+- `AGENTS.md` is checked first; `CLAUDE.md` is used as a fallback if `AGENTS.md` is not found.
+- Markdown links to other `.md` files (e.g. `[api conventions](./docs/api.md)`) are automatically inlined so the agent sees the full context.
 
 ```markdown
 # Project Conventions
@@ -90,6 +93,8 @@ Create `AGENTS.md` at the root of your project to give the reviewer context abou
 - Prefix async data fetchers with `fetch` (e.g. `fetchUser`, `fetchOrders`)
 - Prefix boolean functions with `is`, `has`, or `can`
 - Prefix mutations with a verb: `update`, `delete`, `create`, `reset`
+
+[API conventions](./docs/api-conventions.md)
 ```
 
 ## Bot identity

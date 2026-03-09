@@ -142,11 +142,12 @@ tests/
 - [ ] Route to correct provider based on `model` input prefix or key type
 - [ ] Update README inputs table
 
-### 7. Project conventions file support
+### ✅ 7. Project conventions file support
 
-- [ ] Read `CLAUDE.md` in addition to `AGENTS.md` when loading project context
-- [ ] Priority order: `AGENTS.md` → `CLAUDE.md` (first found wins, or merge both)
-- [ ] Update docs + tests
+- [x] Read `CLAUDE.md` in addition to `AGENTS.md` when loading project context
+- [x] Priority order: `AGENTS.md` → `CLAUDE.md` (first found wins)
+- [x] Resolve markdown links to other `.md` files in `loadContext` — inline referenced file content so the agent sees the full context (e.g. `[conventions](./docs/api-conventions.md)`)
+- [x] Update docs + tests
 
 ### ✅ 8. Diff size handling
 
@@ -166,6 +167,14 @@ tests/
 - [x] System prompt unchanged — agent still returns same JSON review format
 - [x] No runtime check for ssh.ts — document that `--ssh` requires an SSH extension (e.g. ssh.ts) to be installed; without it, falls back silently to local execution
 - [x] Update README with `--ssh` usage example and prerequisite note
+
+### 11. Severity filtering (`--min-severity`)
+
+- [ ] Add `--min-severity info|warn|critical` flag to `/review` command (default: `info`)
+- [ ] Add `min-severity` input to `action.yml` (default: `info`)
+- [ ] Pass threshold to `buildSystemPrompt` so the agent is instructed to skip below-threshold issues (saves tokens)
+- [ ] Filter `comments` in `parseAgentResponse` output as a safety net — drop comments below threshold before posting
+- [ ] Update README + tests
 
 ### 10. Custom system prompt
 
