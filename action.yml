@@ -11,10 +11,6 @@ inputs:
     description: "Anthropic API key for Claude models"
     required: false
 
-  copilot-api-key:
-    description: "GitHub Copilot API key"
-    required: false
-
   model:
     description: "Model to use in provider/modelId format (e.g. anthropic/claude-opus-4-6)"
     required: false
@@ -30,8 +26,8 @@ runs:
     - name: Validate API key
       shell: bash
       run: |
-        if [ -z "${{ inputs.anthropic-api-key }}" ] && [ -z "${{ inputs.copilot-api-key }}" ]; then
-          echo "Error: at least one of anthropic-api-key or copilot-api-key must be provided"
+        if [ -z "${{ inputs.anthropic-api-key }}" ]; then
+          echo "Error: anthropic-api-key is required"
           exit 1
         fi
 

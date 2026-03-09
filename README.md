@@ -12,9 +12,8 @@ npx github:zeflq/pi-reviewer init
 
 This generates `.github/workflows/pi-review.yml`. Commit it to your default branch.
 
-Then add your API key to your repo secrets (at least one required):
-- `ANTHROPIC_API_KEY` — for Claude models
-- `COPILOT_API_KEY` — for GitHub Copilot models
+Then add your API key to your repo secrets:
+- `ANTHROPIC_API_KEY` — required
 
 ## CI usage
 
@@ -25,8 +24,7 @@ Every pull request triggers an automatic review comment posted by `github-action
 | Input | Required | Description |
 |---|---|---|
 | `github-token` | yes | GitHub token to post PR comments |
-| `anthropic-api-key` | one of | Anthropic API key for Claude models |
-| `copilot-api-key` | one of | GitHub Copilot API key |
+| `anthropic-api-key` | yes | Anthropic API key for Claude models |
 | `model` | no | Model to use in `provider/modelId` format (e.g. `anthropic/claude-opus-4-6`) |
 | `post-comment` | no | Post review as a GitHub PR comment (default: `true`) |
 
