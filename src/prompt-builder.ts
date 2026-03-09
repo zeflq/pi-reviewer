@@ -69,6 +69,6 @@ export function buildSSHUserPrompt(options: SSHPromptOptions = {}): string {
     `   ${diffCommand}`,
     "2. Read AGENTS.md or CLAUDE.md from the project root if either exists.",
     "3. Review the diff following your instructions and return the JSON result.",
-    "4. Write your full JSON response to pi-review.md in the project root using the Write tool.",
+    "4. Write a human-readable markdown summary of your review to pi-review.md in the project root using the Write tool. Use the summary and comments fields from your JSON — do not write raw JSON.",
   ].join("\n");
 }
