@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { loadContext } from "../../src/context.js";
 import { resolveDiff } from "../../src/diff-resolver.js";
+import { formatForTerminal, parseAgentResponse } from "../../src/output.js";
 import { buildSSHUserPrompt, buildSystemPrompt, buildUserPrompt } from "../../src/prompt-builder.js";
 import { parseArgs } from "./args.js";
 import { createEventAccumulator } from "./events.js";
@@ -86,12 +87,7 @@ export default function (pi) {
                             ctx.ui.notify("Review completed but agent returned no text.", "error");
                             return;
                         }
-                        const date = new Date().toISOString().replace("T", " ").slice(0, 19);
-                        const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${text}\n`;
-                        const outPath = path.join(ctx.cwd, "pi-review.md");
-                        writeFile(outPath, markdown, "utf-8")
-                            .then(() => ctx.ui.notify("Review saved → pi-review.md"))
-                            .catch((err) => ctx.ui.notify(`Failed to write pi-review.md: ${err.message}`, "error"));
+                        ctx.ui.notify("Review complete — pi-review.md written to remote project root.");
                     });
                     pi.sendUserMessage(userPrompt);
                     return;
@@ -142,8 +138,9 @@ export default function (pi) {
                                 reject(new Error(`pi process exited without producing a review.${hint}`));
                                 return;
                             }
+                            const formatted = formatForTerminal(parseAgentResponse(reviewText));
                             const date = new Date().toISOString().replace("T", " ").slice(0, 19);
-                            const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${reviewText}\n`;
+                            const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${formatted}\n`;
                             const outPath = path.join(ctx.cwd, "pi-review.md");
                             writeFile(outPath, markdown, "utf-8")
                                 .then(() => ctx.ui.notify(`Review saved → pi-review.md`))
