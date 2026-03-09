@@ -6,33 +6,10 @@ import path from "node:path";
 import { loadContext } from "../../src/context.js";
 import { resolveDiff } from "../../src/diff-resolver.js";
 import { formatForTerminal, parseAgentResponse } from "../../src/output.js";
-import { buildSSHUserPrompt, buildSystemPrompt, buildUserPrompt } from "../../src/prompt-builder.js";
+import { buildSSHSystemPrompt, buildSSHUserPrompt, buildSystemPrompt, buildUserPrompt } from "../../src/prompt-builder.js";
 import { parseArgs } from "./args.js";
 import { createEventAccumulator } from "./events.js";
 import { setReviewFooter } from "./footer.js";
-function extractLastAssistantText(messages) {
-    if (!Array.isArray(messages))
-        return "";
-    for (let i = messages.length - 1; i >= 0; i--) {
-        const msg = messages[i];
-        if (msg?.role !== "assistant")
-            continue;
-        if (typeof msg.content === "string")
-            return msg.content.trim();
-        if (Array.isArray(msg.content)) {
-            return msg.content
-                .map((p) => {
-                if (typeof p === "string")
-                    return p;
-                const part = p;
-                return part?.type === "text" ? (part.text ?? "") : "";
-            })
-                .join("")
-                .trim();
-        }
-    }
-    return "";
-}
 export default function (pi) {
     pi.registerCommand("review", {
         description: "Review a PR diff with pi-reviewer (flags: --diff, --branch, --pr, --ssh, --dry-run)",
@@ -44,7 +21,7 @@ export default function (pi) {
                 let userPrompt;
                 let source;
                 if (parsed.ssh) {
-                    systemPrompt = buildSystemPrompt("");
+                    systemPrompt = buildSSHSystemPrompt();
                     userPrompt = buildSSHUserPrompt({ branch: parsed.branch, diff: parsed.diff, pr: parsed.pr });
                     source = "remote (ssh)";
                 }
@@ -71,7 +48,9 @@ export default function (pi) {
                 stopLoader = setReviewFooter(ctx, source);
                 if (parsed.ssh) {
                     // In SSH mode, run the review inside the current session so the agent's
-                    // tools (Bash, Read) are already SSH-redirected — no subprocess needed.
+                    // tools (Bash, Read, Write) are already SSH-redirected — no subprocess needed.
+                    // Single-turn: user prompt instructs the agent to fetch diff, review,
+                    // and write pi-review.md via the Write tool in one pass.
                     let fired = false;
                     pi.on("before_agent_start", async () => {
                         if (fired)
@@ -79,15 +58,9 @@ export default function (pi) {
                         fired = true;
                         return { systemPrompt };
                     });
-                    pi.on("agent_end", async (event) => {
+                    pi.on("agent_end", async () => {
                         stopLoader();
-                        const messages = event.messages;
-                        const text = extractLastAssistantText(messages);
-                        if (!text) {
-                            ctx.ui.notify("Review completed but agent returned no text.", "error");
-                            return;
-                        }
-                        ctx.ui.notify("Review complete — pi-review.md written to remote project root.");
+                        ctx.ui.notify("Review saved → pi-review.md");
                     });
                     pi.sendUserMessage(userPrompt);
                     return;

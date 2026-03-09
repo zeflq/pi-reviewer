@@ -45,6 +45,27 @@ export function buildUserPrompt(diff: string, skippedFiles?: string[]): string {
   return prompt;
 }
 
+export function buildSSHSystemPrompt(): string {
+  return [
+    "You are a code reviewer. Review the following PR diff carefully.",
+    "",
+    "Severity tiers:",
+    "- CRITICAL: bugs causing runtime failures, security vulnerabilities, data loss risks",
+    "- WARN: type errors, missing error handling, logic issues, test gaps",
+    "- INFO: style, naming, performance hints, suggestions",
+    "",
+    "Rules:",
+    "- Only flag what is actually wrong in the diff — no hypotheticals",
+    "- If nothing is wrong, say so clearly",
+    "",
+    "Write your review as Markdown with:",
+    "- A summary section with bullet points for each issue (prefix with **CRITICAL**, **WARN**, or **INFO**)",
+    "- An inline comments section listing file, line, and comment for each specific finding",
+    "",
+    "After writing your review, save it to pi-review.md in the project root using the Write tool.",
+  ].join("\n");
+}
+
 export interface SSHPromptOptions {
   branch?: string;
   diff?: string;
@@ -65,10 +86,14 @@ export function buildSSHUserPrompt(options: SSHPromptOptions = {}): string {
   }
 
   return [
-    "1. Run this command to get the diff:",
-    `   ${diffCommand}`,
+    "You are performing a code review. Execute all steps in order:",
+    "",
+    `1. Run this command to get the diff: ${diffCommand}`,
     "2. Read AGENTS.md or CLAUDE.md from the project root if either exists.",
-    "3. Review the diff following your instructions and return the JSON result.",
-    "4. Write a human-readable markdown summary of your review to pi-review.md in the project root using the Write tool. Use the summary and comments fields from your JSON — do not write raw JSON.",
+    "3. Review the diff. Write your findings as markdown with:",
+    "   - A summary section with bullet points prefixed by CRITICAL / WARN / INFO",
+    "   - An inline comments section listing file, line, and comment for each finding",
+    "4. Use the Write tool to save your markdown review to pi-review.md in the current working directory.",
+    "   The file must contain readable markdown — not JSON, not code-fenced JSON.",
   ].join("\n");
 }
