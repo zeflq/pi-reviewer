@@ -80,7 +80,7 @@ function formatForGitHub(result: ReviewResult): string {
   return lines.join("\n");
 }
 
-function formatForTerminal(result: ReviewResult): string {
+export function formatForTerminal(result: ReviewResult): string {
   const lines = ["== Review Summary ==", result.summary];
 
   if (result.comments.length > 0) {

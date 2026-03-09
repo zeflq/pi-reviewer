@@ -42,7 +42,7 @@ function formatForGitHub(result) {
     lines.push("", "---", ATTRIBUTION);
     return lines.join("\n");
 }
-function formatForTerminal(result) {
+export function formatForTerminal(result) {
     const lines = ["== Review Summary ==", result.summary];
     if (result.comments.length > 0) {
         lines.push("", "== Inline Comments ==");
