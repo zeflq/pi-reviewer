@@ -10,9 +10,41 @@ Run once in your project root:
 npx github:zeflq/pi-reviewer init
 ```
 
-This generates `.github/workflows/pi-review.yml`. Commit it to your default branch.
+This generates `.github/workflows/pi-review.yml`:
 
-Then add your API key to your repo secrets:
+```yaml
+name: Pi Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      min-severity:
+        description: 'Minimum severity to report (info, warn, critical)'
+        required: false
+        default: 'info'
+        type: choice
+        options:
+          - info
+          - warn
+          - critical
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: zeflq/pi-reviewer@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          min-severity: ${{ inputs.min-severity || 'info' }}
+```
+
+Commit it to your default branch, then add your API key to your repo secrets:
 - `ANTHROPIC_API_KEY` — required
 
 ## CI usage
@@ -133,6 +165,7 @@ steps:
     with:
       github-token: ${{ steps.bot-token.outputs.token }}
       anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+      min-severity: ${{ inputs.min-severity || 'info' }}
 ```
 
 The review comment will then appear under your GitHub App's name (e.g. `my-bot[bot]`).
