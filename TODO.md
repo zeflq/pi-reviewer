@@ -182,13 +182,14 @@ tests/
 - [x] Render emoji markers in terminal, file, and GitHub comment output
 - [x] Embed emoji in agent system prompt so they appear in all output paths (Reviews API + Issues API)
 
-### 13. REVIEW.md support
+### ✅ 13. REVIEW.md support
 
-- [ ] `loadContext` reads `REVIEW.md` from project root in addition to `AGENTS.md` / `CLAUDE.md`
-- [ ] Merge strategy: `AGENTS.md` / `CLAUDE.md` (project conventions) + `REVIEW.md` (review-specific rules) combined into one context block
-- [ ] Label sections clearly in the system prompt so the agent distinguishes general conventions from review-only rules
-- [ ] Update README with `REVIEW.md` usage example (what to flag, what to skip)
-- [ ] Update tests
+- [x] `loadContext` reads `REVIEW.md` from project root in addition to `AGENTS.md` / `CLAUDE.md`
+- [x] Merge strategy: `AGENTS.md` / `CLAUDE.md` (project conventions) + `REVIEW.md` (review-specific rules) — additive, not a fallback
+- [x] Label sections clearly in the system prompt so the agent distinguishes general conventions from review-only rules
+- [x] Markdown link inlining supported in `REVIEW.md`
+- [x] Update README with `REVIEW.md` usage example (what to flag, what to skip)
+- [x] Update tests
 
 ### 12. GitLab CI/CD support
 
