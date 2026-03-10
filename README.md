@@ -27,6 +27,7 @@ Every pull request triggers an automatic review comment posted by `github-action
 | `anthropic-api-key` | yes | Anthropic API key for Claude models |
 | `model` | no | Model to use in `provider/modelId` format (e.g. `anthropic/claude-opus-4-6`) |
 | `post-comment` | no | Post review as a GitHub PR comment (default: `true`) |
+| `min-severity` | no | Minimum severity to report: `info`, `warn`, or `critical` (default: `info`) |
 
 ## Local review (pi extension)
 
@@ -44,6 +45,7 @@ Then inside the pi TUI, use the `/review` command:
 /review --pr 42
 /review --diff HEAD~1
 /review --ssh
+/review --min-severity warn
 /review --dry-run
 ```
 
@@ -53,6 +55,7 @@ Then inside the pi TUI, use the `/review` command:
 | `--pr <number>` | Fetch and review a specific PR diff via `gh` CLI | `--pr 42` |
 | `--diff <ref>` | Review changes since a specific git ref | `--diff HEAD~1` |
 | `--ssh` | SSH mode: skip local diff resolution, let the agent fetch the diff and conventions via its tools (requires an SSH extension e.g. [ssh.ts](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/examples/extensions/ssh.ts)) | `--ssh` |
+| `--min-severity <level>` | Only report issues at this level and above: `info`, `warn`, or `critical` (default: `info`) | `--min-severity warn` |
 | `--dry-run` | Print the diff and prompt without calling the agent | |
 
 The review output is saved to `pi-review.md` in your project root.

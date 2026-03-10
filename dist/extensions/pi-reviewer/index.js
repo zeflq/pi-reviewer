@@ -21,7 +21,7 @@ export default function (pi) {
                 let userPrompt;
                 let source;
                 if (parsed.ssh) {
-                    systemPrompt = buildSSHSystemPrompt();
+                    systemPrompt = buildSSHSystemPrompt(parsed.minSeverity);
                     userPrompt = buildSSHUserPrompt({ branch: parsed.branch, diff: parsed.diff, pr: parsed.pr });
                     source = "remote (ssh)";
                 }
@@ -35,7 +35,7 @@ export default function (pi) {
                     if (warning)
                         ctx.ui.notify(warning, "warning");
                     const context = await loadContext({ cwd: ctx.cwd });
-                    systemPrompt = buildSystemPrompt(context);
+                    systemPrompt = buildSystemPrompt(context, parsed.minSeverity);
                     userPrompt = buildUserPrompt(diff);
                     source = resolvedSource;
                 }
@@ -113,7 +113,7 @@ export default function (pi) {
                                 reject(new Error(`pi process exited without producing a review.${hint}`));
                                 return;
                             }
-                            const formatted = formatForTerminal(parseAgentResponse(reviewText));
+                            const formatted = formatForTerminal(parseAgentResponse(reviewText, parsed.minSeverity));
                             const date = new Date().toISOString().replace("T", " ").slice(0, 19);
                             const markdown = `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${formatted}\n`;
                             const outPath = path.join(ctx.cwd, "pi-review.md");

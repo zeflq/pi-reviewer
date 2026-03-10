@@ -45,4 +45,24 @@ describe("prompt-builder", () => {
     expect(prompt).toContain('"summary"');
     expect(prompt).toContain('"comments"');
   });
+
+  it("buildSystemPrompt with minSeverity WARN adds skip-INFO rule", () => {
+    const prompt = buildSystemPrompt("", "WARN");
+
+    expect(prompt).toContain("skip INFO");
+    expect(prompt).not.toContain("skip WARN");
+  });
+
+  it("buildSystemPrompt with minSeverity CRITICAL adds skip-WARN-and-INFO rule", () => {
+    const prompt = buildSystemPrompt("", "CRITICAL");
+
+    expect(prompt).toContain("skip WARN and INFO");
+  });
+
+  it("buildSystemPrompt with default minSeverity adds no skip rule", () => {
+    const prompt = buildSystemPrompt("");
+
+    expect(prompt).not.toContain("skip INFO");
+    expect(prompt).not.toContain("skip WARN");
+  });
 });

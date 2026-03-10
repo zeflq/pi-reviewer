@@ -26,7 +26,7 @@ describe("parseAgentResponse", () => {
       JSON.stringify({
         summary: "Overall review",
         comments: [
-          { file: "src/a.ts", line: 10, side: "RIGHT", body: "Nice improvement" },
+          { file: "src/a.ts", line: 10, side: "RIGHT", severity: "WARN", body: "Nice improvement" },
         ],
       })
     );
@@ -34,7 +34,7 @@ describe("parseAgentResponse", () => {
     expect(result).toEqual({
       summary: "Overall review",
       comments: [
-        { file: "src/a.ts", line: 10, side: "RIGHT", body: "Nice improvement" },
+        { file: "src/a.ts", line: 10, side: "RIGHT", severity: "WARN", body: "Nice improvement" },
       ],
     });
   });
@@ -57,6 +57,18 @@ describe("parseAgentResponse", () => {
     expect(result).toEqual({ summary: "looks good", comments: [] });
   });
 
+  it("parses JSON when agent adds preamble text before the fence", () => {
+    const json = JSON.stringify({ summary: "looks good", comments: [] });
+    const result = parseAgentResponse("Here is my review:\n\n```json\n" + json + "\n```");
+    expect(result).toEqual({ summary: "looks good", comments: [] });
+  });
+
+  it("parses JSON when agent adds preamble and no fence", () => {
+    const json = JSON.stringify({ summary: "looks good", comments: [] });
+    const result = parseAgentResponse("Here is my review:\n\n" + json);
+    expect(result).toEqual({ summary: "looks good", comments: [] });
+  });
+
   it("falls back when JSON is missing required fields", () => {
     const result = parseAgentResponse(JSON.stringify({ summary: "Only summary" }));
 
@@ -64,6 +76,48 @@ describe("parseAgentResponse", () => {
       summary: JSON.stringify({ summary: "Only summary" }),
       comments: [],
     });
+  });
+
+  it("normalizes missing severity to INFO", () => {
+    const result = parseAgentResponse(
+      JSON.stringify({
+        summary: "review",
+        comments: [{ file: "src/a.ts", line: 1, side: "RIGHT", body: "comment" }],
+      })
+    );
+    expect(result.comments[0].severity).toBe("INFO");
+  });
+
+  it("filters out comments below minSeverity", () => {
+    const result = parseAgentResponse(
+      JSON.stringify({
+        summary: "review",
+        comments: [
+          { file: "src/a.ts", line: 1, side: "RIGHT", severity: "INFO", body: "style" },
+          { file: "src/b.ts", line: 2, side: "RIGHT", severity: "WARN", body: "logic issue" },
+          { file: "src/c.ts", line: 3, side: "RIGHT", severity: "CRITICAL", body: "crash" },
+        ],
+      }),
+      "WARN"
+    );
+    expect(result.comments).toHaveLength(2);
+    expect(result.comments.map((c) => c.severity)).toEqual(["WARN", "CRITICAL"]);
+  });
+
+  it("keeps only CRITICAL when minSeverity is CRITICAL", () => {
+    const result = parseAgentResponse(
+      JSON.stringify({
+        summary: "review",
+        comments: [
+          { file: "src/a.ts", line: 1, side: "RIGHT", severity: "INFO", body: "style" },
+          { file: "src/b.ts", line: 2, side: "RIGHT", severity: "WARN", body: "logic" },
+          { file: "src/c.ts", line: 3, side: "RIGHT", severity: "CRITICAL", body: "crash" },
+        ],
+      }),
+      "CRITICAL"
+    );
+    expect(result.comments).toHaveLength(1);
+    expect(result.comments[0].severity).toBe("CRITICAL");
   });
 });
 
@@ -115,7 +169,7 @@ describe("sendOutput", () => {
       content: JSON.stringify({
         summary: "Needs fixes",
         comments: [
-          { file: "src/auth.ts", line: 42, side: "RIGHT", body: "Missing null check" },
+          { file: "src/auth.ts", line: 42, side: "RIGHT", severity: "CRITICAL", body: "Missing null check" },
         ],
       }),
       githubToken: "token123",
@@ -150,7 +204,7 @@ describe("sendOutput", () => {
       target: "comment",
       content: JSON.stringify({
         summary: "Needs fixes",
-        comments: [{ file: "src/auth.ts", line: 42, side: "RIGHT", body: "Missing null check" }],
+        comments: [{ file: "src/auth.ts", line: 42, side: "RIGHT", severity: "WARN", body: "Missing null check" }],
       }),
       githubToken: "token123",
       prNumber: 42,
@@ -247,7 +301,7 @@ describe("sendOutput", () => {
       content: JSON.stringify({
         summary: "Please address comments",
         comments: [
-          { file: "src/a.ts", line: 7, side: "RIGHT", body: "Handle undefined" },
+          { file: "src/a.ts", line: 7, side: "RIGHT", severity: "WARN", body: "Handle undefined" },
         ],
       }),
       cwd: dir,
@@ -255,8 +309,33 @@ describe("sendOutput", () => {
 
     const content = await readFile(path.join(dir, "pi-review.md"), "utf-8");
     expect(content).toBe(
-      "== Review Summary ==\nPlease address comments\n\n== Inline Comments ==\nsrc/a.ts:7 (RIGHT)\nHandle undefined"
+      "== Review Summary ==\nPlease address comments\n\n== Inline Comments ==\n🟡 src/a.ts:7 (RIGHT)\nHandle undefined"
     );
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("pi-review.md"));
+  });
+
+  it("filters comments by minSeverity when posting", async () => {
+    const fetchMock = okFetch();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await sendOutput({
+      target: "comment",
+      content: JSON.stringify({
+        summary: "review",
+        comments: [
+          { file: "src/a.ts", line: 1, side: "RIGHT", severity: "INFO", body: "style" },
+          { file: "src/b.ts", line: 2, side: "RIGHT", severity: "CRITICAL", body: "crash" },
+        ],
+      }),
+      githubToken: "token123",
+      prNumber: 1,
+      repo: "owner/repo",
+      commitId: "abc123",
+      minSeverity: "CRITICAL",
+    });
+
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body);
+    expect(body.comments).toHaveLength(1);
+    expect(body.comments[0].path).toBe("src/b.ts");
   });
 });

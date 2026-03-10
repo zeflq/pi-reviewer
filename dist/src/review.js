@@ -47,7 +47,7 @@ export async function review(options) {
         console.warn(`[pi-reviewer] ${warning}`);
     const context = await loadContext({ cwd });
     console.log(`[pi-reviewer] context: ${context ? "AGENTS.md loaded" : "no AGENTS.md found"}`);
-    const systemPrompt = buildSystemPrompt(context);
+    const systemPrompt = buildSystemPrompt(context, options.minSeverity);
     const userPrompt = buildUserPrompt(diff, skippedFiles);
     const target = options.output ?? (process.env.GITHUB_ACTIONS === "true" ? "comment" : "terminal");
     if (options.dryRun) {
@@ -119,6 +119,7 @@ export async function review(options) {
             prNumber: options.pr,
             repo,
             commitId: options.commitId,
+            minSeverity: options.minSeverity,
         });
     }
     finally {

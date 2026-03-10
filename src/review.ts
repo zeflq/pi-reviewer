@@ -4,8 +4,8 @@ import { createReadOnlyTools } from "@mariozechner/pi-coding-agent";
 
 import { loadContext } from "./context.js";
 import { resolveDiff } from "./diff-resolver.js";
-import { sendOutput, type OutputTarget } from "./output.js";
-import { buildSystemPrompt, buildUserPrompt } from "./prompt-builder.js";
+import { sendOutput, type OutputTarget, type Severity } from "./output.js";
+import { buildSystemPrompt, buildUserPrompt, type MinSeverity } from "./prompt-builder.js";
 
 export interface ReviewOptions {
   cwd?: string;
@@ -19,6 +19,7 @@ export interface ReviewOptions {
   repo?: string;
   commitId?: string;
   model?: string; // format: "provider/modelId" e.g. "anthropic/claude-opus-4-6"
+  minSeverity?: MinSeverity;
 }
 
 function extractAssistantText(messages: unknown): string {
@@ -68,7 +69,7 @@ export async function review(options: ReviewOptions): Promise<void> {
   const context = await loadContext({ cwd });
   console.log(`[pi-reviewer] context: ${context ? "AGENTS.md loaded" : "no AGENTS.md found"}`);
 
-  const systemPrompt = buildSystemPrompt(context);
+  const systemPrompt = buildSystemPrompt(context, options.minSeverity);
   const userPrompt = buildUserPrompt(diff, skippedFiles);
 
   const target: OutputTarget =
@@ -153,6 +154,7 @@ export async function review(options: ReviewOptions): Promise<void> {
       prNumber: options.pr,
       repo,
       commitId: options.commitId,
+      minSeverity: options.minSeverity as Severity | undefined,
     });
   } finally {
     unsubscribe?.();

@@ -23,8 +23,13 @@ if (!prInfo) {
     process.exit(1);
 }
 console.log(`[pi-reviewer] starting review for PR #${prInfo.number} in ${process.env.GITHUB_REPOSITORY ?? "unknown repo"}`);
+const minSeverityRaw = process.env.MIN_SEVERITY?.toUpperCase();
+const minSeverity = minSeverityRaw === "CRITICAL" || minSeverityRaw === "WARN" || minSeverityRaw === "INFO"
+    ? minSeverityRaw
+    : undefined;
 await review({
     pr: prInfo.number,
     commitId: prInfo.headSha,
     output: "comment",
+    minSeverity,
 });

@@ -2,11 +2,15 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export type OutputTarget = "terminal" | "comment" | "file";
+export type Severity = "CRITICAL" | "WARN" | "INFO";
+
+const SEVERITY_RANK: Record<Severity, number> = { INFO: 0, WARN: 1, CRITICAL: 2 };
 
 export interface ReviewComment {
   file: string;
   line: number;
   side: "LEFT" | "RIGHT";
+  severity: Severity;
   body: string;
 }
 
@@ -23,6 +27,12 @@ export interface OutputOptions {
   prNumber?: number;
   repo?: string;
   commitId?: string;
+  minSeverity?: Severity;
+}
+
+function normalizeSeverity(value: unknown): Severity {
+  if (value === "CRITICAL" || value === "WARN" || value === "INFO") return value;
+  return "INFO";
 }
 
 function isReviewComment(value: unknown): value is ReviewComment {
@@ -37,30 +47,55 @@ function isReviewComment(value: unknown): value is ReviewComment {
   );
 }
 
-export function parseAgentResponse(text: string): ReviewResult {
+function tryParseJSON(raw: string): Record<string, unknown> | null {
   try {
-    const stripped = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-    const parsed = JSON.parse(stripped) as Record<string, unknown>;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+  } catch {
+    // not valid JSON
+  }
+  return null;
+}
+
+export function parseAgentResponse(text: string, minSeverity: Severity = "INFO"): ReviewResult {
+  const candidates: string[] = [];
+
+  // 1. raw text
+  candidates.push(text.trim());
+
+  // 2. content inside any ```json ... ``` or ``` ... ``` fence
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch) candidates.push(fenceMatch[1].trim());
+
+  // 3. first { to last } in the whole text
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start !== -1 && end > start) candidates.push(text.slice(start, end + 1));
+
+  for (const candidate of candidates) {
+    const parsed = tryParseJSON(candidate);
     if (
       parsed &&
-      typeof parsed === "object" &&
       typeof parsed.summary === "string" &&
       Array.isArray(parsed.comments) &&
       parsed.comments.every(isReviewComment)
     ) {
+      const minRank = SEVERITY_RANK[minSeverity];
       return {
         summary: parsed.summary,
-        comments: parsed.comments,
+        comments: parsed.comments
+          .map((c) => ({ ...c, severity: normalizeSeverity(c.severity) }))
+          .filter((c) => SEVERITY_RANK[c.severity] >= minRank),
       };
     }
-  } catch {
-    // graceful fallback below
   }
 
   return { summary: text, comments: [] };
 }
 
 const ATTRIBUTION = "*Review by [pi-reviewer](https://github.com/zeflq/pi-reviewer)*";
+
+const SEVERITY_EMOJI: Record<Severity, string> = { CRITICAL: "🔴", WARN: "🟡", INFO: "🔵" };
 
 function formatForGitHub(result: ReviewResult): string {
   const lines = ["## Pi Reviewer", "", result.summary];
@@ -70,7 +105,7 @@ function formatForGitHub(result: ReviewResult): string {
     for (const comment of result.comments) {
       lines.push(
         "",
-        `**\`${comment.file}:${comment.line}\`** · ${comment.side}`,
+        `${SEVERITY_EMOJI[comment.severity]} **\`${comment.file}:${comment.line}\`** · ${comment.side}`,
         comment.body
       );
     }
@@ -87,7 +122,7 @@ export function formatForTerminal(result: ReviewResult): string {
     lines.push("", "== Inline Comments ==");
     for (const comment of result.comments) {
       lines.push(
-        `${comment.file}:${comment.line} (${comment.side})`,
+        `${SEVERITY_EMOJI[comment.severity]} ${comment.file}:${comment.line} (${comment.side})`,
         comment.body,
         ""
       );
@@ -102,7 +137,7 @@ export function formatForTerminal(result: ReviewResult): string {
 }
 
 export async function sendOutput(options: OutputOptions): Promise<void> {
-  const result = parseAgentResponse(options.content);
+  const result = parseAgentResponse(options.content, options.minSeverity);
 
   if (options.target === "terminal") {
     console.log(formatForTerminal(result));

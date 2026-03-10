@@ -20,6 +20,11 @@ inputs:
     required: false
     default: "true"
 
+  min-severity:
+    description: "Minimum severity level to report: info, warn, or critical (default: info)"
+    required: false
+    default: "info"
+
 runs:
   using: "composite"
   steps:
@@ -49,6 +54,7 @@ runs:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         POST_COMMENT: ${{ inputs.post-comment }}
         PI_REVIEWER_MODEL: ${{ inputs.model }}
+        MIN_SEVERITY: ${{ inputs.min-severity }}
       run: node ${{ github.action_path }}/dist/src/action-entry.js
 
 branding:

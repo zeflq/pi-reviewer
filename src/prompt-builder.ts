@@ -1,4 +1,13 @@
-export function buildSystemPrompt(context: string): string {
+export type MinSeverity = "CRITICAL" | "WARN" | "INFO";
+
+const SEVERITY_RULE: Record<MinSeverity, string | null> = {
+  INFO: null,
+  WARN: "- Only report CRITICAL and WARN issues — skip INFO",
+  CRITICAL: "- Only report CRITICAL issues — skip WARN and INFO",
+};
+
+export function buildSystemPrompt(context: string, minSeverity: MinSeverity = "INFO"): string {
+  const severityRule = SEVERITY_RULE[minSeverity];
   const basePrompt = [
     "You are a code reviewer. Review the following PR diff carefully.",
     "",
@@ -11,6 +20,7 @@ export function buildSystemPrompt(context: string): string {
     "- Only flag what is actually wrong in the diff — no hypotheticals",
     "- Do not repeat what the project conventions already enforce",
     "- If nothing is wrong, say so clearly",
+    ...(severityRule ? [severityRule] : []),
     "",
     "Return only a JSON object with this exact shape (no markdown fences, no extra text):",
     "{",
@@ -45,7 +55,8 @@ export function buildUserPrompt(diff: string, skippedFiles?: string[]): string {
   return prompt;
 }
 
-export function buildSSHSystemPrompt(): string {
+export function buildSSHSystemPrompt(minSeverity: MinSeverity = "INFO"): string {
+  const severityRule = SEVERITY_RULE[minSeverity];
   return [
     "You are a code reviewer. Review the following PR diff carefully.",
     "",
@@ -57,6 +68,7 @@ export function buildSSHSystemPrompt(): string {
     "Rules:",
     "- Only flag what is actually wrong in the diff — no hypotheticals",
     "- If nothing is wrong, say so clearly",
+    ...(severityRule ? [severityRule] : []),
     "",
     "Write your review as Markdown with:",
     "- A summary section with bullet points for each issue (prefix with **CRITICAL**, **WARN**, or **INFO**)",

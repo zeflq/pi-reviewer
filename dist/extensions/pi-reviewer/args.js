@@ -1,6 +1,6 @@
 export function parseArgs(rawArgs) {
     const tokens = rawArgs.trim() ? rawArgs.trim().split(/\s+/) : [];
-    const parsed = { dryRun: false, ssh: false };
+    const parsed = { dryRun: false, ssh: false, minSeverity: "INFO" };
     for (let i = 0; i < tokens.length; i += 1) {
         const token = tokens[i];
         if (token === "--dry-run") {
@@ -24,6 +24,17 @@ export function parseArgs(rawArgs) {
             if (!value)
                 throw new Error("Missing value for --branch");
             parsed.branch = value;
+            i += 1;
+            continue;
+        }
+        if (token === "--min-severity") {
+            const value = tokens[i + 1]?.toUpperCase();
+            if (!value)
+                throw new Error("Missing value for --min-severity");
+            if (value !== "INFO" && value !== "WARN" && value !== "CRITICAL") {
+                throw new Error(`Invalid severity: ${tokens[i + 1]}. Expected info, warn, or critical`);
+            }
+            parsed.minSeverity = value;
             i += 1;
             continue;
         }

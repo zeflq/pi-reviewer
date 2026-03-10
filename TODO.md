@@ -168,13 +168,40 @@ tests/
 - [x] No runtime check for ssh.ts — document that `--ssh` requires an SSH extension (e.g. ssh.ts) to be installed; without it, falls back silently to local execution
 - [x] Update README with `--ssh` usage example and prerequisite note
 
-### 11. Severity filtering (`--min-severity`)
+### ✅ 11. Severity filtering (`--min-severity`)
 
-- [ ] Add `--min-severity info|warn|critical` flag to `/review` command (default: `info`)
-- [ ] Add `min-severity` input to `action.yml` (default: `info`)
-- [ ] Pass threshold to `buildSystemPrompt` so the agent is instructed to skip below-threshold issues (saves tokens)
-- [ ] Filter `comments` in `parseAgentResponse` output as a safety net — drop comments below threshold before posting
-- [ ] Update README + tests
+- [x] Add `--min-severity info|warn|critical` flag to `/review` command (default: `info`)
+- [x] Add `min-severity` input to `action.yml` (default: `info`)
+- [x] Pass threshold to `buildSystemPrompt` so the agent is instructed to skip below-threshold issues (saves tokens)
+- [x] Filter `comments` in `parseAgentResponse` output as a safety net — drop comments below threshold before posting
+- [x] Update tests
+
+### 14. Severity system improvements
+
+- [x] Add emoji markers to severity levels: 🔴 CRITICAL, 🟡 WARN, 🔵 INFO
+- [x] Render emoji markers in terminal, file, and GitHub comment output
+- [ ] Add optional `pre-existing` flag to comments — bug exists in codebase but was not introduced by this PR, rendered as 🟣
+- [ ] Update JSON shape: `{ ..., "pre-existing": true }` on `ReviewComment`
+- [ ] Update system prompt to instruct agent to use the markers and set `pre-existing: true` when the issue is not introduced by the diff
+- [ ] Update `parseAgentResponse` and `formatForTerminal` to handle the new field
+- [ ] Update tests
+
+### 13. REVIEW.md support
+
+- [ ] `loadContext` reads `REVIEW.md` from project root in addition to `AGENTS.md` / `CLAUDE.md`
+- [ ] Merge strategy: `AGENTS.md` / `CLAUDE.md` (project conventions) + `REVIEW.md` (review-specific rules) combined into one context block
+- [ ] Label sections clearly in the system prompt so the agent distinguishes general conventions from review-only rules
+- [ ] Update README with `REVIEW.md` usage example (what to flag, what to skip)
+- [ ] Update tests
+
+### 12. GitLab CI/CD support
+
+- [ ] Add `gitlab` target to `src/output.ts` — post review via GitLab MR Notes API (`POST /projects/:id/merge_requests/:iid/notes`)
+- [ ] Add `src/init-gitlab.ts` — generate `.gitlab-ci.yml` with a merge request pipeline that runs pi-reviewer
+- [ ] Auth via `CI_JOB_TOKEN` or personal access token (`GITLAB_TOKEN`)
+- [ ] Update `init` command to detect platform (GitHub vs GitLab) or accept a `--platform` flag
+- [ ] Update README with GitLab setup instructions
+- [ ] Add tests for GitLab comment output target
 
 ### 10. Custom system prompt
 
