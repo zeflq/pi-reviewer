@@ -58,7 +58,8 @@ You can also trigger a review manually via **Actions → Pi Reviewer → Run wor
 | Input | Required | Description |
 |---|---|---|
 | `github-token` | yes | GitHub token to post PR comments |
-| `anthropic-api-key` | yes | Anthropic API key for Claude models |
+| `anthropic-api-key` | one of | Anthropic API key for Claude models |
+| `pi-api-key` | one of | Pi platform API key — works for all providers, takes priority over `anthropic-api-key` |
 | `model` | no | Model to use in `provider/modelId` format (e.g. `anthropic/claude-opus-4-6`) |
 | `post-comment` | no | Post review as a GitHub PR comment (default: `true`) |
 | `min-severity` | no | Minimum severity to report: `info`, `warn`, or `critical` (default: `info`) |

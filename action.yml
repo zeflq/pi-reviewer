@@ -8,7 +8,11 @@ inputs:
     required: true
 
   anthropic-api-key:
-    description: "Anthropic API key for Claude models"
+    description: "Anthropic API key (required unless pi-api-key is set)"
+    required: false
+
+  pi-api-key:
+    description: "Pi platform API key — works for all providers, takes priority over anthropic-api-key"
     required: false
 
   model:
@@ -31,8 +35,8 @@ runs:
     - name: Validate API key
       shell: bash
       run: |
-        if [ -z "${{ inputs.anthropic-api-key }}" ]; then
-          echo "Error: anthropic-api-key is required"
+        if [ -z "${{ inputs.anthropic-api-key }}" ] && [ -z "${{ inputs.pi-api-key }}" ]; then
+          echo "Error: either anthropic-api-key or pi-api-key is required"
           exit 1
         fi
 
@@ -52,6 +56,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        PI_API_KEY: ${{ inputs.pi-api-key }}
         POST_COMMENT: ${{ inputs.post-comment }}
         PI_REVIEWER_MODEL: ${{ inputs.model }}
         MIN_SEVERITY: ${{ inputs.min-severity }}

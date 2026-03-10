@@ -135,12 +135,12 @@ tests/
 - [x] `dist/` compiled and tracked in git (commit before tagging)
 - [ ] Publish to GitHub Marketplace as `zeflq/pi-reviewer`
 
-### 6. Multi-provider API key support
+### ✅ 6. Multi-provider API key support
 
-- [ ] Accept pi mono API key in CI (not just `anthropic-api-key` / `copilot-api-key`)
-- [ ] Add `pi-api-key` input to `action.yml`
-- [ ] Route to correct provider based on `model` input prefix or key type
-- [ ] Update README inputs table
+- [x] Accept pi mono API key in CI (not just `anthropic-api-key` / `copilot-api-key`)
+- [x] Add `pi-api-key` input to `action.yml`
+- [x] Route to correct provider based on `model` input prefix or key type
+- [x] Update README inputs table
 
 ### ✅ 7. Project conventions file support
 

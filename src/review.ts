@@ -16,6 +16,7 @@ export interface ReviewOptions {
   dryRun?: boolean;
   githubToken?: string;
   anthropicApiKey?: string;
+  piApiKey?: string; // pi platform universal key (works for all providers)
   repo?: string;
   commitId?: string;
   model?: string; // format: "provider/modelId" e.g. "anthropic/claude-opus-4-6"
@@ -107,10 +108,12 @@ export async function review(options: ReviewOptions): Promise<void> {
       thinkingLevel: "off",
     },
     getApiKey: async (provider) => {
+      const piKey = options.piApiKey ?? process.env.PI_API_KEY;
+      if (piKey) return piKey;
       const key = provider === "anthropic"
         ? (options.anthropicApiKey ?? process.env.ANTHROPIC_API_KEY)
         : process.env[`${provider.toUpperCase()}_API_KEY`];
-      if (!key) throw new Error(`No API key found for provider "${provider}"`);
+      if (!key) throw new Error(`No API key found for provider "${provider}". Set PI_API_KEY or ${provider.toUpperCase()}_API_KEY.`);
       return key;
     },
   });
