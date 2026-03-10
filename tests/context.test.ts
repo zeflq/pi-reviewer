@@ -27,6 +27,7 @@ describe("loadContext", () => {
 
     expect(result.conventions).toBe(content);
     expect(result.reviewRules).toBe("");
+    expect(result.loadedFiles).toEqual(["AGENTS.md"]);
   });
 
   it("returns conventions from CLAUDE.md when AGENTS.md does not exist", async () => {
@@ -38,6 +39,7 @@ describe("loadContext", () => {
 
     expect(result.conventions).toBe(content);
     expect(result.reviewRules).toBe("");
+    expect(result.loadedFiles).toEqual(["CLAUDE.md"]);
   });
 
   it("prefers AGENTS.md over CLAUDE.md when both exist", async () => {
@@ -48,6 +50,7 @@ describe("loadContext", () => {
     const result = await loadContext({ cwd: dir });
 
     expect(result.conventions).toBe("agents content");
+    expect(result.loadedFiles).toEqual(["AGENTS.md"]);
   });
 
   it("returns empty conventions when neither AGENTS.md nor CLAUDE.md exists", async () => {
@@ -57,6 +60,7 @@ describe("loadContext", () => {
 
     expect(result.conventions).toBe("");
     expect(result.reviewRules).toBe("");
+    expect(result.loadedFiles).toEqual([]);
   });
 
   it("returns reviewRules when REVIEW.md exists", async () => {
@@ -68,6 +72,7 @@ describe("loadContext", () => {
 
     expect(result.conventions).toBe("conventions");
     expect(result.reviewRules).toBe("# Review rules\n- Always check res.ok\n");
+    expect(result.loadedFiles).toEqual(["AGENTS.md", "REVIEW.md"]);
   });
 
   it("returns reviewRules even when no conventions file exists", async () => {
@@ -78,6 +83,7 @@ describe("loadContext", () => {
 
     expect(result.conventions).toBe("");
     expect(result.reviewRules).toBe("review only rules");
+    expect(result.loadedFiles).toEqual(["REVIEW.md"]);
   });
 
   it("uses process.cwd() when cwd option is not provided", async () => {
@@ -105,6 +111,7 @@ describe("loadContext", () => {
     expect(result.conventions).toContain("Main content");
     expect(result.conventions).toContain("API rules here");
     expect(result.conventions).not.toContain("[api conventions](./docs/api.md)");
+    expect(result.loadedFiles).toEqual(["AGENTS.md", path.join("docs", "api.md")]);
   });
 
   it("inlines nested linked .md files recursively", async () => {
@@ -118,6 +125,7 @@ describe("loadContext", () => {
     expect(result.conventions).toContain("Root");
     expect(result.conventions).toContain("Level1");
     expect(result.conventions).toContain("Level2 content");
+    expect(result.loadedFiles).toEqual(["AGENTS.md", "level1.md", "level2.md"]);
   });
 
   it("does not inline http links", async () => {
@@ -160,5 +168,6 @@ describe("loadContext", () => {
 
     expect(result.reviewRules).toContain("Rules");
     expect(result.reviewRules).toContain("Detailed rules");
+    expect(result.loadedFiles).toEqual(["REVIEW.md", "review-details.md"]);
   });
 });

@@ -54,7 +54,7 @@ describe("review", () => {
       diff: "diff --git a/a.ts b/a.ts",
       source: "git diff origin/main...HEAD",
     });
-    loadContextMock.mockResolvedValue({ conventions: "- Use strict typing", reviewRules: "" });
+    loadContextMock.mockResolvedValue({ conventions: "- Use strict typing", reviewRules: "", loadedFiles: ["AGENTS.md"] });
     sendOutputMock.mockResolvedValue(undefined);
     createReadOnlyToolsMock.mockReturnValue([]);
     AgentMock.mockImplementation(function () {
@@ -132,7 +132,7 @@ describe("review", () => {
   });
 
   it("continues normally when AGENTS.md context is missing", async () => {
-    loadContextMock.mockResolvedValue({ conventions: "", reviewRules: "" });
+    loadContextMock.mockResolvedValue({ conventions: "", reviewRules: "", loadedFiles: [] });
 
     await review({ cwd: "/repo" });
 

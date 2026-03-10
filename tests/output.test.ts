@@ -34,7 +34,7 @@ describe("parseAgentResponse", () => {
     expect(result).toEqual({
       summary: "Overall review",
       comments: [
-        { file: "src/a.ts", line: 10, side: "RIGHT", severity: "WARN", body: "Nice improvement" },
+        { file: "src/a.ts", line: 10, side: "RIGHT", severity: "WARN", body: "🟡 Nice improvement" },
       ],
     });
   });
@@ -186,7 +186,7 @@ describe("sendOutput", () => {
           body: "Needs fixes",
           event: "COMMENT",
           comments: [
-            { path: "src/auth.ts", line: 42, side: "RIGHT", body: "Missing null check" },
+            { path: "src/auth.ts", line: 42, side: "RIGHT", body: "🔴 Missing null check" },
           ],
         }),
       })
@@ -309,7 +309,7 @@ describe("sendOutput", () => {
 
     const content = await readFile(path.join(dir, "pi-review.md"), "utf-8");
     expect(content).toBe(
-      "== Review Summary ==\nPlease address comments\n\n== Inline Comments ==\n🟡 src/a.ts:7 (RIGHT)\nHandle undefined"
+      "== Review Summary ==\nPlease address comments\n\n== Inline Comments ==\n🟡 src/a.ts:7 (RIGHT)\n🟡 Handle undefined"
     );
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("pi-review.md"));
   });

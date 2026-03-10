@@ -67,8 +67,11 @@ export async function review(options: ReviewOptions): Promise<void> {
   if (warning) console.warn(`[pi-reviewer] ${warning}`);
 
   const context = await loadContext({ cwd });
-  const hasConventions = context.conventions.trim() || context.reviewRules.trim();
-  console.log(`[pi-reviewer] context: ${hasConventions ? "conventions loaded" : "no conventions found"}`);
+  if (context.loadedFiles.length > 0) {
+    console.log(`[pi-reviewer] context loaded: ${context.loadedFiles.join(", ")}`);
+  } else {
+    console.log("[pi-reviewer] context: no conventions found (AGENTS.md / CLAUDE.md / REVIEW.md)");
+  }
 
   const systemPrompt = buildSystemPrompt(context, options.minSeverity);
   const userPrompt = buildUserPrompt(diff, skippedFiles);
