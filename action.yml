@@ -7,13 +7,9 @@ inputs:
     description: "GitHub token to post PR comments."
     required: true
 
-  anthropic-api-key:
-    description: "Anthropic API key (required unless pi-api-key is set)"
-    required: false
-
   pi-api-key:
-    description: "Pi platform API key — works for all providers, takes priority over anthropic-api-key"
-    required: false
+    description: "Pi platform API key"
+    required: true
 
   model:
     description: "Model to use in provider/modelId format (e.g. anthropic/claude-opus-4-6)"
@@ -32,14 +28,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Validate API key
-      shell: bash
-      run: |
-        if [ -z "${{ inputs.anthropic-api-key }}" ] && [ -z "${{ inputs.pi-api-key }}" ]; then
-          echo "Error: either anthropic-api-key or pi-api-key is required"
-          exit 1
-        fi
-
     - name: Setup Node
       uses: actions/setup-node@v4
       with:
@@ -55,7 +43,6 @@ runs:
       working-directory: ${{ github.workspace }}
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
-        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
         PI_API_KEY: ${{ inputs.pi-api-key }}
         POST_COMMENT: ${{ inputs.post-comment }}
         PI_REVIEWER_MODEL: ${{ inputs.model }}

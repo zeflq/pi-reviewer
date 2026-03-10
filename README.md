@@ -40,12 +40,12 @@ jobs:
       - uses: zeflq/pi-reviewer@main
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          pi-api-key: ${{ secrets.PI_API_KEY }}
           min-severity: ${{ inputs.min-severity || 'info' }}
 ```
 
 Commit it to your default branch, then add your API key to your repo secrets:
-- `ANTHROPIC_API_KEY` — required
+- `PI_API_KEY` — required
 
 ## CI usage
 
@@ -58,8 +58,7 @@ You can also trigger a review manually via **Actions → Pi Reviewer → Run wor
 | Input | Required | Description |
 |---|---|---|
 | `github-token` | yes | GitHub token to post PR comments |
-| `anthropic-api-key` | one of | Anthropic API key for Claude models |
-| `pi-api-key` | one of | Pi platform API key — works for all providers, takes priority over `anthropic-api-key` |
+| `pi-api-key` | yes | Pi platform API key |
 | `model` | no | Model to use in `provider/modelId` format (e.g. `anthropic/claude-opus-4-6`) |
 | `post-comment` | no | Post review as a GitHub PR comment (default: `true`) |
 | `min-severity` | no | Minimum severity to report: `info`, `warn`, or `critical` (default: `info`) |
@@ -182,7 +181,7 @@ steps:
   - uses: zeflq/pi-reviewer@main
     with:
       github-token: ${{ steps.bot-token.outputs.token }}
-      anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+      pi-api-key: ${{ secrets.PI_API_KEY }}
       min-severity: ${{ inputs.min-severity || 'info' }}
 ```
 

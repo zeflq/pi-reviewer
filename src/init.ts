@@ -37,7 +37,7 @@ jobs:
       - uses: zeflq/pi-reviewer@main
         with:
           github-token: \${{ secrets.GITHUB_TOKEN }}
-          anthropic-api-key: \${{ secrets.ANTHROPIC_API_KEY }}
+          pi-api-key: \${{ secrets.PI_API_KEY }}
           min-severity: \${{ inputs.min-severity || 'info' }}
 `;
 
