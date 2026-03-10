@@ -94,7 +94,7 @@ export function buildSSHUserPrompt(options = {}) {
         "You are performing a code review. Execute all steps in order:",
         "",
         `1. Run this command to get the diff: ${diffCommand}`,
-        "2. Read AGENTS.md or CLAUDE.md from the project root if either exists. Also read REVIEW.md if it exists — it contains review-specific rules.",
+        "2. Read AGENTS.md or CLAUDE.md from the project root if either exists. If the file contains markdown links to other .md files (e.g. [api conventions](./docs/api.md)), read those files too — they are part of the project conventions. Also read REVIEW.md if it exists — it contains review-specific rules.",
         "3. Review the diff. Write your findings as markdown with:",
         "   - A summary section with bullet points prefixed by CRITICAL / WARN / INFO",
         "   - An inline comments section listing file, line, and comment for each finding",
