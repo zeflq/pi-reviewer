@@ -112,7 +112,7 @@ export function buildSSHUserPrompt(options: SSHPromptOptions = {}): string {
     "You are performing a code review. Execute all steps in order:",
     "",
     `1. Run this command to get the diff: ${diffCommand}`,
-    "2. Read AGENTS.md or CLAUDE.md from the project root if either exists.",
+    "2. Read AGENTS.md or CLAUDE.md from the project root if either exists. Also read REVIEW.md if it exists — it contains review-specific rules.",
     "3. Review the diff. Write your findings as markdown with:",
     "   - A summary section with bullet points prefixed by CRITICAL / WARN / INFO",
     "   - An inline comments section listing file, line, and comment for each finding",
