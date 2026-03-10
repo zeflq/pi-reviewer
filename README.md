@@ -1,6 +1,6 @@
 # pi-reviewer
 
-AI-powered PR reviewer using Claude agent.
+AI-powered PR reviewer using the pi agent — model-agnostic, works with any provider.
 
 ## Setup
 
