@@ -19,6 +19,8 @@ Then add your API key to your repo secrets:
 
 Every pull request triggers an automatic review comment posted by `github-actions[bot]`.
 
+You can also trigger a review manually via **Actions → Pi Reviewer → Run workflow**, where you can select the minimum severity level to report (`info`, `warn`, or `critical`).
+
 ### Inputs
 
 | Input | Required | Description |

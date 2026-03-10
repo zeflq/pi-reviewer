@@ -13,6 +13,17 @@ const WORKFLOW_CONTENT = `name: Pi Reviewer
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      min-severity:
+        description: 'Minimum severity to report (info, warn, critical)'
+        required: false
+        default: 'info'
+        type: choice
+        options:
+          - info
+          - warn
+          - critical
 
 jobs:
   review:
@@ -27,6 +38,7 @@ jobs:
         with:
           github-token: \${{ secrets.GITHUB_TOKEN }}
           anthropic-api-key: \${{ secrets.ANTHROPIC_API_KEY }}
+          min-severity: \${{ inputs.min-severity || 'info' }}
 `;
 
 export async function init(options: InitOptions = {}): Promise<void> {
