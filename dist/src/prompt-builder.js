@@ -36,10 +36,16 @@ export function buildSystemPrompt(context, minSeverity = "INFO") {
         '- severity: "CRITICAL" | "WARN" | "INFO"',
         "- body: inline comment text — prefix with the severity emoji (e.g. 🔴, 🟡, 🔵), may use Markdown",
     ].join("\n");
-    if (!context.trim()) {
-        return basePrompt;
+    const conventions = typeof context === "string" ? context : context.conventions;
+    const reviewRules = typeof context === "string" ? "" : context.reviewRules;
+    const sections = [basePrompt];
+    if (conventions.trim()) {
+        sections.push(`--- Project conventions (AGENTS.md / CLAUDE.md) ---\n${conventions}\n---`);
     }
-    return `${basePrompt}\n\n--- Project conventions (AGENTS.md / CLAUDE.md) ---\n${context}\n---`;
+    if (reviewRules.trim()) {
+        sections.push(`--- Review-specific rules (REVIEW.md) ---\n${reviewRules}\n---`);
+    }
+    return sections.join("\n\n");
 }
 export function buildUserPrompt(diff, skippedFiles) {
     let prompt = `Review this diff:\n\n${diff}`;

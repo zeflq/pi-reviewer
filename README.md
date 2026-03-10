@@ -121,8 +121,10 @@ A warning is surfaced in the console whenever files are excluded or skipped:
 Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
 
 - `AGENTS.md` is checked first; `CLAUDE.md` is used as a fallback if `AGENTS.md` is not found.
+- `REVIEW.md` is always loaded alongside `AGENTS.md`/`CLAUDE.md` when present — use it for review-specific rules that don't belong in your general conventions.
 - Markdown links to other `.md` files (e.g. `[api conventions](./docs/api.md)`) are automatically inlined so the agent sees the full context.
 
+**`AGENTS.md`** — general project conventions:
 ```markdown
 # Project Conventions
 
@@ -132,6 +134,20 @@ Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the review
 - Prefix mutations with a verb: `update`, `delete`, `create`, `reset`
 
 [API conventions](./docs/api-conventions.md)
+```
+
+**`REVIEW.md`** — review-only rules (what to flag, what to skip):
+```markdown
+# Review Guidelines
+
+## Always flag
+- New API endpoints without an integration test
+- Database migrations that are not backward-compatible
+- `fetch` calls missing `res.ok` check or `try/catch`
+
+## Skip
+- Formatting-only changes in generated files under `dist/`
+- Lock file diffs
 ```
 
 ## Bot identity

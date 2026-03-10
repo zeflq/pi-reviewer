@@ -5,6 +5,11 @@ export interface ContextOptions {
   cwd?: string;
 }
 
+export interface ContextResult {
+  conventions: string; // from AGENTS.md or CLAUDE.md
+  reviewRules: string; // from REVIEW.md
+}
+
 async function tryReadFile(filePath: string): Promise<string | null> {
   try {
     return await readFile(filePath, "utf-8");
@@ -40,15 +45,20 @@ async function resolveLinks(content: string, baseDir: string, visited = new Set<
   return result;
 }
 
-export async function loadContext(options: ContextOptions = {}): Promise<string> {
+export async function loadContext(options: ContextOptions = {}): Promise<ContextResult> {
   const cwd = options.cwd ?? process.cwd();
 
+  let conventions = "";
   for (const filename of ["AGENTS.md", "CLAUDE.md"]) {
     const content = await tryReadFile(path.join(cwd, filename));
     if (content !== null) {
-      return resolveLinks(content, cwd);
+      conventions = await resolveLinks(content, cwd);
+      break;
     }
   }
 
-  return "";
+  const reviewRaw = await tryReadFile(path.join(cwd, "REVIEW.md"));
+  const reviewRules = reviewRaw !== null ? await resolveLinks(reviewRaw, cwd) : "";
+
+  return { conventions, reviewRules };
 }

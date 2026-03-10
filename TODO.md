@@ -176,15 +176,11 @@ tests/
 - [x] Filter `comments` in `parseAgentResponse` output as a safety net — drop comments below threshold before posting
 - [x] Update tests
 
-### 14. Severity system improvements
+### ✅ 14. Severity system improvements
 
 - [x] Add emoji markers to severity levels: 🔴 CRITICAL, 🟡 WARN, 🔵 INFO
 - [x] Render emoji markers in terminal, file, and GitHub comment output
-- [ ] Add optional `pre-existing` flag to comments — bug exists in codebase but was not introduced by this PR, rendered as 🟣
-- [ ] Update JSON shape: `{ ..., "pre-existing": true }` on `ReviewComment`
-- [ ] Update system prompt to instruct agent to use the markers and set `pre-existing: true` when the issue is not introduced by the diff
-- [ ] Update `parseAgentResponse` and `formatForTerminal` to handle the new field
-- [ ] Update tests
+- [x] Embed emoji in agent system prompt so they appear in all output paths (Reviews API + Issues API)
 
 ### 13. REVIEW.md support
 

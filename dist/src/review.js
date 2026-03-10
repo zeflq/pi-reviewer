@@ -46,7 +46,8 @@ export async function review(options) {
     if (warning)
         console.warn(`[pi-reviewer] ${warning}`);
     const context = await loadContext({ cwd });
-    console.log(`[pi-reviewer] context: ${context ? "AGENTS.md loaded" : "no AGENTS.md found"}`);
+    const hasConventions = context.conventions.trim() || context.reviewRules.trim();
+    console.log(`[pi-reviewer] context: ${hasConventions ? "conventions loaded" : "no conventions found"}`);
     const systemPrompt = buildSystemPrompt(context, options.minSeverity);
     const userPrompt = buildUserPrompt(diff, skippedFiles);
     const target = options.output ?? (process.env.GITHUB_ACTIONS === "true" ? "comment" : "terminal");

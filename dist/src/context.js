@@ -35,11 +35,15 @@ async function resolveLinks(content, baseDir, visited = new Set()) {
 }
 export async function loadContext(options = {}) {
     const cwd = options.cwd ?? process.cwd();
+    let conventions = "";
     for (const filename of ["AGENTS.md", "CLAUDE.md"]) {
         const content = await tryReadFile(path.join(cwd, filename));
         if (content !== null) {
-            return resolveLinks(content, cwd);
+            conventions = await resolveLinks(content, cwd);
+            break;
         }
     }
-    return "";
+    const reviewRaw = await tryReadFile(path.join(cwd, "REVIEW.md"));
+    const reviewRules = reviewRaw !== null ? await resolveLinks(reviewRaw, cwd) : "";
+    return { conventions, reviewRules };
 }

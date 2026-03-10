@@ -1,3 +1,5 @@
+import type { ContextResult } from "./context.js";
+
 export type MinSeverity = "CRITICAL" | "WARN" | "INFO";
 
 const SEVERITY_RULE: Record<MinSeverity, string | null> = {
@@ -6,7 +8,7 @@ const SEVERITY_RULE: Record<MinSeverity, string | null> = {
   CRITICAL: "- Only report CRITICAL issues — skip WARN and INFO",
 };
 
-export function buildSystemPrompt(context: string, minSeverity: MinSeverity = "INFO"): string {
+export function buildSystemPrompt(context: ContextResult | string, minSeverity: MinSeverity = "INFO"): string {
   const severityRule = SEVERITY_RULE[minSeverity];
   const basePrompt = [
     "You are a code reviewer. Review the following PR diff carefully.",
@@ -40,11 +42,20 @@ export function buildSystemPrompt(context: string, minSeverity: MinSeverity = "I
     "- body: inline comment text — prefix with the severity emoji (e.g. 🔴, 🟡, 🔵), may use Markdown",
   ].join("\n");
 
-  if (!context.trim()) {
-    return basePrompt;
+  const conventions = typeof context === "string" ? context : context.conventions;
+  const reviewRules = typeof context === "string" ? "" : context.reviewRules;
+
+  const sections: string[] = [basePrompt];
+
+  if (conventions.trim()) {
+    sections.push(`--- Project conventions (AGENTS.md / CLAUDE.md) ---\n${conventions}\n---`);
   }
 
-  return `${basePrompt}\n\n--- Project conventions (AGENTS.md / CLAUDE.md) ---\n${context}\n---`;
+  if (reviewRules.trim()) {
+    sections.push(`--- Review-specific rules (REVIEW.md) ---\n${reviewRules}\n---`);
+  }
+
+  return sections.join("\n\n");
 }
 
 export function buildUserPrompt(diff: string, skippedFiles?: string[]): string {

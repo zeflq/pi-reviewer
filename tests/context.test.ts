@@ -18,24 +18,26 @@ afterEach(async () => {
 });
 
 describe("loadContext", () => {
-  it("returns file content when AGENTS.md exists", async () => {
+  it("returns conventions when AGENTS.md exists", async () => {
     const dir = await createTempDir();
     const content = "# Conventions\n- Keep functions small\n";
     await writeFile(path.join(dir, "AGENTS.md"), content, "utf-8");
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result).toBe(content);
+    expect(result.conventions).toBe(content);
+    expect(result.reviewRules).toBe("");
   });
 
-  it("returns CLAUDE.md content when AGENTS.md does not exist", async () => {
+  it("returns conventions from CLAUDE.md when AGENTS.md does not exist", async () => {
     const dir = await createTempDir();
     const content = "# Claude conventions\n- Use TypeScript\n";
     await writeFile(path.join(dir, "CLAUDE.md"), content, "utf-8");
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result).toBe(content);
+    expect(result.conventions).toBe(content);
+    expect(result.reviewRules).toBe("");
   });
 
   it("prefers AGENTS.md over CLAUDE.md when both exist", async () => {
@@ -45,27 +47,48 @@ describe("loadContext", () => {
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result).toBe("agents content");
+    expect(result.conventions).toBe("agents content");
   });
 
-  it("returns empty string when neither AGENTS.md nor CLAUDE.md exists", async () => {
+  it("returns empty conventions when neither AGENTS.md nor CLAUDE.md exists", async () => {
     const dir = await createTempDir();
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result).toBe("");
+    expect(result.conventions).toBe("");
+    expect(result.reviewRules).toBe("");
+  });
+
+  it("returns reviewRules when REVIEW.md exists", async () => {
+    const dir = await createTempDir();
+    await writeFile(path.join(dir, "AGENTS.md"), "conventions", "utf-8");
+    await writeFile(path.join(dir, "REVIEW.md"), "# Review rules\n- Always check res.ok\n", "utf-8");
+
+    const result = await loadContext({ cwd: dir });
+
+    expect(result.conventions).toBe("conventions");
+    expect(result.reviewRules).toBe("# Review rules\n- Always check res.ok\n");
+  });
+
+  it("returns reviewRules even when no conventions file exists", async () => {
+    const dir = await createTempDir();
+    await writeFile(path.join(dir, "REVIEW.md"), "review only rules", "utf-8");
+
+    const result = await loadContext({ cwd: dir });
+
+    expect(result.conventions).toBe("");
+    expect(result.reviewRules).toBe("review only rules");
   });
 
   it("uses process.cwd() when cwd option is not provided", async () => {
     const dir = await createTempDir();
     const oldCwd = process.cwd();
-    const content = "project context";
-    await writeFile(path.join(dir, "AGENTS.md"), content, "utf-8");
+    await writeFile(path.join(dir, "AGENTS.md"), "project context", "utf-8");
 
     try {
       process.chdir(dir);
       const result = await loadContext();
-      expect(result).toBe(content);
+      expect(result.conventions).toBe("project context");
     } finally {
       process.chdir(oldCwd);
     }
@@ -79,9 +102,9 @@ describe("loadContext", () => {
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result).toContain("Main content");
-    expect(result).toContain("API rules here");
-    expect(result).not.toContain("[api conventions](./docs/api.md)");
+    expect(result.conventions).toContain("Main content");
+    expect(result.conventions).toContain("API rules here");
+    expect(result.conventions).not.toContain("[api conventions](./docs/api.md)");
   });
 
   it("inlines nested linked .md files recursively", async () => {
@@ -92,9 +115,9 @@ describe("loadContext", () => {
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result).toContain("Root");
-    expect(result).toContain("Level1");
-    expect(result).toContain("Level2 content");
+    expect(result.conventions).toContain("Root");
+    expect(result.conventions).toContain("Level1");
+    expect(result.conventions).toContain("Level2 content");
   });
 
   it("does not inline http links", async () => {
@@ -104,7 +127,7 @@ describe("loadContext", () => {
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result).toBe(content);
+    expect(result.conventions).toBe(content);
   });
 
   it("ignores missing linked files gracefully", async () => {
@@ -114,7 +137,7 @@ describe("loadContext", () => {
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result).toBe(content);
+    expect(result.conventions).toBe(content);
   });
 
   it("prevents infinite loops from circular links", async () => {
@@ -124,7 +147,18 @@ describe("loadContext", () => {
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result).toContain("Root");
-    expect(result).toContain("A content");
+    expect(result.conventions).toContain("Root");
+    expect(result.conventions).toContain("A content");
+  });
+
+  it("inlines links in REVIEW.md", async () => {
+    const dir = await createTempDir();
+    await writeFile(path.join(dir, "REVIEW.md"), "Rules\n\n[details](./review-details.md)\n", "utf-8");
+    await writeFile(path.join(dir, "review-details.md"), "Detailed rules", "utf-8");
+
+    const result = await loadContext({ cwd: dir });
+
+    expect(result.reviewRules).toContain("Rules");
+    expect(result.reviewRules).toContain("Detailed rules");
   });
 });
