@@ -46,8 +46,12 @@ export async function review(options) {
     if (warning)
         console.warn(`[pi-reviewer] ${warning}`);
     const context = await loadContext({ cwd });
-    const hasConventions = context.conventions.trim() || context.reviewRules.trim();
-    console.log(`[pi-reviewer] context: ${hasConventions ? "conventions loaded" : "no conventions found"}`);
+    if (context.loadedFiles.length > 0) {
+        console.log(`[pi-reviewer] context loaded: ${context.loadedFiles.join(", ")}`);
+    }
+    else {
+        console.log("[pi-reviewer] context: no conventions found (AGENTS.md / CLAUDE.md / REVIEW.md)");
+    }
     const systemPrompt = buildSystemPrompt(context, options.minSeverity);
     const userPrompt = buildUserPrompt(diff, skippedFiles);
     const target = options.output ?? (process.env.GITHUB_ACTIONS === "true" ? "comment" : "terminal");
@@ -75,12 +79,10 @@ export async function review(options) {
             tools: createReadOnlyTools(cwd),
             thinkingLevel: "off",
         },
-        getApiKey: async (provider) => {
-            const key = provider === "anthropic"
-                ? (options.anthropicApiKey ?? process.env.ANTHROPIC_API_KEY)
-                : process.env[`${provider.toUpperCase()}_API_KEY`];
+        getApiKey: async () => {
+            const key = options.piApiKey ?? process.env.PI_API_KEY;
             if (!key)
-                throw new Error(`No API key found for provider "${provider}"`);
+                throw new Error("PI_API_KEY is not set.");
             return key;
         },
     });

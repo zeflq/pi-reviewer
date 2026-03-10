@@ -1,6 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 const SEVERITY_RANK = { INFO: 0, WARN: 1, CRITICAL: 2 };
+const SEVERITY_EMOJI = { CRITICAL: "🔴", WARN: "🟡", INFO: "🔵" };
 function normalizeSeverity(value) {
     if (value === "CRITICAL" || value === "WARN" || value === "INFO")
         return value;
@@ -47,18 +48,20 @@ export function parseAgentResponse(text, minSeverity = "INFO") {
             Array.isArray(parsed.comments) &&
             parsed.comments.every(isReviewComment)) {
             const minRank = SEVERITY_RANK[minSeverity];
-            return {
-                summary: parsed.summary,
-                comments: parsed.comments
-                    .map((c) => ({ ...c, severity: normalizeSeverity(c.severity) }))
-                    .filter((c) => SEVERITY_RANK[c.severity] >= minRank),
-            };
+            const comments = parsed.comments
+                .map((c) => ({ ...c, severity: normalizeSeverity(c.severity) }))
+                .filter((c) => SEVERITY_RANK[c.severity] >= minRank)
+                .map((c) => {
+                const emoji = SEVERITY_EMOJI[c.severity];
+                const body = c.body.replace(/^[🔴🟡🔵]\s*/, "");
+                return { ...c, body: `${emoji} ${body}` };
+            });
+            return { summary: parsed.summary, comments };
         }
     }
     return { summary: text, comments: [] };
 }
 const ATTRIBUTION = "*Review by [pi-reviewer](https://github.com/zeflq/pi-reviewer)*";
-const SEVERITY_EMOJI = { CRITICAL: "🔴", WARN: "🟡", INFO: "🔵" };
 function formatForGitHub(result) {
     const lines = ["## Pi Reviewer", "", result.summary];
     if (result.comments.length > 0) {

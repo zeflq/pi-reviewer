@@ -26,7 +26,7 @@ export default function (pi) {
                     source = "remote (ssh)";
                 }
                 else {
-                    const { diff, source: resolvedSource, warning } = await resolveDiff({
+                    const { diff, source: resolvedSource, warning, skippedFiles } = await resolveDiff({
                         cwd: ctx.cwd,
                         diff: parsed.diff,
                         branch: parsed.branch,
@@ -35,8 +35,11 @@ export default function (pi) {
                     if (warning)
                         ctx.ui.notify(warning, "warning");
                     const context = await loadContext({ cwd: ctx.cwd });
+                    if (context.loadedFiles.length > 0) {
+                        ctx.ui.notify(`Context: ${context.loadedFiles.join(", ")}`);
+                    }
                     systemPrompt = buildSystemPrompt(context, parsed.minSeverity);
-                    userPrompt = buildUserPrompt(diff);
+                    userPrompt = buildUserPrompt(diff, skippedFiles);
                     source = resolvedSource;
                 }
                 if (parsed.dryRun) {

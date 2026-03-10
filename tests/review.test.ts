@@ -64,7 +64,7 @@ describe("review", () => {
     delete process.env.GITHUB_ACTIONS;
     delete process.env.GITHUB_TOKEN;
     delete process.env.GITHUB_REPOSITORY;
-    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.PI_API_KEY;
   });
 
   it("dry-run logs source and prompt, without calling agent or output", async () => {

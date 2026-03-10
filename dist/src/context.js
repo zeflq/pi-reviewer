@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 async function tryReadFile(filePath) {
     try {
@@ -10,7 +10,17 @@ async function tryReadFile(filePath) {
         throw error;
     }
 }
-async function resolveLinks(content, baseDir, visited = new Set()) {
+async function findFileCaseInsensitive(dir, name) {
+    try {
+        const entries = await readdir(dir);
+        const match = entries.find((e) => e.toLowerCase() === name.toLowerCase());
+        return match ? path.join(dir, match) : null;
+    }
+    catch {
+        return null;
+    }
+}
+async function resolveLinks(content, baseDir, visited, loaded) {
     const linkPattern = /\[([^\]]*)\]\(([^)]+\.md)\)/g;
     const replacements = [];
     for (const match of content.matchAll(linkPattern)) {
@@ -24,7 +34,8 @@ async function resolveLinks(content, baseDir, visited = new Set()) {
         if (linked === null)
             continue;
         visited.add(absPath);
-        const resolved = await resolveLinks(linked, path.dirname(absPath), visited);
+        loaded.push(absPath);
+        const resolved = await resolveLinks(linked, path.dirname(absPath), visited, loaded);
         replacements.push({ match: full, replacement: resolved.trim() });
     }
     let result = content;
@@ -35,15 +46,31 @@ async function resolveLinks(content, baseDir, visited = new Set()) {
 }
 export async function loadContext(options = {}) {
     const cwd = options.cwd ?? process.cwd();
+    const loaded = [];
+    const visited = new Set();
     let conventions = "";
     for (const filename of ["AGENTS.md", "CLAUDE.md"]) {
-        const content = await tryReadFile(path.join(cwd, filename));
+        const absPath = await findFileCaseInsensitive(cwd, filename);
+        if (absPath === null)
+            continue;
+        const content = await tryReadFile(absPath);
         if (content !== null) {
-            conventions = await resolveLinks(content, cwd);
+            visited.add(absPath);
+            loaded.push(absPath);
+            conventions = await resolveLinks(content, cwd, visited, loaded);
             break;
         }
     }
-    const reviewRaw = await tryReadFile(path.join(cwd, "REVIEW.md"));
-    const reviewRules = reviewRaw !== null ? await resolveLinks(reviewRaw, cwd) : "";
-    return { conventions, reviewRules };
+    const reviewAbsPath = await findFileCaseInsensitive(cwd, "REVIEW.md");
+    let reviewRules = "";
+    if (reviewAbsPath !== null) {
+        const reviewRaw = await tryReadFile(reviewAbsPath);
+        if (reviewRaw !== null) {
+            visited.add(reviewAbsPath);
+            loaded.push(reviewAbsPath);
+            reviewRules = await resolveLinks(reviewRaw, cwd, visited, loaded);
+        }
+    }
+    const loadedFiles = loaded.map((f) => path.relative(cwd, f));
+    return { conventions, reviewRules, loadedFiles };
 }
