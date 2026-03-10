@@ -35,7 +35,7 @@ jobs:
       - uses: zeflq/pi-reviewer@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          pi-api-key: ${{ secrets.PI_API_KEY }}
 ```
 
 ### 2. Pi extension (local dev, inside pi TUI)
