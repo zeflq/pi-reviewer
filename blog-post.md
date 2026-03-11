@@ -10,31 +10,9 @@ Because it doesn't know that `fetchUser` is an intentional naming convention you
 
 This isn't a model problem. It's a **context problem**.
 
-## What generic review misses
+## The fix: context-aware review
 
-When a senior engineer reviews your PR, they're not just checking syntax. They're checking it against everything they know about the project — the decisions, the trade-offs, the rules the team settled on last quarter. That's the review that actually matters.
-
-A generic AI reviewer only gets the diff. It has no idea that your API endpoints must be versioned under `/api/v1/`, that all `fetch` calls require a `res.ok` check, or that `getData` is a banned function name. It can't enforce what it doesn't know.
-
-So you get a review full of noise — and silence on the things that actually matter.
-
-## How it compares to Claude Code PR Review
-
-Anthropic recently shipped [Code Review](https://code.claude.com/docs/en/code-review) — a managed PR review service built into Claude Code. It reads `CLAUDE.md` and `REVIEW.md`, runs multiple specialized agents against your full codebase in parallel, and posts inline findings with severity tags. It's genuinely impressive.
-
-But it comes with constraints that may not fit your setup.
-
-It's a **managed service** — it runs on Anthropic's infrastructure, requires a GitHub App installation, and is available on Teams and Enterprise plans only. Reviews average $15–25 each. You don't control the infrastructure, and it's Claude-only.
-
-`pi-reviewer` takes a different approach: it runs in your own CI pipeline, costs what your token usage costs, works with any model through the pi agent, and needs nothing more than a secret and a workflow file. No GitHub App. No admin approval flow. No managed infrastructure.
-
-And if you want to review locally before you push — without opening a PR at all — the pi TUI extension gives you `/review` in your terminal, including SSH mode for remote machines.
-
-Both tools read your `CLAUDE.md` and `REVIEW.md`. The difference is where they run, what they cost, and how much control you keep.
-
-## The missing layer: project context
-
-`pi-reviewer` is a GitHub Action and pi TUI extension that runs AI code review — but with your project baked in.
+That's what `pi-reviewer` is built around — a GitHub Action and [pi](https://github.com/mariozechner/pi) TUI extension that brings your project conventions into every review.
 
 Before the agent sees a single line of diff, it reads:
 
@@ -84,11 +62,27 @@ Set `min-severity: warn` and the agent skips INFO-level suggestions entirely —
 
 Three tiers: 🔴 CRITICAL for bugs and security issues, 🟡 WARN for logic and type errors, 🔵 INFO for style and suggestions.
 
-## Model-agnostic, works anywhere
+## Model-agnostic, built on pi mono
 
-`pi-reviewer` runs on the [pi agent](https://github.com/mariozechner/pi) — not tied to a single provider. One `PI_API_KEY` works across all supported models. You pick the model, pi handles the rest.
+`pi-reviewer` runs on [pi](https://github.com/mariozechner/pi) — a terminal-based coding agent that sits on top of the pi mono platform. One `PI_API_KEY` works across all supported models and providers. You pick the model, pi routes the request.
+
+That means you're not locked into a single provider. Swap models without touching your workflow. The review logic stays the same.
 
 It also works over SSH. If your project lives on a remote machine, `--ssh` mode lets the agent fetch the diff and read your conventions directly on the remote — no local copy needed.
+
+## How it compares to Claude Code PR Review
+
+Anthropic recently shipped [Code Review](https://code.claude.com/docs/en/code-review) — a managed PR review service built into Claude Code. It reads `CLAUDE.md` and `REVIEW.md`, runs multiple specialized agents against your full codebase in parallel, and posts inline findings with severity tags. It's genuinely impressive.
+
+But it comes with constraints that may not fit every team.
+
+It's a **managed service** — runs on Anthropic's infrastructure, requires a GitHub App installation, available on Teams and Enterprise plans only. Reviews average $15–25 each. It's Claude-only, and you don't control where it runs.
+
+`pi-reviewer` runs in your own CI, costs what your token usage costs, works with any model through pi mono, and needs nothing more than a secret and a workflow file. No GitHub App. No admin approval flow.
+
+And if you want to review locally before you push — without opening a PR at all — the pi TUI extension gives you `/review` in your terminal.
+
+Both tools read your `CLAUDE.md` and `REVIEW.md`. The difference is where they run, what they cost, and how much control you keep.
 
 ## Set it up once, forget about it
 
@@ -98,7 +92,7 @@ npx github:zeflq/pi-reviewer init
 
 That generates a workflow file. Add your `PI_API_KEY` secret. Every PR from that point on gets a review that knows your project.
 
-The context files — `AGENTS.md`, `REVIEW.md` — live in your repo. They're version-controlled, team-editable, and evolve with the project. The better you document your conventions, the better the reviews get.
+The context files — `AGENTS.md`, `REVIEW.md` — live in your repo. Version-controlled, team-editable, evolve with the project. The better you document your conventions, the better the reviews get.
 
 ## The shift
 
