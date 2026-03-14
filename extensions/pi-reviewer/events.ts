@@ -20,6 +20,15 @@ export function extractAssistantText(message: unknown): string {
   return "";
 }
 
+export function extractLastAssistantText(messages: unknown): string {
+  if (!Array.isArray(messages)) return "";
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const text = extractAssistantText(messages[i]);
+    if (text) return text;
+  }
+  return "";
+}
+
 export interface EventAccumulator {
   process(line: string): void;
   getLastReviewText(): string;

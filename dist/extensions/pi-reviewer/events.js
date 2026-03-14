@@ -19,6 +19,16 @@ export function extractAssistantText(message) {
     }
     return "";
 }
+export function extractLastAssistantText(messages) {
+    if (!Array.isArray(messages))
+        return "";
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+        const text = extractAssistantText(messages[i]);
+        if (text)
+            return text;
+    }
+    return "";
+}
 export function createEventAccumulator(onUnexpected) {
     let lastReviewText = "";
     return {

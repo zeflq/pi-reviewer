@@ -1,37 +1,11 @@
 import { Agent } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
 import { createReadOnlyTools } from "@mariozechner/pi-coding-agent";
+import { extractLastAssistantText } from "../extensions/pi-reviewer/events.js";
 import { loadContext } from "./context.js";
 import { resolveDiff } from "./diff-resolver.js";
 import { sendOutput } from "./output.js";
 import { buildSystemPrompt, buildUserPrompt } from "./prompt-builder.js";
-function extractAssistantText(messages) {
-    if (!Array.isArray(messages))
-        return "";
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-        const message = messages[i];
-        if (message?.role !== "assistant")
-            continue;
-        if (typeof message.content === "string") {
-            return message.content;
-        }
-        if (Array.isArray(message.content)) {
-            return message.content
-                .map((part) => {
-                if (typeof part === "string")
-                    return part;
-                if (part && typeof part === "object" && "type" in part && part.type === "text") {
-                    return part.text ?? "";
-                }
-                return "";
-            })
-                .join("")
-                .trim();
-        }
-        return "";
-    }
-    return "";
-}
 export async function review(options) {
     const cwd = options.cwd ?? process.cwd();
     const githubToken = options.githubToken ?? process.env.GITHUB_TOKEN;
@@ -102,7 +76,7 @@ export async function review(options) {
                     reject(new Error(`Agent failed: ${msg}`));
                     return;
                 }
-                finalResponse = extractAssistantText(ev.messages);
+                finalResponse = extractLastAssistantText(ev.messages);
                 if (!finalResponse.trim()) {
                     console.error("[pi-reviewer] agent returned an empty response");
                     reject(new Error("Agent returned an empty response"));

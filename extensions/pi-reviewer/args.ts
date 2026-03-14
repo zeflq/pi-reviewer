@@ -1,4 +1,6 @@
-export type MinSeverity = "CRITICAL" | "WARN" | "INFO";
+import type { MinSeverity } from "../../src/prompt-builder.js";
+
+export type { MinSeverity };
 
 export interface ReviewCommandArgs {
   diff?: string;

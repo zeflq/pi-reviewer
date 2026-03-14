@@ -2,6 +2,7 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
 import { createReadOnlyTools } from "@mariozechner/pi-coding-agent";
 
+import { extractLastAssistantText } from "../extensions/pi-reviewer/events.js";
 import { loadContext } from "./context.js";
 import { resolveDiff } from "./diff-resolver.js";
 import { sendOutput, type OutputTarget, type Severity } from "./output.js";
@@ -22,35 +23,6 @@ export interface ReviewOptions {
   minSeverity?: MinSeverity;
 }
 
-function extractAssistantText(messages: unknown): string {
-  if (!Array.isArray(messages)) return "";
-
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    const message = messages[i] as { role?: string; content?: unknown };
-    if (message?.role !== "assistant") continue;
-
-    if (typeof message.content === "string") {
-      return message.content;
-    }
-
-    if (Array.isArray(message.content)) {
-      return message.content
-        .map((part) => {
-          if (typeof part === "string") return part;
-          if (part && typeof part === "object" && "type" in part && (part as { type?: string }).type === "text") {
-            return (part as { text?: string }).text ?? "";
-          }
-          return "";
-        })
-        .join("")
-        .trim();
-    }
-
-    return "";
-  }
-
-  return "";
-}
 
 export async function review(options: ReviewOptions): Promise<void> {
   const cwd = options.cwd ?? process.cwd();
@@ -132,7 +104,7 @@ export async function review(options: ReviewOptions): Promise<void> {
           return;
         }
 
-        finalResponse = extractAssistantText(ev.messages);
+        finalResponse = extractLastAssistantText(ev.messages);
 
         if (!finalResponse.trim()) {
           console.error("[pi-reviewer] agent returned an empty response");
