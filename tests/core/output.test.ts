@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { parseAgentResponse, sendOutput } from "../src/output.js";
+import { parseAgentResponse, sendOutput } from "../../src/core/output.js";
 
 const createdDirs: string[] = [];
 

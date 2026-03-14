@@ -5,7 +5,7 @@ vi.mock("node:child_process", () => ({
 }));
 
 import { execSync } from "node:child_process";
-import { resolveDiff } from "../src/diff-resolver.js";
+import { resolveDiff } from "../../src/core/diff-resolver.js";
 
 const execSyncMock = vi.mocked(execSync);
 

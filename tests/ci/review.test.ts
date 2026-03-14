@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../src/diff-resolver.js", () => ({
+vi.mock("../../src/core/diff-resolver.js", () => ({
   resolveDiff: vi.fn(),
 }));
 
-vi.mock("../src/context.js", () => ({
+vi.mock("../../src/core/context.js", () => ({
   loadContext: vi.fn(),
 }));
 
-vi.mock("../src/output.js", () => ({
+vi.mock("../../src/core/output.js", () => ({
   sendOutput: vi.fn(),
 }));
 
@@ -22,10 +22,10 @@ vi.mock("@mariozechner/pi-coding-agent", () => ({
 
 import { Agent } from "@mariozechner/pi-agent-core";
 import { createReadOnlyTools } from "@mariozechner/pi-coding-agent";
-import { loadContext } from "../src/context.js";
-import { resolveDiff } from "../src/diff-resolver.js";
-import { sendOutput } from "../src/output.js";
-import { review } from "../src/review.js";
+import { loadContext } from "../../src/core/context.js";
+import { resolveDiff } from "../../src/core/diff-resolver.js";
+import { sendOutput } from "../../src/core/output.js";
+import { review } from "../../src/ci/review.js";
 
 const resolveDiffMock = vi.mocked(resolveDiff);
 const loadContextMock = vi.mocked(loadContext);

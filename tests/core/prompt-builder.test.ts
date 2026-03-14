@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSystemPrompt, buildUserPrompt } from "../src/prompt-builder.js";
+import { buildSystemPrompt, buildUserPrompt } from "../../src/core/prompt-builder.js";
 
 describe("prompt-builder", () => {
   it("returns base prompt without sections when context is empty", () => {

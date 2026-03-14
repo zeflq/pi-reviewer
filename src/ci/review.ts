@@ -2,11 +2,11 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
 import { createReadOnlyTools } from "@mariozechner/pi-coding-agent";
 
-import { extractLastAssistantText } from "../extensions/pi-reviewer/events.js";
-import { loadContext } from "./context.js";
-import { resolveDiff } from "./diff-resolver.js";
-import { sendOutput, type OutputTarget, type Severity } from "./output.js";
-import { buildSystemPrompt, buildUserPrompt, type MinSeverity } from "./prompt-builder.js";
+import { extractLastAssistantText } from "../../extensions/pi-reviewer/events.js";
+import { loadContext } from "../core/context.js";
+import { resolveDiff } from "../core/diff-resolver.js";
+import { sendOutput, type OutputTarget, type Severity } from "../core/output.js";
+import { buildSystemPrompt, buildUserPrompt, type MinSeverity } from "../core/prompt-builder.js";
 
 export interface ReviewOptions {
   cwd?: string;
@@ -39,8 +39,8 @@ export async function review(options: ReviewOptions): Promise<void> {
   if (warning) console.warn(`[pi-reviewer] ${warning}`);
 
   const context = await loadContext({ cwd });
-  if (context.loadedFiles.length > 0) {
-    console.log(`[pi-reviewer] context loaded: ${context.loadedFiles.join(", ")}`);
+  if ((context.loadedFiles?.length ?? 0) > 0) {
+    console.log(`[pi-reviewer] context loaded: ${context.loadedFiles?.join(", ")}`);
   } else {
     console.log("[pi-reviewer] context: no conventions found (AGENTS.md / CLAUDE.md / REVIEW.md)");
   }

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { init } from "../src/init.js";
+import { init } from "../../src/ci/init.js";
 
 const createdDirs: string[] = [];
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_MAX_CHARS, filterDiff } from "../src/diff-filter.js";
+import { DEFAULT_MAX_CHARS, filterDiff } from "../../src/core/diff-filter.js";
 
 function makeDiffSection(file: string, lines = "+"): string {
   return `diff --git a/${file} b/${file}\n--- a/${file}\n+++ b/${file}\n@@ -1 +1 @@\n${lines}\n`;

@@ -47,7 +47,7 @@ runs:
         POST_COMMENT: ${{ inputs.post-comment }}
         PI_REVIEWER_MODEL: ${{ inputs.model }}
         MIN_SEVERITY: ${{ inputs.min-severity }}
-      run: node ${{ github.action_path }}/dist/src/action-entry.js
+      run: node ${{ github.action_path }}/dist/src/ci/action-entry.js
 
 branding:
   icon: "eye"

@@ -8,7 +8,7 @@ export interface ContextOptions {
 export interface ContextResult {
   conventions: string; // from AGENTS.md or CLAUDE.md
   reviewRules: string; // from REVIEW.md
-  loadedFiles: string[]; // all files loaded (root + inlined links), relative to cwd
+  loadedFiles?: string[]; // all files loaded (root + inlined links), relative to cwd
 }
 
 async function tryReadFile(filePath: string): Promise<string | null> {

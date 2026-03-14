@@ -3,10 +3,10 @@ import { randomUUID } from "node:crypto";
 import { unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { loadContext } from "../../src/context.js";
-import { resolveDiff } from "../../src/diff-resolver.js";
-import { formatForTerminal, parseAgentResponse } from "../../src/output.js";
-import { buildSSHSystemPrompt, buildSSHUserPrompt, buildSystemPrompt, buildUserPrompt } from "../../src/prompt-builder.js";
+import { loadContext } from "../../src/core/context.js";
+import { resolveDiff } from "../../src/core/diff-resolver.js";
+import { formatForTerminal, parseAgentResponse } from "../../src/core/output.js";
+import { buildSSHSystemPrompt, buildSSHUserPrompt, buildSystemPrompt, buildUserPrompt } from "../../src/core/prompt-builder.js";
 import { parseArgs } from "./args.js";
 import { createEventAccumulator } from "./events.js";
 import { setReviewFooter } from "./footer.js";
@@ -35,8 +35,8 @@ export default function (pi) {
                     if (warning)
                         ctx.ui.notify(warning, "warning");
                     const context = await loadContext({ cwd: ctx.cwd });
-                    if (context.loadedFiles.length > 0) {
-                        ctx.ui.notify(`Context: ${context.loadedFiles.join(", ")}`);
+                    if ((context.loadedFiles?.length ?? 0) > 0) {
+                        ctx.ui.notify(`Context: ${context.loadedFiles?.join(", ")}`);
                     }
                     systemPrompt = buildSystemPrompt(context, parsed.minSeverity);
                     userPrompt = buildUserPrompt(diff, skippedFiles);

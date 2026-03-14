@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { loadContext } from "../src/context.js";
+import { loadContext } from "../../src/core/context.js";
 
 const createdDirs: string[] = [];
 

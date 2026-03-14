@@ -1,4 +1,4 @@
-import type { MinSeverity } from "../../src/prompt-builder.js";
+import type { MinSeverity } from "../../src/core/prompt-builder.js";
 
 export type { MinSeverity };
 

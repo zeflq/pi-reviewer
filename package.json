@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "pi-reviewer": "./dist/src/bin.js"
+    "pi-reviewer": "./dist/src/ci/bin.js"
   },
   "scripts": {
     "build": "tsc",

@@ -8,5 +8,5 @@
     "outDir": "dist",
     "rootDir": "."
   },
-  "include": ["src", "extensions"]
+  "include": ["src", "extensions", "tests"]
 }
