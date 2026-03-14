@@ -45,7 +45,7 @@ jobs:
 ```
 
 Commit it to your default branch, then add your API key to your repo secrets:
-- `PI_API_KEY` — required
+- `PI_API_KEY` — your [pi](https://github.com/mariozechner/pi) API key, works with any AI provider (Anthropic, OpenAI, etc.)
 
 ## CI usage
 
@@ -58,7 +58,7 @@ You can also trigger a review manually via **Actions → Pi Reviewer → Run wor
 | Input | Required | Description |
 |---|---|---|
 | `github-token` | yes | GitHub token to post PR comments |
-| `pi-api-key` | yes | Pi platform API key |
+| `pi-api-key` | yes | [pi](https://github.com/mariozechner/pi) API key — works with any AI provider (Anthropic, OpenAI, etc.) |
 | `model` | no | Model to use in `provider/modelId` format (e.g. `anthropic/claude-opus-4-6`) |
 | `post-comment` | no | Post review as a GitHub PR comment (default: `true`) |
 | `min-severity` | no | Minimum severity to report: `info`, `warn`, or `critical` (default: `info`) |
