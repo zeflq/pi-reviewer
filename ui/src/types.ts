@@ -20,4 +20,6 @@ export interface CommentDecision {
 export interface UIData {
   result: ReviewResult;
   diff: string;
+  source?: string;
+  ssh?: boolean;
 }

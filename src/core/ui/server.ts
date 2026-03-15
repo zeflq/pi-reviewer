@@ -26,8 +26,8 @@ export interface UIServerHandle {
 // Resolve if no ping received for this long — user closed the tab
 const HEARTBEAT_MS = 6000;
 
-export async function startUIServer(result: ReviewResult, diff: string): Promise<UIServerHandle> {
-  const html = buildHTML(result, diff);
+export async function startUIServer(result: ReviewResult, diff: string, source?: string, ssh?: boolean): Promise<UIServerHandle> {
+  const html = buildHTML(result, diff, source, ssh);
 
   let resolveAction!: (a: UIAction) => void;
   const actionPromise = new Promise<UIAction>((r) => { resolveAction = r; });

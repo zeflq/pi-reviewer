@@ -12,14 +12,15 @@ export interface UIHandlerOptions {
   cwd: string;
   notify: (msg: string, type?: "info" | "warning" | "error") => void;
   sendMessage: (msg: string) => void;
+  ssh?: boolean;
   /** When set, save is delegated to the remote (SSH) instead of written locally. */
   saveRemote?: (markdown: string) => void;
 }
 
 export async function handleUIReview(opts: UIHandlerOptions): Promise<void> {
-  const { result, diff, conventions, source, cwd, notify, sendMessage, saveRemote } = opts;
+  const { result, diff, conventions, source, ssh, cwd, notify, sendMessage, saveRemote } = opts;
 
-  const handle = await startUIServer(result, diff);
+  const handle = await startUIServer(result, diff, source, ssh);
   notify(`Review UI → ${handle.url}`);
 
   const action = await handle.waitForAction();

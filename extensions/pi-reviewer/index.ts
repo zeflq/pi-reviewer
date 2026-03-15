@@ -72,7 +72,7 @@ export default function (pi: ExtensionAPI): void {
             minSeverity: parsed.minSeverity, stopLoader, notify,
           });
           await handleUIReview({
-            result, diff: resolvedDiff, conventions, source, cwd: ctx.cwd, notify,
+            result, diff: resolvedDiff, conventions, source, ssh: true, cwd: ctx.cwd, notify,
             sendMessage: pi.sendUserMessage.bind(pi),
             saveRemote: (md) => {
               pi.sendUserMessage(

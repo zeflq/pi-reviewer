@@ -96,33 +96,70 @@ body {
 #hdr {
   background: var(--bg-subtle);
   border-bottom: 1px solid var(--border);
-  padding: 10px 24px;
+  padding: 8px 24px;
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
-  position: relative;
 }
 
-#hdr h1 {
+#hdr2 {
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+  padding: 5px 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#hdr2-source {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+#wordmark {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+
+#wordmark-pi {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-weight: 700;
+  color: var(--link);
+}
+
+#hdr .icon-btn {
+  margin-left: auto;
 }
 
 #progress {
   font-size: 12px;
   color: var(--text-muted);
+  white-space: nowrap;
   margin-left: auto;
 }
 
+
+
 .tbtn {
   cursor: pointer;
-  color: var(--link);
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  color: var(--text);
+  background: var(--bg);
+  border: none;
+  border-radius: 4px;
   padding: 4px 10px;
   font-size: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+
+.tbtn:hover {
+  box-shadow: 0 1px 5px rgba(0,0,0,.3);
 }
 
 .act-btn {
@@ -159,6 +196,53 @@ body {
   color: var(--text-muted);
   cursor: help;
   flex-shrink: 0;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.icon-btn:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+
+.action-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+.action-btn span {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.action-btn:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.action-btn:disabled {
+  opacity: .35;
+  cursor: not-allowed;
 }
 
 /* ── Summary ─────────────────────────────────────────────────────────────── */
@@ -233,7 +317,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
-  scroll-margin-top: 52px;
+  scroll-margin-top: 90px;
 }
 
 .fhdr {

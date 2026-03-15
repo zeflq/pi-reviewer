@@ -50,6 +50,8 @@ function makeLargeDiff(): string {
 }
 
 export const mockData: UIData = {
+  source: "main vs origin/main",
+  ssh: true,
   result: {
     summary:
       "Overall the changes look solid. A few minor issues around error handling and one potential security concern worth addressing before merge.",
