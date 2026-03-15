@@ -1,4 +1,5 @@
 export const NOISE_PATTERNS = [
+    /^pi-review\.md$/,
     /^package-lock\.json$/,
     /^yarn\.lock$/,
     /^pnpm-lock\.yaml$/,
