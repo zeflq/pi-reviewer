@@ -12,10 +12,12 @@ export interface UIHandlerOptions {
   cwd: string;
   notify: (msg: string, type?: "info" | "warning" | "error") => void;
   sendMessage: (msg: string) => void;
+  /** When set, save is delegated to the remote (SSH) instead of written locally. */
+  saveRemote?: (markdown: string) => void;
 }
 
 export async function handleUIReview(opts: UIHandlerOptions): Promise<void> {
-  const { result, diff, conventions, source, cwd, notify, sendMessage } = opts;
+  const { result, diff, conventions, source, cwd, notify, sendMessage, saveRemote } = opts;
 
   const handle = await startUIServer(result, diff);
   notify(`Review UI → ${handle.url}`);
@@ -27,8 +29,13 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<void> {
 
   if (action.type === "save" || action.type === "save-and-send") {
     const md = buildDecisionsMarkdown(result, action.decisions, source);
-    await writeFile(path.join(cwd, "pi-review.md"), md, "utf-8");
-    notify("Review saved → pi-review.md");
+    if (saveRemote) {
+      saveRemote(md);
+      notify("Review save requested → pi-review.md (remote)");
+    } else {
+      await writeFile(path.join(cwd, "pi-review.md"), md, "utf-8");
+      notify("Review saved → pi-review.md");
+    }
   }
 
   if (action.type === "send" || action.type === "save-and-send") {

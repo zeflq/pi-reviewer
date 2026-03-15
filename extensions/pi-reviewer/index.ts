@@ -9,7 +9,7 @@ import { buildSSHSystemPrompt, buildSSHUserPrompt, buildSystemPrompt, buildUserP
 import { parseArgs } from "./args.js";
 import { setReviewFooter } from "./footer.js";
 import { runLocalReview } from "./run-local.js";
-import { runSSHReview } from "./run-ssh.js";
+import { runSSHReview, runSSHReviewAndWait } from "./run-ssh.js";
 import { handleUIReview } from "./ui-handler.js";
 
 export default function (pi: ExtensionAPI): void {
@@ -28,11 +28,13 @@ export default function (pi: ExtensionAPI): void {
         let resolvedDiff = "";
         let conventions = "";
 
-        if (parsed.ssh) {
+        if (parsed.ssh && !parsed.ui) {
+          // SSH-only: remote agent fetches diff, reviews, and saves pi-review.md itself
           systemPrompt = buildSSHSystemPrompt(parsed.minSeverity);
           userPrompt = buildSSHUserPrompt({ branch: parsed.branch, diff: parsed.diff, pr: parsed.pr });
           source = "remote (ssh)";
         } else {
+          // Local or SSH+UI: fetch diff locally
           const { diff, source: src, warning, skippedFiles } = await resolveDiff({
             cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch, pr: parsed.pr,
           });
@@ -55,13 +57,33 @@ export default function (pi: ExtensionAPI): void {
 
         stopLoader = setReviewFooter(ctx, source);
 
-        // ── SSH mode ────────────────────────────────────────────────────
-        if (parsed.ssh) {
+        // ── SSH-only mode ────────────────────────────────────────────────
+        if (parsed.ssh && !parsed.ui) {
           runSSHReview({ systemPrompt, userPrompt, pi, stopLoader, notify });
           return;
         }
 
-        // ── Local mode ──────────────────────────────────────────────────
+        // ── SSH + UI mode ────────────────────────────────────────────────
+        // Diff fetched locally, review runs on remote SSH agent, UI served locally,
+        // save writes pi-review.md on the remote via a follow-up agent message.
+        if (parsed.ssh && parsed.ui) {
+          const result = await runSSHReviewAndWait({
+            systemPrompt, userPrompt, pi,
+            minSeverity: parsed.minSeverity, stopLoader, notify,
+          });
+          await handleUIReview({
+            result, diff: resolvedDiff, conventions, source, cwd: ctx.cwd, notify,
+            sendMessage: pi.sendUserMessage.bind(pi),
+            saveRemote: (md) => {
+              pi.sendUserMessage(
+                `Write the following content to pi-review.md in the project root.\nRun \`git rev-parse --show-toplevel\` to get the absolute path, then use the Write tool:\n\n${md}`
+              );
+            },
+          });
+          return;
+        }
+
+        // ── Local mode ───────────────────────────────────────────────────
         const result = await runLocalReview({
           systemPrompt, userPrompt, cwd: ctx.cwd,
           minSeverity: parsed.minSeverity, stopLoader, notify,
