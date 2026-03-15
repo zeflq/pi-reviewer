@@ -206,12 +206,18 @@ body {
   flex: 1;
 }
 
-#summary p {
+.md {
   color: var(--text-body);
-  white-space: pre-wrap;
   max-width: 900px;
   font-size: 13px;
+  line-height: 1.6;
 }
+
+.md p { margin-bottom: 8px; }
+.md ul, .md ol { padding-left: 20px; margin-bottom: 8px; }
+.md li { margin-bottom: 2px; }
+.md strong { color: var(--text); font-weight: 600; }
+.md code { background: var(--bg-inset); border-radius: 3px; padding: 1px 5px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; }
 
 /* ── File list ───────────────────────────────────────────────────────────── */
 #files {
@@ -429,6 +435,23 @@ tr.has-comment td.code-ctx, tr.has-comment td.ln-ctx { background: var(--has-com
 }
 
 /* ── Misc ────────────────────────────────────────────────────────────────── */
+.load-more {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  background: var(--bg-subtle);
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--link);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.load-more:hover {
+  background: var(--bg-inset);
+}
+
 .bin-note {
   padding: 10px 16px;
   color: var(--text-muted);

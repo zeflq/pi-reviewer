@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { marked } from "marked";
 import { parseDiff } from "./diff-parser";
 import { FileDiff } from "./FileDiff";
 import { ReviewComment, UIData } from "./types";
@@ -118,7 +119,7 @@ export default function App() {
         </span>
         {summaryOpen && (
           <div id="summary">
-            <p>{result.summary}</p>
+            <div className="md" dangerouslySetInnerHTML={{ __html: marked(result.summary) as string }} />
           </div>
         )}
         {filesOpen && (

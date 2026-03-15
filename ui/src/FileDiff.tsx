@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ReviewComment } from "./types";
 import { ParsedFile, SplitRow, buildSplitRows } from "./diff-parser";
 import { CommentCard } from "./CommentCard";
+
+const AUTO_COLLAPSE_THRESHOLD = 200;
+const TRUNCATE_THRESHOLD = 300;
 
 interface DecisionState {
   decision: string;
@@ -26,14 +29,20 @@ function rowComments(
       if (c.side === "LEFT") return row.oln === c.line;
       return row.nln === c.line;
     }
-    // change row
     if (c.side === "LEFT") return row.del != null && row.del.ln === c.line;
     return row.add != null && row.add.ln === c.line;
   });
 }
 
 export function FileDiff({ file, comments: fc, decisions, onDecide }: Props) {
-  const [collapsed, setCollapsed] = useState(false);
+  const allRows = useMemo(() => buildSplitRows(file), [file]);
+  const isLarge = allRows.length > AUTO_COLLAPSE_THRESHOLD;
+
+  const [collapsed, setCollapsed] = useState(isLarge);
+  const [showAll, setShowAll] = useState(false);
+
+  const rows = showAll ? allRows : allRows.slice(0, TRUNCATE_THRESHOLD);
+  const hidden = allRows.length - TRUNCATE_THRESHOLD;
 
   const badge =
     fc.length > 0 ? (
@@ -42,8 +51,12 @@ export function FileDiff({ file, comments: fc, decisions, onDecide }: Props) {
       </span>
     ) : null;
 
+  const sizeBadge = isLarge ? (
+    <span className="cbadge">{allRows.length} lines</span>
+  ) : null;
+
   const trows: React.ReactNode[] = [];
-  buildSplitRows(file).forEach(function (row, ri) {
+  rows.forEach(function (row, ri) {
     if (row.type === "hunk") {
       trows.push(
         <tr key={`h${ri}`} className="hunk-hdr">
@@ -73,14 +86,10 @@ export function FileDiff({ file, comments: fc, decisions, onDecide }: Props) {
       trows.push(
         <tr key={`r${ri}`} className={trCls}>
           <td className={`ln ${d ? "ln-del" : "ln-del-empty"}`}>{d ? String(d.ln) : ""}</td>
-          <td className={`code ${d ? "code-del" : "code-del-empty"}`}>
-            {d ? d.content || "\u00a0" : ""}
-          </td>
+          <td className={`code ${d ? "code-del" : "code-del-empty"}`}>{d ? d.content || "\u00a0" : ""}</td>
           <td className="sep" />
           <td className={`ln ${a ? "ln-add" : "ln-add-empty"}`}>{a ? String(a.ln) : ""}</td>
-          <td className={`code ${a ? "code-add" : "code-add-empty"}`}>
-            {a ? a.content || "\u00a0" : ""}
-          </td>
+          <td className={`code ${a ? "code-add" : "code-add-empty"}`}>{a ? a.content || "\u00a0" : ""}</td>
         </tr>
       );
     }
@@ -102,9 +111,7 @@ export function FileDiff({ file, comments: fc, decisions, onDecide }: Props) {
           <tr key={`c${item.idx}`} className="cmt-row">
             {isLeft ? (
               <>
-                <td colSpan={2} className="cmt-cell">
-                  {card}
-                </td>
+                <td colSpan={2} className="cmt-cell">{card}</td>
                 <td className="sep" />
                 <td colSpan={2} className="cmt-empty" />
               </>
@@ -112,9 +119,7 @@ export function FileDiff({ file, comments: fc, decisions, onDecide }: Props) {
               <>
                 <td colSpan={2} className="cmt-empty" />
                 <td className="sep" />
-                <td colSpan={2} className="cmt-cell">
-                  {card}
-                </td>
+                <td colSpan={2} className="cmt-cell">{card}</td>
               </>
             )}
           </tr>
@@ -129,21 +134,29 @@ export function FileDiff({ file, comments: fc, decisions, onDecide }: Props) {
         <span className="collapse-icon">{collapsed ? "▶" : "▼"}</span>
         <span className="fname">{file.file}</span>
         {badge}
+        {sizeBadge}
       </div>
       {!collapsed && (
         file.binary ? (
           <div className="bin-note">Binary file &mdash; diff not shown</div>
         ) : (
-          <table className="diff-table">
-            <colgroup>
-              <col className="ln" />
-              <col className="code" />
-              <col className="sep" />
-              <col className="ln" />
-              <col className="code" />
-            </colgroup>
-            <tbody>{trows}</tbody>
-          </table>
+          <>
+            <table className="diff-table">
+              <colgroup>
+                <col className="ln" />
+                <col className="code" />
+                <col className="sep" />
+                <col className="ln" />
+                <col className="code" />
+              </colgroup>
+              <tbody>{trows}</tbody>
+            </table>
+            {!showAll && hidden > 0 && (
+              <button className="load-more" onClick={() => setShowAll(true)}>
+                Load {hidden} more lines
+              </button>
+            )}
+          </>
         )
       )}
     </div>
