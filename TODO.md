@@ -202,23 +202,24 @@ tests/
 
 ### 15. Native diff review window (`--ui`, local server + Monaco)
 
-- [ ] Add `--ui` flag to `/review` command
-- [ ] After review completes, spin up a local HTTP server on a random port
-- [ ] Serve a Monaco diff UI — render the diff with structured inline comments overlaid (same experience as GitHub review)
-- [ ] Open browser automatically (`open` / `xdg-open` / `start`)
-- [ ] **Comment decisions — user must act on every comment before any action is available:**
+- [x] Add `--ui` flag to `/review` command
+- [x] After review completes, spin up a local HTTP server on a random port
+- [x] Serve a Monaco diff UI — render the diff with structured inline comments overlaid (same experience as GitHub review)
+- [x] Open browser automatically (`open` / `xdg-open` / `start`)
+- [x] Works on macOS, Linux, Windows — zero extra deps (Node built-in `http`)
+- [x] **Comment decisions — user must act on every comment before any action is available:**
   - ✅ **Accept** — injected into agent context
   - ❌ **Reject** — not injected, excluded entirely
   - 💬 **Discuss** — reveals free-form text input, text is injected
-- [ ] **Three actions (all disabled until every comment has a decision):**
+- [x] **Three actions (all disabled until every comment has a decision):**
   - **Send** — inject accepted + discussed comments → start new agent turn → close
   - **Save** — write result + decisions to `pi-review.md` → close (no agent turn)
   - **Save & Send** — write to `pi-review.md` + start new agent turn → close
-- [ ] **On Send / Save & Send:** inject full context — AGENTS.md / CLAUDE.md + REVIEW.md + accepted/discussed comments (bot finding + user discuss text)
-- [ ] **On close with no action:** nothing injected, nothing saved, server shuts down silently
-- [ ] Server shuts down after any action or on window close
-- [ ] Works on macOS, Linux, Windows — zero extra deps (Node built-in `http`)
+- [x] **On Send / Save & Send:** inject full context — AGENTS.md / CLAUDE.md + REVIEW.md + accepted/discussed comments (bot finding + user discuss text)
+- [x] **On close with no action:** nothing injected, nothing saved, server shuts down silently
+- [x] Server shuts down after any action or on window close
 - [ ] SSH mode supported — diff fetched locally, `ReviewResult` received from remote agent
+- [ ] **Renderer strategy:** use Glimpse (cross-platform native webview) as default; fall back to `open`/`xdg-open`/`start` launching the system browser if Glimpse is unavailable
 
 ### 10. Custom system prompt
 

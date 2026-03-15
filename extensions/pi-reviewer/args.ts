@@ -8,12 +8,13 @@ export interface ReviewCommandArgs {
   pr?: number;
   dryRun: boolean;
   ssh: boolean;
+  ui: boolean;
   minSeverity: MinSeverity;
 }
 
 export function parseArgs(rawArgs: string): ReviewCommandArgs {
   const tokens = rawArgs.trim() ? rawArgs.trim().split(/\s+/) : [];
-  const parsed: ReviewCommandArgs = { dryRun: false, ssh: false, minSeverity: "INFO" };
+  const parsed: ReviewCommandArgs = { dryRun: false, ssh: false, ui: false, minSeverity: "INFO" };
 
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
@@ -25,6 +26,11 @@ export function parseArgs(rawArgs: string): ReviewCommandArgs {
 
     if (token === "--ssh") {
       parsed.ssh = true;
+      continue;
+    }
+
+    if (token === "--ui") {
+      parsed.ui = true;
       continue;
     }
 

@@ -1,6 +1,6 @@
 export function parseArgs(rawArgs) {
     const tokens = rawArgs.trim() ? rawArgs.trim().split(/\s+/) : [];
-    const parsed = { dryRun: false, ssh: false, minSeverity: "INFO" };
+    const parsed = { dryRun: false, ssh: false, ui: false, minSeverity: "INFO" };
     for (let i = 0; i < tokens.length; i += 1) {
         const token = tokens[i];
         if (token === "--dry-run") {
@@ -9,6 +9,10 @@ export function parseArgs(rawArgs) {
         }
         if (token === "--ssh") {
             parsed.ssh = true;
+            continue;
+        }
+        if (token === "--ui") {
+            parsed.ui = true;
             continue;
         }
         if (token === "--diff") {

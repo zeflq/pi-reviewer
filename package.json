@@ -8,7 +8,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "vitest --run"
+    "test": "vitest --run",
+    "dev:ui": "tsx src/dev/mock-ui.ts"
   },
   "pi": {
     "extensions": [
