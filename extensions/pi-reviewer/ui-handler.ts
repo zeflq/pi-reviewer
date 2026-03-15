@@ -69,7 +69,6 @@ function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision
 
 function buildInjectionMessage(result: ReviewResult, decisions: CommentDecision[], conventions: string): string {
   const accepted = decisions.filter((d) => d.decision !== "reject");
-  if (accepted.length === 0) return "All review findings were rejected — nothing to address.";
 
   const parts: string[] = ["Here are the review findings to address. Please work through each one:", ""];
 

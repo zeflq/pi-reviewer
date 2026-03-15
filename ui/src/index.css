@@ -233,6 +233,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
+  scroll-margin-top: 52px;
 }
 
 .fhdr {

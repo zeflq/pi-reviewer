@@ -35,6 +35,7 @@ export default function App() {
 
   const decidedCount = Object.values(decisions).filter((d) => d.decision).length;
   const allDone = totalComments > 0 && decidedCount === totalComments;
+  const hasAccepted = Object.values(decisions).some((d) => d.decision && d.decision !== "reject");
 
   const onDecide = useCallback(
     (idx: number, decision: string, discussText: string) => {
@@ -102,14 +103,14 @@ export default function App() {
         </button>
         <button
           className="act-btn primary"
-          disabled={!allDone}
+          disabled={!allDone || !hasAccepted}
           onClick={() => doAction("send")}
         >
           Send to agent
         </button>
         <button
           className="act-btn"
-          disabled={!allDone}
+          disabled={!allDone || !hasAccepted}
           onClick={() => doAction("save-and-send")}
         >
           Save &amp; Send
