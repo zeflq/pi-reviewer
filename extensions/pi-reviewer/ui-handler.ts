@@ -11,14 +11,18 @@ export interface UIHandlerOptions {
   source: string;
   cwd: string;
   notify: (msg: string, type?: "info" | "warning" | "error") => void;
-  sendMessage: (msg: string) => void;
   ssh?: boolean;
   /** When set, save is delegated to the remote (SSH) instead of written locally. */
   saveRemote?: (markdown: string) => void;
 }
 
-export async function handleUIReview(opts: UIHandlerOptions): Promise<void> {
-  const { result, diff, conventions, source, ssh, cwd, notify, sendMessage, saveRemote } = opts;
+/**
+ * Returns the injection message to send to the agent, or undefined if none.
+ * Save is handled internally; the caller is responsible for sending the injection
+ * message at the right time (after any agent-side save has completed).
+ */
+export async function handleUIReview(opts: UIHandlerOptions): Promise<string | undefined> {
+  const { result, diff, conventions, source, ssh, cwd, notify, saveRemote } = opts;
 
   const handle = await startUIServer(result, diff, source, ssh);
   notify(`Review UI → ${handle.url}`);
@@ -26,7 +30,7 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<void> {
   const action = await handle.waitForAction();
   await handle.close();
 
-  if (action.type === "closed") return;
+  if (action.type === "closed") return undefined;
 
   if (action.type === "save" || action.type === "save-and-send") {
     const md = buildDecisionsMarkdown(result, action.decisions, source);
@@ -40,8 +44,10 @@ export async function handleUIReview(opts: UIHandlerOptions): Promise<void> {
   }
 
   if (action.type === "send" || action.type === "save-and-send") {
-    sendMessage(buildInjectionMessage(result, action.decisions, conventions));
+    return buildInjectionMessage(result, action.decisions, conventions);
   }
+
+  return undefined;
 }
 
 function buildDecisionsMarkdown(result: ReviewResult, decisions: CommentDecision[], source: string): string {

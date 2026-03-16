@@ -4,8 +4,8 @@ import { platform } from "node:os";
 import { buildHTML } from "./template.js";
 // Resolve if no ping received for this long — user closed the tab
 const HEARTBEAT_MS = 6000;
-export async function startUIServer(result, diff) {
-    const html = buildHTML(result, diff);
+export async function startUIServer(result, diff, source, ssh) {
+    const html = buildHTML(result, diff, source, ssh);
     let resolveAction;
     const actionPromise = new Promise((r) => { resolveAction = r; });
     let heartbeatTimer;

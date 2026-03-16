@@ -56,7 +56,8 @@ export function parseAgentResponse(text, minSeverity = "INFO") {
                 const body = c.body.replace(/^[🔴🟡🔵]\s*/, "");
                 return { ...c, body: `${emoji} ${body}` };
             });
-            return { summary: parsed.summary, comments };
+            const diff = typeof parsed.diff === "string" ? parsed.diff : undefined;
+            return { summary: parsed.summary, comments, ...(diff !== undefined ? { diff } : {}) };
         }
     }
     return { summary: text, comments: [] };

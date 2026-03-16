@@ -39,6 +39,15 @@ export default function App() {
   const allDone = totalComments > 0 && decidedCount === totalComments;
   const hasAccepted = Object.values(decisions).some((d) => d.decision && d.decision !== "reject");
 
+  function jumpToNextPending() {
+    for (let i = 0; i < totalComments; i++) {
+      if (!decisions[i]?.decision) {
+        document.getElementById(`cmt-${i}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+    }
+  }
+
   const onDecide = useCallback(
     (idx: number, decision: string, discussText: string) => {
       setDecisions((prev) => {
@@ -107,6 +116,9 @@ export default function App() {
         <div id="hdr2">
           <span id="hdr2-source">{source ? (ssh ? `SSH · ${source}` : source) : ""}</span>
           <span id="progress">{decidedCount} / {totalComments} decided</span>
+          <button className="icon-btn" disabled={allDone} onClick={jumpToNextPending} title="Jump to next undecided comment">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          </button>
           <button className="action-btn" disabled={!allDone} onClick={() => doAction("save")}>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
             <span>Save</span>

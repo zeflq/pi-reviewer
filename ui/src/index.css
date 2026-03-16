@@ -436,11 +436,27 @@ tr.has-comment td.code-ctx, tr.has-comment td.ln-ctx { background: var(--has-com
 .cc.warn     { border-left-color: #d29922; }
 .cc.info     { border-left-color: #388bfd; }
 
+/* Decision states */
+.cc.decided-accept,
+.cc.decided-discuss { background: rgba(63, 185, 80, 0.07); border-color: rgba(63, 185, 80, 0.25); }
+.cc.decided-reject  { opacity: 0.4; transition: opacity 0.15s; }
+.cc.decided-reject:hover { opacity: 0.75; }
+
 .cc-meta {
   padding: 6px 14px 2px;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 11px;
   color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cc-status {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .cc-body {

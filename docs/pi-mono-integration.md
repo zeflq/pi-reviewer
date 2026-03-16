@@ -44,7 +44,7 @@ The CI uses the read tools but skips the full `pi-coding-agent` stack: no extens
 
 1. Checkout → fetch PR diff via `gh` CLI
 2. `loadContext()` reads `AGENTS.md` / `CLAUDE.md`
-3. `buildSystemPrompt(context)` + `buildUserPrompt(diff)`
+3. `buildJSONSystemPrompt(context)` + `buildUserPrompt(diff)`
 4. `new Agent({ tools: createReadOnlyTools(cwd) })` — read-only file access
 5. `agent.prompt(userPrompt)` → agent loop runs, may read files for context
 6. Post final assistant text as GitHub PR comment via GitHub API
@@ -83,13 +83,17 @@ The extension does not import `pi-agent-core`. It delegates the agent run entire
 | ExtensionAPI surface | Usage |
 |---|---|
 | `pi.registerCommand("review", ...)` | Register the `/review` command |
-| `ctx.cwd` | Pass working directory to `resolveDiff()` and the subprocess |
+| `ctx.cwd` | Pass working directory to `resolveDiff()` and the subprocess (local mode) |
 | `ctx.ui.notify(msg, level)` | Show warnings (diff truncated, etc.) and errors |
 | `ctx.ui.setFooter(render)` | Replace default footer with spinner + review source |
+| `pi.on("before_agent_start", cb)` | Inject system prompt into the SSH agent before it starts |
+| `pi.on("agent_end", cb)` | Capture final agent messages to extract review result; also used to sequence injection after save |
+| `pi.on("tool_result", cb)` | Capture bash tool output — used in SSH+UI to silently extract the diff from the agent's git diff call |
+| `pi.sendUserMessage(msg)` | Send the user prompt to the SSH agent; also used post-UI to trigger save/send turns |
 
 ### Events from subprocess (`--mode json`)
 
-The subprocess emits one JSON object per line on stdout. pi-reviewer only cares about `turn_end`:
+In **local mode**, the subprocess emits one JSON object per line on stdout. pi-reviewer processes `turn_end` events:
 
 ```
 { "type": "turn_end", "message": { "role": "assistant", "content": "..." } }
@@ -97,6 +101,21 @@ The subprocess emits one JSON object per line on stdout. pi-reviewer only cares 
 
 `createEventAccumulator` collects the last non-empty assistant text across all `turn_end` events. On process close, `getLastReviewText()` returns the final review. Intermediate tool-use turns (empty content) are ignored.
 
+In **SSH mode**, the extension uses `pi.on()` hooks instead:
+- `before_agent_start` — called before the agent's first turn; returns `{ systemPrompt }` to inject
+- `agent_end` — called when the agent finishes; receives `event.messages` to extract the final assistant text
+
 ### `--ssh` flag
 
-When `--ssh` is passed, `resolveDiff()` and `loadContext()` are skipped entirely. Instead `buildSSHUserPrompt()` produces an instruction that tells the subprocess agent to fetch the diff itself using its Bash tool — which is SSH-redirected by the `ssh.ts` extension already loaded in the subprocess.
+When `--ssh` is passed, the extension skips `resolveDiff()` and `loadContext()`. Instead, it builds a diff command string (`buildSSHDiffCommand`) and passes it to `buildSSHUserPrompt`, which instructs the agent to:
+1. Run the diff command itself (via its bash tool, which is SSH-redirected by `ssh.ts`)
+2. Read `AGENTS.md` / `CLAUDE.md` from the remote project root
+3. Review and produce output
+
+The agent fetches the diff on the remote — no local SSH implementation needed.
+
+### `--ssh --ui` flag combination
+
+Same agent setup as SSH-only, but uses `buildJSONSystemPrompt` (JSON format) and `runSSHReviewAndWait` instead of fire-and-forget. The diff is captured silently via a `tool_result` listener that watches for bash output containing `diff --git` — this avoids asking the agent to echo the diff back in its JSON response (which would flood the terminal).
+
+After the agent finishes, the `ReviewResult` and captured diff are served via a local UI server. Post-UI actions (save/send) are sequenced carefully: `saveRemote` triggers the first agent turn, and if an injection message is also needed, it is sent via an `agent_end` listener after the save turn completes.

@@ -5,7 +5,7 @@ import { extractLastAssistantText } from "../../extensions/pi-reviewer/events.js
 import { loadContext } from "../core/context.js";
 import { resolveDiff } from "../core/diff-resolver.js";
 import { sendOutput } from "../core/output.js";
-import { buildSystemPrompt, buildUserPrompt } from "../core/prompt-builder.js";
+import { buildJSONSystemPrompt, buildUserPrompt } from "../core/prompt-builder.js";
 export async function review(options) {
     const cwd = options.cwd ?? process.cwd();
     const githubToken = options.githubToken ?? process.env.GITHUB_TOKEN;
@@ -26,7 +26,7 @@ export async function review(options) {
     else {
         console.log("[pi-reviewer] context: no conventions found (AGENTS.md / CLAUDE.md / REVIEW.md)");
     }
-    const systemPrompt = buildSystemPrompt(context, options.minSeverity);
+    const systemPrompt = buildJSONSystemPrompt(context, options.minSeverity);
     const userPrompt = buildUserPrompt(diff, skippedFiles);
     const target = options.output ?? (process.env.GITHUB_ACTIONS === "true" ? "comment" : "terminal");
     if (options.dryRun) {

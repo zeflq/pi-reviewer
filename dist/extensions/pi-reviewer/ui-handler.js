@@ -1,22 +1,34 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { startUIServer } from "../../src/core/ui-server.js";
+/**
+ * Returns the injection message to send to the agent, or undefined if none.
+ * Save is handled internally; the caller is responsible for sending the injection
+ * message at the right time (after any agent-side save has completed).
+ */
 export async function handleUIReview(opts) {
-    const { result, diff, conventions, source, cwd, notify, sendMessage } = opts;
-    const handle = await startUIServer(result, diff);
+    const { result, diff, conventions, source, ssh, cwd, notify, saveRemote } = opts;
+    const handle = await startUIServer(result, diff, source, ssh);
     notify(`Review UI → ${handle.url}`);
     const action = await handle.waitForAction();
     await handle.close();
     if (action.type === "closed")
-        return;
+        return undefined;
     if (action.type === "save" || action.type === "save-and-send") {
         const md = buildDecisionsMarkdown(result, action.decisions, source);
-        await writeFile(path.join(cwd, "pi-review.md"), md, "utf-8");
-        notify("Review saved → pi-review.md");
+        if (saveRemote) {
+            saveRemote(md);
+            notify("Review save requested → pi-review.md (remote)");
+        }
+        else {
+            await writeFile(path.join(cwd, "pi-review.md"), md, "utf-8");
+            notify("Review saved → pi-review.md");
+        }
     }
     if (action.type === "send" || action.type === "save-and-send") {
-        sendMessage(buildInjectionMessage(result, action.decisions, conventions));
+        return buildInjectionMessage(result, action.decisions, conventions);
     }
+    return undefined;
 }
 function buildDecisionsMarkdown(result, decisions, source) {
     const date = new Date().toISOString().replace("T", " ").slice(0, 19);
@@ -49,8 +61,6 @@ function buildDecisionsMarkdown(result, decisions, source) {
 }
 function buildInjectionMessage(result, decisions, conventions) {
     const accepted = decisions.filter((d) => d.decision !== "reject");
-    if (accepted.length === 0)
-        return "All review findings were rejected — nothing to address.";
     const parts = ["Here are the review findings to address. Please work through each one:", ""];
     for (const d of accepted) {
         const c = result.comments[d.index];

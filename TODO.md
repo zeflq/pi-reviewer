@@ -162,9 +162,11 @@ tests/
 
 - [x] Add `--ssh` flag to `/review` command
 - [x] When set, skip `resolveDiff()` and `loadContext()` in the extension handler
-- [x] Build user prompt as an instruction for the spawned pi subprocess to fetch the diff via its `Bash` tool (SSH-redirected by ssh.ts)
-- [x] `AGENTS.md` / `CLAUDE.md` read via subprocess `Read` tool (also SSH-redirected)
-- [x] System prompt unchanged — agent still returns same JSON review format
+- [x] Agent fetches diff itself via SSH-redirected bash tool (`buildSSHDiffCommand` + `buildSSHUserPrompt`)
+- [x] `AGENTS.md` / `CLAUDE.md` read via agent's SSH-redirected `Read` tool
+- [x] SSH-only: `buildMarkdownSystemPrompt` — agent writes review to `pi-review.md` directly
+- [x] SSH+UI: `buildJSONSystemPrompt` — agent returns structured JSON; diff captured silently from `tool_result` event (no terminal flood)
+- [x] Post-UI save/send sequenced via `agent_end` listener to avoid "agent already processing" error
 - [x] No runtime check for ssh.ts — document that `--ssh` requires an SSH extension (e.g. ssh.ts) to be installed; without it, falls back silently to local execution
 - [x] Update README with `--ssh` usage example and prerequisite note
 
@@ -218,7 +220,7 @@ tests/
 - [x] **On Send / Save & Send:** inject full context — AGENTS.md / CLAUDE.md + REVIEW.md + accepted/discussed comments (bot finding + user discuss text)
 - [x] **On close with no action:** nothing injected, nothing saved, server shuts down silently
 - [x] Server shuts down after any action or on window close
-- [ ] SSH mode supported — diff fetched locally, `ReviewResult` received from remote agent
+- [x] SSH mode supported — diff captured from `tool_result` event, `ReviewResult` received from remote agent; save/send sequenced via `agent_end` listener
 - [ ] **Renderer strategy:** use Glimpse (cross-platform native webview) as default; fall back to `open`/`xdg-open`/`start` launching the system browser if Glimpse is unavailable
 
 ### 10. Custom system prompt

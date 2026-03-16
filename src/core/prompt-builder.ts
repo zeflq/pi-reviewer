@@ -8,9 +8,11 @@ const SEVERITY_RULE: Record<MinSeverity, string | null> = {
   CRITICAL: "- Only report CRITICAL issues — skip WARN and INFO",
 };
 
-export function buildSystemPrompt(context: ContextResult | string, minSeverity: MinSeverity = "INFO"): string {
+// ── Shared base ───────────────────────────────────────────────────────────────
+
+function buildSharedBase(minSeverity: MinSeverity): string[] {
   const severityRule = SEVERITY_RULE[minSeverity];
-  const basePrompt = [
+  return [
     "You are a code reviewer. Review the following PR diff carefully.",
     "",
     "Severity tiers:",
@@ -20,9 +22,25 @@ export function buildSystemPrompt(context: ContextResult | string, minSeverity: 
     "",
     "Rules:",
     "- Only flag what is actually wrong in the diff — no hypotheticals",
-    "- Do not repeat what the project conventions already enforce",
     "- If nothing is wrong, say so clearly",
     ...(severityRule ? [severityRule] : []),
+  ];
+}
+
+// ── System prompts ────────────────────────────────────────────────────────────
+
+/**
+ * JSON system prompt — used by local mode and SSH+UI.
+ * Agent must return a structured JSON ReviewResult.
+ * Conventions and review rules are injected from context when available.
+ */
+export function buildJSONSystemPrompt(
+  context: ContextResult | string,
+  minSeverity: MinSeverity = "INFO",
+): string {
+  const base = [
+    ...buildSharedBase(minSeverity),
+    "- Do not repeat what the project conventions already enforce",
     "",
     "Return only a JSON object with this exact shape (no markdown fences, no extra text):",
     "{",
@@ -45,41 +63,20 @@ export function buildSystemPrompt(context: ContextResult | string, minSeverity: 
   const conventions = typeof context === "string" ? context : context.conventions;
   const reviewRules = typeof context === "string" ? "" : context.reviewRules;
 
-  const sections: string[] = [basePrompt];
-
-  if (conventions.trim()) {
-    sections.push(`--- Project conventions (AGENTS.md / CLAUDE.md) ---\n${conventions}\n---`);
-  }
-
-  if (reviewRules.trim()) {
-    sections.push(`--- Review-specific rules (REVIEW.md) ---\n${reviewRules}\n---`);
-  }
+  const sections: string[] = [base];
+  if (conventions.trim()) sections.push(`--- Project conventions (AGENTS.md / CLAUDE.md) ---\n${conventions}\n---`);
+  if (reviewRules.trim()) sections.push(`--- Review-specific rules (REVIEW.md) ---\n${reviewRules}\n---`);
 
   return sections.join("\n\n");
 }
 
-export function buildUserPrompt(diff: string, skippedFiles?: string[]): string {
-  let prompt = `Review this diff:\n\n${diff}`;
-  if (skippedFiles && skippedFiles.length > 0) {
-    prompt += `\n\n⚠ The following files were not included because the diff exceeded the size limit. Mention them explicitly in your summary as not reviewed:\n${skippedFiles.map((f) => `- ${f}`).join("\n")}`;
-  }
-  return prompt;
-}
-
-export function buildSSHSystemPrompt(minSeverity: MinSeverity = "INFO"): string {
-  const severityRule = SEVERITY_RULE[minSeverity];
+/**
+ * Markdown system prompt — used by SSH-only mode.
+ * Agent writes a human-readable markdown review and saves it to pi-review.md.
+ */
+export function buildMarkdownSystemPrompt(minSeverity: MinSeverity = "INFO"): string {
   return [
-    "You are a code reviewer. Review the following PR diff carefully.",
-    "",
-    "Severity tiers:",
-    "- 🔴 CRITICAL: bugs causing runtime failures, security vulnerabilities, data loss risks",
-    "- 🟡 WARN: type errors, missing error handling, logic issues, test gaps",
-    "- 🔵 INFO: style, naming, performance hints, suggestions",
-    "",
-    "Rules:",
-    "- Only flag what is actually wrong in the diff — no hypotheticals",
-    "- If nothing is wrong, say so clearly",
-    ...(severityRule ? [severityRule] : []),
+    ...buildSharedBase(minSeverity),
     "",
     "Write your review as Markdown with:",
     "- A summary section with bullet points for each issue",
@@ -89,35 +86,27 @@ export function buildSSHSystemPrompt(minSeverity: MinSeverity = "INFO"): string 
   ].join("\n");
 }
 
-export interface SSHPromptOptions {
-  branch?: string;
-  diff?: string;
-  pr?: number;
+// ── User prompts ──────────────────────────────────────────────────────────────
+
+/** Local mode — diff only, conventions already in system prompt. */
+export function buildUserPrompt(diff: string, skippedFiles?: string[]): string {
+  let prompt = `Review this diff:\n\n${diff}`;
+  if (skippedFiles && skippedFiles.length > 0) {
+    prompt += `\n\n⚠ The following files were not included because the diff exceeded the size limit. Mention them explicitly in your summary as not reviewed:\n${skippedFiles.map((f) => `- ${f}`).join("\n")}`;
+  }
+  return prompt;
 }
 
-export function buildSSHUserPrompt(options: SSHPromptOptions = {}): string {
-  let diffCommand: string;
-
-  if (typeof options.pr === "number") {
-    diffCommand = `gh pr diff ${options.pr}`;
-  } else if (options.diff) {
-    diffCommand = `git diff ${options.diff}`;
-  } else if (options.branch) {
-    diffCommand = `git diff $(git merge-base ${options.branch} HEAD)`;
-  } else {
-    diffCommand = `git diff $(git merge-base $(git symbolic-ref refs/remotes/origin/HEAD --short 2>/dev/null || echo origin/main) HEAD)`;
-  }
-
+/**
+ * SSH mode (both SSH-only and SSH+UI).
+ * Agent runs the given diff command, reads project conventions, then reviews.
+ */
+export function buildSSHUserPrompt(diffCommand: string): string {
   return [
     "You are performing a code review. Execute all steps in order:",
     "",
     `1. Run this command to get the diff: ${diffCommand}`,
-    "2. Read AGENTS.md or CLAUDE.md from the project root if either exists. Then scan the file for markdown links matching the pattern [text](./path.md) — read every linked .md file, and repeat the same scan recursively for each file you read (following links at any depth). These files are all part of the project conventions. Also read REVIEW.md from the project root if it exists (same recursive link rule applies) — it contains review-specific rules.",
-    "3. Review the diff. Write your findings as markdown with:",
-    "   - A summary section with bullet points for each issue",
-    "   - An inline comments section listing file, line, and comment for each finding",
-    "4. Run `git rev-parse --show-toplevel` to get the absolute project root path.",
-    "   Use the Write tool to save your markdown review to <project_root>/pi-review.md.",
-    "   The file must contain readable markdown — not JSON, not code-fenced JSON.",
+    "2. Read AGENTS.md or CLAUDE.md from the project root if either exists. Scan for markdown links matching [text](./path.md) and read each linked .md file recursively (at any depth). Also read REVIEW.md from the project root if it exists (same recursive rule). These files contain project conventions and review-specific rules.",
+    "3. Review the diff according to the system prompt instructions.",
   ].join("\n");
 }

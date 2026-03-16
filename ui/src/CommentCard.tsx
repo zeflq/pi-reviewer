@@ -30,10 +30,16 @@ export function CommentCard({ comment, idx, decision, discussText = "", onDecide
     setLocalText("");
   }
 
+  const decisionLabel =
+    decision === "accept" ? "✅ Accepted" :
+    decision === "reject" ? "❌ Rejected" :
+    decision === "discuss" ? "💬 Noted" : null;
+
   return (
-    <div className={`cc ${sev}`}>
+    <div id={`cmt-${idx}`} className={`cc ${sev}${decision ? ` decided-${decision}` : " pending"}`}>
       <div className="cc-meta">
         {comment.file}:{comment.line}&nbsp;&nbsp;[{comment.severity}]
+        {decisionLabel && <span className="cc-status">{decisionLabel}</span>}
       </div>
       <div className="cc-body">{comment.body}</div>
       <div className="cc-actions">

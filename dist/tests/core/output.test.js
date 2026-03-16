@@ -80,6 +80,18 @@ describe("parseAgentResponse", () => {
         expect(result.comments).toHaveLength(2);
         expect(result.comments.map((c) => c.severity)).toEqual(["WARN", "CRITICAL"]);
     });
+    it("extracts diff field when present in JSON", () => {
+        const result = parseAgentResponse(JSON.stringify({ summary: "looks good", comments: [], diff: "diff --git a/src/a.ts..." }));
+        expect(result.diff).toBe("diff --git a/src/a.ts...");
+    });
+    it("leaves diff undefined when not present in JSON", () => {
+        const result = parseAgentResponse(JSON.stringify({ summary: "looks good", comments: [] }));
+        expect(result.diff).toBeUndefined();
+    });
+    it("leaves diff undefined when diff field is not a string", () => {
+        const result = parseAgentResponse(JSON.stringify({ summary: "looks good", comments: [], diff: 42 }));
+        expect(result.diff).toBeUndefined();
+    });
     it("keeps only CRITICAL when minSeverity is CRITICAL", () => {
         const result = parseAgentResponse(JSON.stringify({
             summary: "review",

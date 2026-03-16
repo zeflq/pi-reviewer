@@ -6,7 +6,7 @@ import { extractLastAssistantText } from "../../extensions/pi-reviewer/events.js
 import { loadContext } from "../core/context.js";
 import { resolveDiff } from "../core/diff-resolver.js";
 import { sendOutput, type OutputTarget, type Severity } from "../core/output.js";
-import { buildSystemPrompt, buildUserPrompt, type MinSeverity } from "../core/prompt-builder.js";
+import { buildJSONSystemPrompt, buildUserPrompt, type MinSeverity } from "../core/prompt-builder.js";
 
 export interface ReviewOptions {
   cwd?: string;
@@ -45,7 +45,7 @@ export async function review(options: ReviewOptions): Promise<void> {
     console.log("[pi-reviewer] context: no conventions found (AGENTS.md / CLAUDE.md / REVIEW.md)");
   }
 
-  const systemPrompt = buildSystemPrompt(context, options.minSeverity);
+  const systemPrompt = buildJSONSystemPrompt(context, options.minSeverity);
   const userPrompt = buildUserPrompt(diff, skippedFiles);
 
   const target: OutputTarget =
