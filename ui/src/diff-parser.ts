@@ -45,6 +45,38 @@ export function parseDiff(txt: string): ParsedFile[] {
   return files;
 }
 
+export interface UnifiedRow {
+  type: "hunk" | "del" | "add" | "ctx";
+  label?: string;
+  content?: string;
+  oln?: number;
+  nln?: number;
+}
+
+export function buildUnifiedRows(file: ParsedFile): UnifiedRow[] {
+  const rows: UnifiedRow[] = [];
+
+  file.hunks.forEach(function (hunk) {
+    rows.push({ type: "hunk", label: "@@ -" + hunk.os + " +" + hunk.ns + " @@" + hunk.ctx });
+
+    let o = hunk.os;
+    let n = hunk.ns;
+
+    hunk.lines.forEach(function (l) {
+      if (l.startsWith("-")) {
+        rows.push({ type: "del", content: l.slice(1), oln: o++ });
+      } else if (l.startsWith("+")) {
+        rows.push({ type: "add", content: l.slice(1), nln: n++ });
+      } else {
+        const c = l.startsWith(" ") ? l.slice(1) : l;
+        rows.push({ type: "ctx", content: c, oln: o++, nln: n++ });
+      }
+    });
+  });
+
+  return rows;
+}
+
 export function buildSplitRows(file: ParsedFile): SplitRow[] {
   const rows: SplitRow[] = [];
 

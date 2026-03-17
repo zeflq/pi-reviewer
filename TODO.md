@@ -243,7 +243,7 @@ Config file already created for theme persistence. Future settings to add:
 ### 18. UI improvements (GitHub-inspired)
 
 - [x] **Syntax highlighting** — colorize the diff by language instead of plain text
-- [ ] **Split diff view** — side-by-side (LEFT / RIGHT) option alongside the current unified view
+- [x] **Split diff view** — side-by-side (LEFT / RIGHT) option alongside the current unified view
 - [ ] **Click a line to add a note** — attach a personal annotation to any diff line, not just to agent-generated comments
 
 ### 10. Custom system prompt

@@ -133,11 +133,13 @@ body {
   font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: baseline;
+  gap: 2px;
 }
 
 #wordmark-pi {
-  font-family: "SFMono-Regular", Consolas, monospace;
-  font-weight: 700;
   color: var(--link);
 }
 
@@ -292,7 +294,7 @@ body {
   font-family: "SFMono-Regular", Consolas, monospace;
 }
 
-.tree-file:hover {
+.tree-file:hover, .tree-file-active {
   background: var(--bg-inset);
   color: var(--link);
 }
@@ -354,9 +356,14 @@ body {
 
 .fblock {
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 4px;
   overflow: hidden;
   scroll-margin-top: 90px;
+  transition: border-color 0.15s;
+}
+
+.fblock-selected {
+  border-color: var(--link);
 }
 
 .fhdr {
@@ -387,6 +394,48 @@ body {
   font-size: 11px;
   color: var(--text-muted);
 }
+
+/* ── Syntax highlighting (GitHub palette) ────────────────────────────────── */
+.hljs-comment, .hljs-quote          { color: #8b949e; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag,
+.hljs-deletion                      { color: #ff7b72; }
+.hljs-number, .hljs-literal,
+.hljs-variable, .hljs-template-variable,
+.hljs-tag .hljs-attr                { color: #79c0ff; }
+.hljs-string, .hljs-doctag,
+.hljs-addition                      { color: #a5d6ff; }
+.hljs-title, .hljs-section,
+.hljs-selector-id                   { color: #d2a8ff; font-weight: bold; }
+.hljs-subst                         { color: var(--text); }
+.hljs-type, .hljs-class .hljs-title,
+.hljs-built_in                      { color: #ffa657; }
+.hljs-attr, .hljs-attribute         { color: #79c0ff; }
+.hljs-regexp, .hljs-link            { color: #a5d6ff; }
+.hljs-symbol, .hljs-bullet          { color: #ff7b72; }
+.hljs-meta                          { color: #79c0ff; }
+.hljs-emphasis                      { font-style: italic; }
+.hljs-strong                        { font-weight: bold; }
+
+[data-theme="light"] .hljs-comment,
+[data-theme="light"] .hljs-quote          { color: #6e7781; }
+[data-theme="light"] .hljs-keyword,
+[data-theme="light"] .hljs-selector-tag  { color: #cf222e; }
+[data-theme="light"] .hljs-number,
+[data-theme="light"] .hljs-literal,
+[data-theme="light"] .hljs-tag .hljs-attr { color: #0550ae; }
+[data-theme="light"] .hljs-string,
+[data-theme="light"] .hljs-doctag        { color: #0a3069; }
+[data-theme="light"] .hljs-title,
+[data-theme="light"] .hljs-section       { color: #8250df; }
+[data-theme="light"] .hljs-type,
+[data-theme="light"] .hljs-built_in      { color: #953800; }
+[data-theme="light"] .hljs-attr,
+[data-theme="light"] .hljs-attribute     { color: #0550ae; }
+[data-theme="light"] .hljs-regexp,
+[data-theme="light"] .hljs-link         { color: #0a3069; }
+[data-theme="light"] .hljs-symbol,
+[data-theme="light"] .hljs-bullet       { color: #cf222e; }
+[data-theme="light"] .hljs-meta         { color: #0550ae; }
 
 /* ── Split diff table ────────────────────────────────────────────────────── */
 .diff-table {
@@ -457,6 +506,22 @@ tr.cmt-row td.sep    { background: var(--sep); }
 tr.has-comment td.code-del, tr.has-comment td.ln-del { background: var(--has-comment-del) !important; }
 tr.has-comment td.code-add, tr.has-comment td.ln-add { background: var(--has-comment-add) !important; }
 tr.has-comment td.code-ctx, tr.has-comment td.ln-ctx { background: var(--has-comment-ctx) !important; }
+
+/* ── Unified diff table ──────────────────────────────────────────────────── */
+.diff-table col.sign { width: 20px; }
+
+td.sign {
+  text-align: center;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 12px;
+  user-select: none;
+  padding: 1px 4px;
+  vertical-align: top;
+}
+
+td.sign-del { background: var(--del-bg); color: var(--del-ln); }
+td.sign-add { background: var(--add-bg); color: var(--add-ln); }
+td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
 
 /* ── Comment card ────────────────────────────────────────────────────────── */
 .cc {
