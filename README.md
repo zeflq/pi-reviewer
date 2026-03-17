@@ -7,6 +7,8 @@ AI-powered PR reviewer using the pi agent — model-agnostic, works with any pro
 - Interactive browser UI — inspect each finding against the diff, decide per-comment, then save or send to the agent
 - Model-agnostic — works with any provider (Anthropic, OpenAI, etc.)
 
+![pi-reviewer demo](./docs/demo.gif)
+
 ---
 
 ## Extension
@@ -23,6 +25,8 @@ The default. Fetches the diff and your project conventions locally, spawns a pi 
 /review --pr 42
 /review --diff HEAD~1
 ```
+
+Progress is shown in the pi TUI as the review runs — diff fetch, context load, agent thinking, and writing the review are all surfaced as notifications.
 
 ### SSH mode (`--ssh`)
 
@@ -50,6 +54,8 @@ Opens a local browser-based review interface after the agent finishes. You can i
 ```
 
 Cards change color after each decision (accepted → green tint, rejected → dimmed) so you can see at a glance what still needs attention. A "jump to next pending" button lets you move through unreviewed comments quickly.
+
+The dark/light theme toggle is remembered across reviews via `~/.pi/pi-reviewer/config.json`.
 
 `--ssh --ui` works the same as local `--ui` — the diff is captured silently from the agent's tool output and displayed in the browser without a second SSH round-trip.
 

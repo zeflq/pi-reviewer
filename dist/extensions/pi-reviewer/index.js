@@ -97,9 +97,11 @@ export default function (pi) {
                     return;
                 }
                 // ── Local ─────────────────────────────────────────────────────────
+                notify("Fetching diff…");
                 const { diff, source, warning, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch, pr: parsed.pr });
                 if (warning)
                     notify(warning, "warning");
+                notify("Loading context…");
                 const context = await loadContext({ cwd: ctx.cwd });
                 if ((context.loadedFiles?.length ?? 0) > 0)
                     notify(`Context: ${context.loadedFiles?.join(", ")}`);

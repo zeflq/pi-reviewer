@@ -1,8 +1,36 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { exec } from "node:child_process";
-import { platform } from "node:os";
+import { platform, homedir } from "node:os";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
 import type { ReviewResult } from "../output.js";
 import { buildHTML } from "./template.js";
+
+const CONFIG_DIR = join(homedir(), ".pi", "pi-reviewer");
+const CONFIG_FILE = join(CONFIG_DIR, "config.json");
+
+interface PiReviewerConfig {
+  theme?: "dark" | "light";
+}
+
+function readConfig(): PiReviewerConfig {
+  try {
+    return JSON.parse(readFileSync(CONFIG_FILE, "utf-8")) as PiReviewerConfig;
+  } catch {
+    return {};
+  }
+}
+
+function saveConfig(config: PiReviewerConfig): void {
+  try {
+    mkdirSync(CONFIG_DIR, { recursive: true });
+    writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), "utf-8");
+  } catch { /* ignore */ }
+}
+
+export function readTheme(): "dark" | "light" {
+  return readConfig().theme ?? "dark";
+}
 
 export type ActionType = "send" | "save" | "save-and-send" | "closed";
 
@@ -27,7 +55,7 @@ export interface UIServerHandle {
 const HEARTBEAT_MS = 6000;
 
 export async function startUIServer(result: ReviewResult, diff: string, source?: string, ssh?: boolean): Promise<UIServerHandle> {
-  const html = buildHTML(result, diff, source, ssh);
+  const html = buildHTML(result, diff, source, ssh, readTheme());
 
   let resolveAction!: (a: UIAction) => void;
   const actionPromise = new Promise<UIAction>((r) => { resolveAction = r; });
@@ -64,6 +92,14 @@ export async function startUIServer(result: ReviewResult, diff: string, source?:
       res.end(html);
     } else if (req.method === "GET" && req.url === "/ping") {
       resetHeartbeat();
+      res.writeHead(204);
+      res.end();
+    } else if (req.method === "POST" && req.url === "/theme") {
+      const body = await readBody(req);
+      try {
+        const { theme } = JSON.parse(body) as { theme?: string };
+        if (theme === "dark" || theme === "light") saveConfig({ ...readConfig(), theme });
+      } catch { /* ignore */ }
       res.writeHead(204);
       res.end();
     } else if (req.method === "POST" && req.url === "/action") {

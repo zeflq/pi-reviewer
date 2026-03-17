@@ -22,4 +22,5 @@ export interface UIData {
   diff: string;
   source?: string;
   ssh?: boolean;
+  theme?: "dark" | "light";
 }

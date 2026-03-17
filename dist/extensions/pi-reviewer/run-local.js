@@ -13,8 +13,8 @@ export async function runLocalReview(opts) {
         const proc = spawn("pi", ["--mode", "json", "-p", "--no-session", "--append-system-prompt", tempPath, userPrompt], { cwd, env: process.env, shell: false, stdio: ["ignore", "pipe", "pipe"] });
         let stderr = "";
         let stdoutBuffer = "";
-        const accumulator = createEventAccumulator((line) => {
-            notify(`[pi-reviewer] unexpected output: ${line}`, "error");
+        const accumulator = createEventAccumulator(() => { }, {
+            onProgress(text) { notify(text); },
         });
         return await new Promise((resolve, reject) => {
             proc.stdout.on("data", (chunk) => {

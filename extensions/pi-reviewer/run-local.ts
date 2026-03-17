@@ -32,9 +32,12 @@ export async function runLocalReview(opts: RunLocalOptions): Promise<ReviewResul
 
     let stderr = "";
     let stdoutBuffer = "";
-    const accumulator = createEventAccumulator((line) => {
-      notify(`[pi-reviewer] unexpected output: ${line}`, "error");
-    });
+    const accumulator = createEventAccumulator(
+      () => { /* ignore non-JSON lines from subprocess */ },
+      {
+        onProgress(text) { notify(text); },
+      }
+    );
 
     return await new Promise<ReviewResult>((resolve, reject) => {
       proc.stdout.on("data", (chunk) => {

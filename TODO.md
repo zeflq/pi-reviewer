@@ -223,6 +223,23 @@ tests/
 - [x] SSH mode supported — diff captured from `tool_result` event, `ReviewResult` received from remote agent; save/send sequenced via `agent_end` listener
 - [ ] **Renderer strategy:** use Glimpse (cross-platform native webview) as default; fall back to `open`/`xdg-open`/`start` launching the system browser if Glimpse is unavailable
 
+### ✅ 16. Local mode progress feedback
+
+- [x] Show `Fetching diff…` and `Loading context…` before the subprocess starts
+- [x] Surface `thinking_start` → `Thinking…` notification when model begins reasoning
+- [x] Stream thinking sentences via `thinking_delta` from `message_update` events
+- [x] Show `Writing review…` when model starts writing the JSON output (`text_start`)
+- [x] Note: local mode makes no tool calls (diff + context are pre-loaded in prompt) — no tool-call log available unlike SSH mode where the agent fetches them itself
+
+### 17. User config (`~/.pi/pi-reviewer/config.json`)
+
+Config file already created for theme persistence. Future settings to add:
+
+- [ ] `verbose` — default `false`; when `true`, behave as if `--verbose` is always passed
+- [ ] `minSeverity` — default `"info"`; persist last used value so it doesn't need to be repeated
+- [ ] `theme` — already implemented ✅
+- [ ] `model` — default model override (e.g. `anthropic/claude-opus-4-6`) so user doesn't need to set it per-run
+
 ### 10. Custom system prompt
 
 - [ ] Add `system-prompt` input to `action.yml` (file path relative to project root)

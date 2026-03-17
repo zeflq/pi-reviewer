@@ -28,11 +28,11 @@ export default function App() {
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [filesOpen, setFilesOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("pi-theme") as "dark" | "light") ?? "dark");
+  const [theme, setTheme] = useState<"dark" | "light">(data.theme ?? "dark");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("pi-theme", theme);
+    fetch("/theme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ theme }) }).catch(() => {});
   }, [theme]);
 
   const decidedCount = Object.values(decisions).filter((d) => d.decision).length;

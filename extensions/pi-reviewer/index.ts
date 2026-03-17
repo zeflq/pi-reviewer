@@ -97,8 +97,10 @@ export default function (pi: ExtensionAPI): void {
         }
 
         // ── Local ─────────────────────────────────────────────────────────
+        notify("Fetching diff…");
         const { diff, source, warning, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch, pr: parsed.pr });
         if (warning) notify(warning, "warning");
+        notify("Loading context…");
         const context = await loadContext({ cwd: ctx.cwd });
         if ((context.loadedFiles?.length ?? 0) > 0) notify(`Context: ${context.loadedFiles?.join(", ")}`);
         const conventions = [context.conventions, context.reviewRules].filter(Boolean).join("\n\n");
