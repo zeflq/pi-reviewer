@@ -183,7 +183,7 @@ Then inside the pi TUI:
 | Option | Description | Example |
 |---|---|---|
 | `--branch <name>` | Compare current branch against this branch (default: auto-detected from `origin/HEAD`) | `--branch dev` |
-| `--pr <number>` | Fetch and review a specific PR diff via `gh` CLI | `--pr 42` |
+| `--pr <number>` | Fetch and review a specific PR diff via `gh` CLI (requires [GitHub CLI](https://cli.github.com)) | `--pr 42` |
 | `--diff <ref>` | Review changes since a specific git ref | `--diff HEAD~1` |
 | `--ssh` | SSH mode: agent fetches diff and conventions on the remote (requires SSH extension) | `--ssh` |
 | `--ui` | Open browser review UI after the agent finishes | `--ui` |

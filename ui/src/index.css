@@ -111,6 +111,13 @@ body {
   gap: 8px;
 }
 
+#hdr2-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
 #hdr2-source {
   flex: 1;
   overflow: hidden;
@@ -257,37 +264,51 @@ body {
   z-index: 9;
 }
 
-#file-nav {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: var(--bg-subtle);
-  border-bottom: 1px solid var(--border);
-  padding: 8px 0;
-  z-index: 9;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-.file-nav-item {
+.tree-folder {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 24px;
-  text-decoration: none;
+  gap: 5px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
   color: var(--text-muted);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 12px;
+  user-select: none;
 }
 
-.file-nav-item:hover {
+.tree-folder:hover {
+  background: var(--bg-inset);
+  color: var(--text);
+}
+
+.tree-file {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 12px;
+  text-decoration: none;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.tree-file:hover {
   background: var(--bg-inset);
   color: var(--link);
 }
 
-.file-nav-name {
+.tree-chevron {
+  font-size: 9px;
+  width: 10px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.tree-name {
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .md {
@@ -303,14 +324,32 @@ body {
 .md strong { color: var(--text); font-weight: 600; }
 .md code { background: var(--bg-inset); border-radius: 3px; padding: 1px 5px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; }
 
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+#layout {
+  display: flex;
+  align-items: flex-start;
+}
+
 /* ── File list ───────────────────────────────────────────────────────────── */
 #files {
-  padding: 16px 24px;
+  flex: 1;
+  min-width: 0;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 1600px;
-  margin: 0 auto;
+}
+
+/* ── File sidebar ────────────────────────────────────────────────────────── */
+#file-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 80px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  padding: 16px 0 8px;
 }
 
 .fblock {
@@ -321,7 +360,6 @@ body {
 }
 
 .fhdr {
-  background: var(--bg-subtle);
   padding: 7px 14px;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 12px;

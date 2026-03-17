@@ -1,8 +1,10 @@
 import { execSync } from "node:child_process";
 import { filterDiff } from "./diff-filter.js";
 const EMPTY_DIFF_ERROR = "No changes found. Make sure you are on a feature branch with commits ahead of the base.";
+const extraPaths = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"].filter(Boolean);
+const augmentedPath = [...extraPaths, process.env.PATH ?? ""].join(":");
 function run(command, cwd) {
-    return execSync(command, { cwd, encoding: "utf-8" });
+    return execSync(command, { cwd, encoding: "utf-8", env: { ...process.env, PATH: augmentedPath } });
 }
 function ensureNonEmptyDiff(diff) {
     if (diff.trim().length === 0) {
@@ -42,7 +44,16 @@ export async function resolveDiff(options) {
     let raw;
     let source;
     if (typeof options.pr === "number") {
-        raw = run(`gh pr diff ${options.pr}`, cwd);
+        try {
+            raw = run(`gh pr diff ${options.pr}`, cwd);
+        }
+        catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            if (msg.includes("gh: command not found") || msg.includes("not found") || msg.includes("not recognized")) {
+                throw new Error("--pr requires the GitHub CLI (gh) to be installed: https://cli.github.com");
+            }
+            throw e;
+        }
         source = `PR #${options.pr}`;
     }
     else if (options.diff) {

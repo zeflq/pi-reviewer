@@ -16,6 +16,128 @@ interface DecisionState {
   discussText: string;
 }
 
+interface TreeNode {
+  name: string;
+  fullPath?: string;
+  isDir: boolean;
+  children: TreeNode[];
+  commentCount: number;
+}
+
+function buildTree(files: string[], commentsByFile: Record<string, number>): TreeNode[] {
+  const root: TreeNode[] = [];
+
+  function insert(nodes: TreeNode[], segments: string[], fullPath: string): void {
+    const [head, ...rest] = segments;
+    if (rest.length === 0) {
+      // file node
+      nodes.push({
+        name: head,
+        fullPath,
+        isDir: false,
+        children: [],
+        commentCount: commentsByFile[fullPath] ?? 0,
+      });
+      return;
+    }
+    // folder node
+    let dir = nodes.find((n) => n.isDir && n.name === head);
+    if (!dir) {
+      dir = { name: head, isDir: true, children: [], commentCount: 0 };
+      nodes.push(dir);
+    }
+    insert(dir.children, rest, fullPath);
+  }
+
+  for (const file of files) {
+    insert(root, file.split("/"), file);
+  }
+
+  function sumCounts(node: TreeNode): number {
+    if (!node.isDir) return node.commentCount;
+    node.commentCount = node.children.reduce((acc, c) => acc + sumCounts(c), 0);
+    return node.commentCount;
+  }
+
+  root.forEach(sumCounts);
+  return root;
+}
+
+const FolderIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style={{ color: "#54aeff", flexShrink: 0 }}>
+    <path d="M2 6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z" />
+  </svg>
+);
+
+const FileIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+  </svg>
+);
+
+function TreeNodes({
+  nodes,
+  depth,
+  collapsedFolders,
+  toggleFolder,
+  folderPrefix,
+}: {
+  nodes: TreeNode[];
+  depth: number;
+  collapsedFolders: Record<string, boolean>;
+  toggleFolder: (path: string) => void;
+  folderPrefix: string;
+}) {
+  return (
+    <>
+      {nodes.map((node) => {
+        const folderPath = folderPrefix ? `${folderPrefix}/${node.name}` : node.name;
+        const collapsed = collapsedFolders[folderPath] ?? false;
+
+        if (node.isDir) {
+          return (
+            <div key={folderPath}>
+              <div
+                className="tree-folder"
+                style={{ paddingLeft: `${12 + depth * 16}px` }}
+                onClick={() => toggleFolder(folderPath)}
+              >
+                <span className="tree-chevron">{collapsed ? "▶" : "▼"}</span>
+                <FolderIcon />
+                <span className="tree-name">{node.name}</span>
+                {node.commentCount > 0 && <span className="cbadge">{node.commentCount}</span>}
+              </div>
+              {!collapsed && (
+                <TreeNodes
+                  nodes={node.children}
+                  depth={depth + 1}
+                  collapsedFolders={collapsedFolders}
+                  toggleFolder={toggleFolder}
+                  folderPrefix={folderPath}
+                />
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <a
+            key={node.fullPath}
+            className="tree-file"
+            style={{ paddingLeft: `${12 + depth * 16}px` }}
+            href={`#file-${CSS.escape(node.fullPath!)}`}
+          >
+            <FileIcon />
+            <span className="tree-name">{node.name}</span>
+            {node.commentCount > 0 && <span className="cbadge">{node.commentCount}</span>}
+          </a>
+        );
+      })}
+    </>
+  );
+}
+
 export default function App() {
   const data = window.__DATA__ ?? mockData;
   const result = data.result;
@@ -26,9 +148,14 @@ export default function App() {
 
   const [decisions, setDecisions] = useState<Record<number, DecisionState>>({});
   const [summaryOpen, setSummaryOpen] = useState(false);
-  const [filesOpen, setFilesOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(data.theme ?? "dark");
+  const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
+
+  const toggleFolder = useCallback((folderPath: string) => {
+    setCollapsedFolders((prev) => ({ ...prev, [folderPath]: !(prev[folderPath] ?? false) }));
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -90,19 +217,20 @@ export default function App() {
 
   const parsed = parseDiff(rawDiff);
 
+  const commentsByFile: Record<string, number> = {};
+  for (const [file, cmts] of Object.entries(byFile)) {
+    commentsByFile[file] = cmts.length;
+  }
+  const fileList = parsed.map((f) => f.file);
+  const tree = buildTree(fileList, commentsByFile);
+
   return (
     <>
       <div id="sticky-top">
 
-        {/* ── Row 1: branding + navigation ── */}
+        {/* ── Row 1: branding + theme ── */}
         <div id="hdr">
           <h1 id="wordmark"><span id="wordmark-pi">π</span> review</h1>
-          <button className="tbtn" onClick={() => { setSummaryOpen((o) => !o); setFilesOpen(false); }}>
-            Summary
-          </button>
-          <button className="tbtn" onClick={() => { setFilesOpen((o) => !o); setSummaryOpen(false); }}>
-            Files ({parsed.length})
-          </button>
           <button className="icon-btn" onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
             {theme === "dark" ? (
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -114,6 +242,16 @@ export default function App() {
 
         {/* ── Row 2: source + actions ── */}
         <div id="hdr2">
+          <button className="icon-btn" onClick={() => setSidebarOpen((o) => !o)} title={sidebarOpen ? "Hide file sidebar" : "Show file sidebar"}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}>
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <line x1="15" y1="3" x2="15" y2="21"/>
+            </svg>
+          </button>
+          <button className="icon-btn" onClick={() => setSummaryOpen((o) => !o)} title="Summary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </button>
+          <span id="hdr2-sep" />
           <span id="hdr2-source">{source ? (ssh ? `SSH · ${source}` : source) : ""}</span>
           <span id="progress">{decidedCount} / {totalComments} decided</span>
           <button className="icon-btn" disabled={allDone} onClick={jumpToNextPending} title="Jump to next undecided comment">
@@ -139,36 +277,31 @@ export default function App() {
             <div className="md" dangerouslySetInnerHTML={{ __html: marked(result.summary) as string }} />
           </div>
         )}
-        {filesOpen && (
-          <div id="file-nav">
-            {parsed.map((file) => {
-              const count = (byFile[file.file] || []).length;
-              return (
-                <a
-                  key={file.file}
-                  className="file-nav-item"
-                  href={`#file-${CSS.escape(file.file)}`}
-                  onClick={() => setFilesOpen(false)}
-                >
-                  <span className="file-nav-name">{file.file}</span>
-                  {count > 0 && <span className="cbadge">{count}</span>}
-                </a>
-              );
-            })}
-          </div>
-        )}
 
       </div>
-      <div id="files">
-        {parsed.map((file, i) => (
-          <FileDiff
-            key={file.file + i}
-            file={file}
-            comments={byFile[file.file] || []}
-            decisions={decisions}
-            onDecide={onDecide}
-          />
-        ))}
+      <div id="layout">
+        {sidebarOpen && (
+          <div id="file-sidebar">
+            <TreeNodes
+              nodes={tree}
+              depth={0}
+              collapsedFolders={collapsedFolders}
+              toggleFolder={toggleFolder}
+              folderPrefix=""
+            />
+          </div>
+        )}
+        <div id="files">
+          {parsed.map((file, i) => (
+            <FileDiff
+              key={file.file + i}
+              file={file}
+              comments={byFile[file.file] || []}
+              decisions={decisions}
+              onDecide={onDecide}
+            />
+          ))}
+        </div>
       </div>
     </>
   );

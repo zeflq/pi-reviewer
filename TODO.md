@@ -240,6 +240,12 @@ Config file already created for theme persistence. Future settings to add:
 - [ ] `theme` — already implemented ✅
 - [ ] `model` — default model override (e.g. `anthropic/claude-opus-4-6`) so user doesn't need to set it per-run
 
+### 18. UI improvements (GitHub-inspired)
+
+- [x] **Syntax highlighting** — colorize the diff by language instead of plain text
+- [ ] **Split diff view** — side-by-side (LEFT / RIGHT) option alongside the current unified view
+- [ ] **Click a line to add a note** — attach a personal annotation to any diff line, not just to agent-generated comments
+
 ### 10. Custom system prompt
 
 - [ ] Add `system-prompt` input to `action.yml` (file path relative to project root)
