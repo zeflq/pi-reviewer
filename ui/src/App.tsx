@@ -50,7 +50,7 @@ export default function App() {
   }, [viewMode]);
 
   useEffect(() => {
-    const iv = setInterval(() => { fetch("/ping").catch(() => {}); }, 2000);
+    const iv = setInterval(() => { fetch("/ping").catch(() => {}); }, 30_000);
     return () => clearInterval(iv);
   }, []);
 

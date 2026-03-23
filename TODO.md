@@ -158,6 +158,10 @@ tests/
 - [x] Fix truncation to drop whole file sections instead of slicing the string mid-diff (section-boundary truncation)
 - [x] Append skipped file names to the user prompt so the agent acknowledges them in its summary
 
+### 19. Untracked file support
+
+- [ ] Run `git add -N .` before diffing to register untracked new files as intent-to-add, making them visible to `git diff` without staging their content; restore index state after diff is captured
+
 ### ✅ 9. SSH support (`--ssh`)
 
 - [x] Add `--ssh` flag to `/review` command
@@ -244,10 +248,14 @@ Config file already created for theme persistence. Future settings to add:
 
 - [x] **Syntax highlighting** — colorize the diff by language instead of plain text
 - [x] **Split diff view** — side-by-side (LEFT / RIGHT) option alongside the current unified view
-- [ ] **Click a line to add a note** — attach a personal annotation to any diff line, not just to agent-generated comments
 - [x] **Submit review panel** — replace Save / Send / Save & Send buttons with a single "Finish review" button; click opens a panel with a global comment textarea and 3 radio options (Send / Save / Save & Send); submit triggers the selected action with the comment injected
 - [x] **Summary overview panel** — replace the inline summary dropdown with an ⓘ icon button; click opens a side panel (GitHub-style Overview) rendering the summary markdown; add a separator between the left icon cluster and the right action cluster in hdr2
 - [x] **Layout settings panel** — replace the split/unified toggle icon with a ⚙ gear icon; click opens a dropdown panel (GitHub-style) with layout options: Unified / Split (radio); extracted as `LayoutPanel` component; gear button placed next to "Finish review"
+- [ ] **Viewed file checkbox** — add a "Viewed" toggle in each file header; checked files are visually dimmed and tracked so the user knows what they've already reviewed; state persists in session
+- [ ] **Annotate** — unified annotation feature: click a line or the file header to attach a free-form note; line-level and file-level notes both injected into agent context on Send
+- [ ] **Keyboard shortcuts** — `n`/`p` next/prev comment, `a`/`r`/`d` accept/reject/discuss, `f` finish review; show shortcut hints on hover
+- [ ] **Comment severity filter** — in-UI toggle to show/hide INFO / WARN / CRITICAL comments without re-running the agent; lets user focus on what matters on large diffs
+- [ ] **Re-run review** — button available before finishing; re-sends the same diff to the agent with optionally different settings (model, min-severity); replaces the current comments with the new result; useful when you edit `REVIEW.md` or want a stricter/looser severity pass before acting
 
 ### 10. Custom system prompt
 

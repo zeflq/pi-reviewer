@@ -27,8 +27,10 @@ export function readTheme() {
 export function readViewMode() {
     return readConfig().viewMode ?? "split";
 }
-// Resolve if no ping received for this long — user closed the tab
-const HEARTBEAT_MS = 6000;
+// Resolve if no ping received for this long — user closed the tab.
+// Set high enough to survive browser background tab throttling (browsers can
+// suspend setInterval to ~1 min when the tab is in the background).
+const HEARTBEAT_MS = 120_000; // 2 minutes
 export async function startUIServer(result, diff, source, ssh) {
     const html = buildHTML(result, diff, source, ssh, readTheme(), readViewMode());
     let resolveAction;
