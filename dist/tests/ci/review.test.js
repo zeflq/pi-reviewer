@@ -60,7 +60,7 @@ describe("review", () => {
         await review({ cwd: "/repo", dryRun: true });
         expect(logSpy).toHaveBeenCalledWith("Diff source: git diff origin/main...HEAD");
         expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("System prompt:\n\nYou are a code reviewer"));
-        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("User prompt:\n\nReview this diff:\n\ndiff --git a/a.ts b/a.ts"));
+        expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("User prompt:\n\nReview this diff:\n<diff>\ndiff --git a/a.ts b/a.ts"));
         expect(AgentMock).not.toHaveBeenCalled();
         expect(sendOutputMock).not.toHaveBeenCalled();
     });

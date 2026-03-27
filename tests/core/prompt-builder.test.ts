@@ -7,40 +7,40 @@ describe("prompt-builder", () => {
     const prompt = buildJSONSystemPrompt({ conventions: "", reviewRules: "" });
 
     expect(prompt).toContain("You are a code reviewer");
-    expect(prompt).toContain("Return only a JSON object with this exact shape");
-    expect(prompt).not.toContain("--- Project conventions");
-    expect(prompt).not.toContain("--- Review-specific rules");
+    expect(prompt).toContain("Return only a JSON object matching this schema exactly");
+    expect(prompt).not.toContain("<conventions>");
+    expect(prompt).not.toContain("<review_rules>");
   });
 
   it("appends conventions section when conventions is provided", () => {
     const prompt = buildJSONSystemPrompt({ conventions: "use tabs", reviewRules: "" });
 
-    expect(prompt).toContain("--- Project conventions (AGENTS.md / CLAUDE.md) ---");
+    expect(prompt).toContain("<conventions>");
     expect(prompt).toContain("use tabs");
-    expect(prompt).not.toContain("--- Review-specific rules");
+    expect(prompt).not.toContain("<review_rules>");
   });
 
   it("appends review rules section when reviewRules is provided", () => {
     const prompt = buildJSONSystemPrompt({ conventions: "", reviewRules: "always check res.ok" });
 
-    expect(prompt).toContain("--- Review-specific rules (REVIEW.md) ---");
+    expect(prompt).toContain("<review_rules>");
     expect(prompt).toContain("always check res.ok");
-    expect(prompt).not.toContain("--- Project conventions");
+    expect(prompt).not.toContain("<conventions>");
   });
 
   it("appends both sections when both are provided", () => {
     const prompt = buildJSONSystemPrompt({ conventions: "use tabs", reviewRules: "always check res.ok" });
 
-    expect(prompt).toContain("--- Project conventions (AGENTS.md / CLAUDE.md) ---");
+    expect(prompt).toContain("<conventions>");
     expect(prompt).toContain("use tabs");
-    expect(prompt).toContain("--- Review-specific rules (REVIEW.md) ---");
+    expect(prompt).toContain("<review_rules>");
     expect(prompt).toContain("always check res.ok");
   });
 
   it("still accepts a plain string for backward compat", () => {
     const prompt = buildJSONSystemPrompt("use tabs");
 
-    expect(prompt).toContain("--- Project conventions (AGENTS.md / CLAUDE.md) ---");
+    expect(prompt).toContain("<conventions>");
     expect(prompt).toContain("use tabs");
   });
 
@@ -139,6 +139,6 @@ describe("buildSSHUserPrompt", () => {
   it("instructs agent to run the command first", () => {
     const prompt = buildSSHUserPrompt("git diff HEAD~1");
 
-    expect(prompt).toContain("Run this command NOW to get the current diff");
+    expect(prompt).toContain("Run this command to get the current diff");
   });
 });
