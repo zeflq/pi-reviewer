@@ -100,6 +100,6 @@ describe("buildSSHUserPrompt", () => {
     });
     it("instructs agent to run the command first", () => {
         const prompt = buildSSHUserPrompt("git diff HEAD~1");
-        expect(prompt).toContain("Run this command to get the diff");
+        expect(prompt).toContain("Run this command NOW to get the current diff");
     });
 });

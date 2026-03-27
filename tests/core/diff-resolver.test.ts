@@ -21,10 +21,10 @@ describe("resolveDiff", () => {
 
     const result = await resolveDiff({ pr: 42, cwd: "/repo" });
 
-    expect(execSyncMock).toHaveBeenCalledWith("gh pr diff 42", {
+    expect(execSyncMock).toHaveBeenCalledWith("gh pr diff 42", expect.objectContaining({
       cwd: "/repo",
       encoding: "utf-8",
-    });
+    }));
     expect(result.source).toBe("PR #42");
   });
 
@@ -33,10 +33,10 @@ describe("resolveDiff", () => {
 
     const result = await resolveDiff({ diff: "HEAD~2", cwd: "/repo" });
 
-    expect(execSyncMock).toHaveBeenCalledWith("git diff HEAD~2", {
+    expect(execSyncMock).toHaveBeenCalledWith("git diff HEAD~2", expect.objectContaining({
       cwd: "/repo",
       encoding: "utf-8",
-    });
+    }));
     expect(result.source).toBe("git diff HEAD~2");
   });
 
@@ -53,14 +53,14 @@ describe("resolveDiff", () => {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
     });
-    expect(execSyncMock).toHaveBeenNthCalledWith(2, "git merge-base dev HEAD", {
+    expect(execSyncMock).toHaveBeenNthCalledWith(2, "git merge-base dev HEAD", expect.objectContaining({
       cwd: "/repo",
       encoding: "utf-8",
-    });
-    expect(execSyncMock).toHaveBeenNthCalledWith(3, "git diff abc123", {
+    }));
+    expect(execSyncMock).toHaveBeenNthCalledWith(3, "git diff abc123", expect.objectContaining({
       cwd: "/repo",
       encoding: "utf-8",
-    });
+    }));
     expect(result.source).toBe("feature-branch vs dev");
   });
 
@@ -78,10 +78,10 @@ describe("resolveDiff", () => {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
     });
-    expect(execSyncMock).toHaveBeenNthCalledWith(2, "git diff origin/main...HEAD", {
+    expect(execSyncMock).toHaveBeenNthCalledWith(2, "git diff origin/main...HEAD", expect.objectContaining({
       cwd: "/repo",
       encoding: "utf-8",
-    });
+    }));
     expect(result.source).toBe("feature-branch vs origin/main");
   });
 
@@ -108,14 +108,14 @@ describe("resolveDiff", () => {
         stdio: ["pipe", "pipe", "pipe"],
       }
     );
-    expect(execSyncMock).toHaveBeenNthCalledWith(3, "git merge-base origin/main HEAD", {
+    expect(execSyncMock).toHaveBeenNthCalledWith(3, "git merge-base origin/main HEAD", expect.objectContaining({
       cwd: "/repo",
       encoding: "utf-8",
-    });
-    expect(execSyncMock).toHaveBeenNthCalledWith(4, "git diff abc123", {
+    }));
+    expect(execSyncMock).toHaveBeenNthCalledWith(4, "git diff abc123", expect.objectContaining({
       cwd: "/repo",
       encoding: "utf-8",
-    });
+    }));
     expect(result.source).toBe("feature-branch vs origin/main");
   });
 

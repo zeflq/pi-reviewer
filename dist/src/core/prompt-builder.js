@@ -86,10 +86,11 @@ export function buildUserPrompt(diff, skippedFiles) {
  * Agent runs the given diff command, reads project conventions, then reviews.
  */
 export function buildSSHUserPrompt(diffCommand) {
+    const ts = new Date().toISOString();
     return [
-        "You are performing a code review. Execute all steps in order:",
+        `You are performing a code review (request: ${ts}). Execute all steps in order:`,
         "",
-        `1. Run this command to get the diff: ${diffCommand}`,
+        `1. Run this command NOW to get the current diff — always re-execute it, never reuse output from a previous review: ${diffCommand}`,
         "2. Read AGENTS.md or CLAUDE.md from the project root if either exists. Scan for markdown links matching [text](./path.md) and read each linked .md file recursively (at any depth). Also read REVIEW.md from the project root if it exists (same recursive rule). These files contain project conventions and review-specific rules.",
         "3. Review the diff according to the system prompt instructions.",
     ].join("\n");
