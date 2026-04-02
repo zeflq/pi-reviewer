@@ -58,6 +58,19 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const handler = () => {
+      fetch("/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "closed", decisions: [] }),
+        keepalive: true,
+      }).catch(() => {});
+    };
+    window.addEventListener("pagehide", handler);
+    return () => window.removeEventListener("pagehide", handler);
+  }, []);
+
+  useEffect(() => {
     const handler = () => setSelectedFile(null);
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);

@@ -27,10 +27,10 @@ export function readTheme() {
 export function readViewMode() {
     return readConfig().viewMode ?? "split";
 }
-// Resolve if no ping received for this long — user closed the tab.
-// Set high enough to survive browser background tab throttling (browsers can
-// suspend setInterval to ~1 min when the tab is in the background).
-const HEARTBEAT_MS = 120_000; // 2 minutes
+// Fallback: resolve if no ping received for this long.
+// The UI sends an explicit pagehide signal on tab close, so this only
+// triggers on browser crash or network drop. 45s = one missed ping + grace.
+const HEARTBEAT_MS = 45_000;
 export async function startUIServer(result, diff, source, ssh) {
     const html = buildHTML(result, diff, source, ssh, readTheme(), readViewMode());
     let resolveAction;
@@ -109,6 +109,7 @@ export async function startUIServer(result, diff, source, ssh) {
     });
     const port = await listenOnRandomPort(server);
     const url = "http://localhost:" + port;
+    resetHeartbeat();
     openBrowser(url);
     return {
         url,
