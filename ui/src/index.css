@@ -436,6 +436,39 @@ body {
   flex-shrink: 0;
 }
 
+.fblock-orphan {
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.fname-orphan {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.badge {
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+}
+
+.badge-pending {
+  background: var(--bg-inset);
+  color: var(--text-muted);
+}
+
+.badge-ok {
+  background: var(--bg-inset);
+  color: var(--text-muted);
+}
+
+.orphan-list {
+  padding: 8px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .cbadge {
   background: var(--bg-inset);
   border-radius: 10px;

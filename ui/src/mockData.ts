@@ -321,6 +321,13 @@ export const mockData: UIData = {
         severity: "INFO",
         body: "Consider extracting the token generation and storage into a dedicated `createSession` method — it's called from `login` today but will likely be needed for OAuth and SSO flows too.",
       },
+      {
+        file: "src/core/token-store.ts",
+        line: 12,
+        side: "RIGHT",
+        severity: "WARN",
+        body: "⚠ ORPHAN: this file is not in the diff — comment is counted but never rendered, blocking the Finish button.",
+      },
     ],
   },
   diff: makeFirstFileDiff() + makeLargeDiff() + `diff --git a/src/core/output.ts b/src/core/output.ts

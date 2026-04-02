@@ -5,6 +5,7 @@ import { ReviewComment, UIData } from "./types";
 import { mockData } from "./mockData";
 import { FileTree, buildTree } from "./FileTree";
 import { ReviewHeader } from "./ReviewHeader";
+import { OrphanComments } from "./OrphanComments";
 import { SummaryPanel } from "./SummaryPanel";
 
 declare global {
@@ -24,6 +25,8 @@ export default function App() {
   const rawDiff = data.diff;
   const source = data.source;
   const ssh = data.ssh;
+  const parsed = parseDiff(rawDiff);
+  const diffFileSet = new Set(parsed.map((f: { file: string }) => f.file));
   const totalComments = result.comments.length;
 
   const [decisions, setDecisions] = useState<Record<number, DecisionState>>({});
@@ -105,7 +108,10 @@ export default function App() {
     byFile[c.file].push({ comment: c, idx: i });
   });
 
-  const parsed = parseDiff(rawDiff);
+  const orphanComments = result.comments
+    .map((c: ReviewComment, i: number) => ({ comment: c, idx: i }))
+    .filter(({ comment }: { comment: ReviewComment }) => !diffFileSet.has(comment.file));
+
   const commentsByFile: Record<string, number> = Object.fromEntries(
     Object.entries(byFile).map(([file, cmts]) => [file, cmts.length])
   );
@@ -154,6 +160,11 @@ export default function App() {
               viewMode={viewMode}
             />
           ))}
+          <OrphanComments
+            comments={orphanComments}
+            decisions={decisions}
+            onDecide={onDecide}
+          />
         </div>
         {summaryOpen && (
           <SummaryPanel summary={result.summary} onClose={() => setSummaryOpen(false)} />
