@@ -11,5 +11,5 @@ export function buildHTML(result: ReviewResult, diff: string, source?: string, s
     .replace(/</g, "\\u003c")
     .replace(/>/g, "\\u003e")
     .replace(/&/g, "\\u0026");
-  return templateHtml.replace("/*%%DATA%%*/null/*%%END%%*/", escaped);
+  return templateHtml.replace("/*%%DATA%%*/null/*%%END%%*/", () => escaped);
 }

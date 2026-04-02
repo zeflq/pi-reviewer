@@ -8,5 +8,5 @@ export function buildHTML(result, diff, source, ssh, theme, viewMode) {
         .replace(/</g, "\\u003c")
         .replace(/>/g, "\\u003e")
         .replace(/&/g, "\\u0026");
-    return templateHtml.replace("/*%%DATA%%*/null/*%%END%%*/", escaped);
+    return templateHtml.replace("/*%%DATA%%*/null/*%%END%%*/", () => escaped);
 }
