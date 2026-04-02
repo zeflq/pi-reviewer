@@ -57,9 +57,28 @@ describe("parseAgentResponse", () => {
     expect(result).toEqual({ summary: "looks good", comments: [] });
   });
 
+  it("parses JSON fence when a comment body contains an inner fenced code block", () => {
+    const body = "Fix the null check:\n```ts\nif (!client) throw new Error('no client');\n```";
+    const json = JSON.stringify({
+      summary: "review",
+      comments: [{ file: "src/a.ts", line: 10, side: "RIGHT", severity: "WARN", body }],
+    });
+    const result = parseAgentResponse("```json\n" + json + "\n```");
+    expect(result.comments).toHaveLength(1);
+    expect(result.comments[0].body).toContain("if (!client)");
+  });
+
   it("parses JSON when agent adds preamble text before the fence", () => {
     const json = JSON.stringify({ summary: "looks good", comments: [] });
     const result = parseAgentResponse("Here is my review:\n\n```json\n" + json + "\n```");
+    expect(result).toEqual({ summary: "looks good", comments: [] });
+  });
+
+  it("parses JSON when trailing prose after closing fence contains braces", () => {
+    const json = JSON.stringify({ summary: "looks good", comments: [] });
+    const result = parseAgentResponse(
+      "```json\n" + json + "\n```\nThe catch block should look like `} catch(e) {}`"
+    );
     expect(result).toEqual({ summary: "looks good", comments: [] });
   });
 
