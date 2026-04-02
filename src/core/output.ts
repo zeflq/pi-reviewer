@@ -67,11 +67,18 @@ function extractFirstJsonObject(text: string): string | null {
 }
 
 function tryParseJSON(raw: string): Record<string, unknown> | null {
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
-  } catch {
-    // not valid JSON
+  for (const candidate of [raw, raw.replace(/[\u0000-\u001F]/g, (c) => {
+    if (c === "\n") return "\\n";
+    if (c === "\r") return "\\r";
+    if (c === "\t") return "\\t";
+    return "";
+  })]) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    } catch {
+      // not valid JSON
+    }
   }
   return null;
 }

@@ -33,7 +33,7 @@ export function buildJSONSystemPrompt(context, minSeverity = "INFO") {
         ...buildSharedBase(minSeverity),
         "- Do not repeat what the project conventions already enforce",
         "",
-        "Return only a JSON object matching this schema exactly (no markdown fences, no extra text):",
+        "Return only a JSON object matching this schema exactly (no markdown fences, no extra text, no extra fields — do not include the diff or any other field):",
         "<output_format>",
         "{",
         '  "summary": "Overall review in **Markdown**. Use bullet points, `code spans`, and **bold** for clarity.",',

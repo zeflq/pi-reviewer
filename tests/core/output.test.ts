@@ -74,6 +74,14 @@ describe("parseAgentResponse", () => {
     expect(result).toEqual({ summary: "looks good", comments: [] });
   });
 
+  it("parses JSON when LLM includes unescaped newlines in a string field (e.g. raw diff)", () => {
+    // LLM manually pastes the diff into the JSON without escaping newlines → invalid JSON
+    const malformed = `{"summary":"looks good","comments":[],"diff":"diff --git a/f b/f\nindex 0..1\n+line"}`;
+    const result = parseAgentResponse(malformed);
+    expect(result.summary).toBe("looks good");
+    expect(result.comments).toHaveLength(0);
+  });
+
   it("parses JSON when trailing prose after closing fence contains braces", () => {
     const json = JSON.stringify({ summary: "looks good", comments: [] });
     const result = parseAgentResponse(

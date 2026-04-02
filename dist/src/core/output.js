@@ -17,14 +17,55 @@ function isReviewComment(value) {
         (comment.side === "LEFT" || comment.side === "RIGHT") &&
         typeof comment.body === "string");
 }
-function tryParseJSON(raw) {
-    try {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
-            return parsed;
+function extractFirstJsonObject(text) {
+    const start = text.indexOf("{");
+    if (start === -1)
+        return null;
+    let depth = 0, inString = false, escape = false;
+    for (let i = start; i < text.length; i++) {
+        const c = text[i];
+        if (escape) {
+            escape = false;
+            continue;
+        }
+        if (c === "\\" && inString) {
+            escape = true;
+            continue;
+        }
+        if (c === '"') {
+            inString = !inString;
+            continue;
+        }
+        if (inString)
+            continue;
+        if (c === "{")
+            depth++;
+        else if (c === "}") {
+            depth--;
+            if (depth === 0)
+                return text.slice(start, i + 1);
+        }
     }
-    catch {
-        // not valid JSON
+    return null;
+}
+function tryParseJSON(raw) {
+    for (const candidate of [raw, raw.replace(/[\u0000-\u001F]/g, (c) => {
+            if (c === "\n")
+                return "\\n";
+            if (c === "\r")
+                return "\\r";
+            if (c === "\t")
+                return "\\t";
+            return "";
+        })]) {
+        try {
+            const parsed = JSON.parse(candidate);
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+                return parsed;
+        }
+        catch {
+            // not valid JSON
+        }
     }
     return null;
 }
@@ -32,15 +73,15 @@ export function parseAgentResponse(text, minSeverity = "INFO") {
     const candidates = [];
     // 1. raw text
     candidates.push(text.trim());
-    // 2. content inside any ```json ... ``` or ``` ... ``` fence
-    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    // 2. content inside the outermost ```json ... ``` or ``` ... ``` fence
+    // Use greedy match so inner fences (e.g. code blocks in comment bodies) don't truncate early.
+    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*)\s*```/i);
     if (fenceMatch)
         candidates.push(fenceMatch[1].trim());
-    // 3. first { to last } in the whole text
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start !== -1 && end > start)
-        candidates.push(text.slice(start, end + 1));
+    // 3. brace-balanced, string-aware extraction of the first complete JSON object
+    const extracted = extractFirstJsonObject(text);
+    if (extracted)
+        candidates.push(extracted);
     for (const candidate of candidates) {
         const parsed = tryParseJSON(candidate);
         if (parsed &&
