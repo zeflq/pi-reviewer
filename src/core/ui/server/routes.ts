@@ -1,8 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { readConfig, saveConfig } from "./config.js";
 import type { PiReviewerConfig, ThinkingLevel, UIAction } from "./types.js";
+import type { MinSeverity } from "../../prompt-builder.js";
 
 const VALID_THINKING: readonly ThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh"];
+const VALID_SEVERITY: readonly MinSeverity[] = ["INFO", "WARN", "CRITICAL"];
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((res) => {
@@ -12,19 +14,21 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
-type RouteHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void> | void;
-
-function configRoute(extract: (parsed: unknown) => Partial<PiReviewerConfig> | undefined): RouteHandler {
-  return async (req, res) => {
-    const raw = await readBody(req);
-    try {
-      const patch = extract(JSON.parse(raw));
-      if (patch) saveConfig({ ...readConfig(), ...patch });
-    } catch { /* ignore */ }
-    res.writeHead(204);
-    res.end();
-  };
+function applyConfigPatch(patch: Partial<PiReviewerConfig>): void {
+  const next = { ...readConfig() };
+  if (patch.theme === "dark" || patch.theme === "light") next.theme = patch.theme;
+  if (patch.viewMode === "split" || patch.viewMode === "unified") next.viewMode = patch.viewMode;
+  if (typeof patch.model === "string") next.model = patch.model;
+  if (typeof patch.autoCollapseViewed === "boolean") next.autoCollapseViewed = patch.autoCollapseViewed;
+  if (typeof patch.verbose === "boolean") next.verbose = patch.verbose;
+  if (typeof patch.thinking === "string" && (VALID_THINKING as string[]).includes(patch.thinking))
+    next.thinking = patch.thinking as ThinkingLevel;
+  if (typeof patch.minSeverity === "string" && (VALID_SEVERITY as string[]).includes(patch.minSeverity))
+    next.minSeverity = patch.minSeverity as MinSeverity;
+  saveConfig(next);
 }
+
+type RouteHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void> | void;
 
 export function createRequestHandler(
   html: string,
@@ -41,24 +45,12 @@ export function createRequestHandler(
       res.writeHead(204);
       res.end();
     },
-    "POST /theme": configRoute((b) => {
-      const { theme } = b as { theme?: string };
-      return theme === "dark" || theme === "light" ? { theme } : undefined;
-    }),
-    "POST /viewmode": configRoute((b) => {
-      const { viewMode } = b as { viewMode?: string };
-      return viewMode === "split" || viewMode === "unified" ? { viewMode } : undefined;
-    }),
-    "POST /model": configRoute((b) => {
-      const { model } = b as { model?: string };
-      return typeof model === "string" ? { model } : undefined;
-    }),
-    "POST /thinking": configRoute((b) => {
-      const { thinking } = b as { thinking?: string };
-      return typeof thinking === "string" && (VALID_THINKING as string[]).includes(thinking)
-        ? { thinking: thinking as ThinkingLevel }
-        : undefined;
-    }),
+    "POST /config": async (req, res) => {
+      const raw = await readBody(req);
+      try { applyConfigPatch(JSON.parse(raw) as Partial<PiReviewerConfig>); } catch { /* ignore */ }
+      res.writeHead(204);
+      res.end();
+    },
     "POST /action": async (req, res) => {
       const raw = await readBody(req);
       try {

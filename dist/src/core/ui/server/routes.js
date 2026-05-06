@@ -1,5 +1,6 @@
 import { readConfig, saveConfig } from "./config.js";
 const VALID_THINKING = ["off", "minimal", "low", "medium", "high", "xhigh"];
+const VALID_SEVERITY = ["INFO", "WARN", "CRITICAL"];
 function readBody(req) {
     return new Promise((res) => {
         let body = "";
@@ -7,18 +8,23 @@ function readBody(req) {
         req.on("end", () => res(body));
     });
 }
-function configRoute(extract) {
-    return async (req, res) => {
-        const raw = await readBody(req);
-        try {
-            const patch = extract(JSON.parse(raw));
-            if (patch)
-                saveConfig({ ...readConfig(), ...patch });
-        }
-        catch { /* ignore */ }
-        res.writeHead(204);
-        res.end();
-    };
+function applyConfigPatch(patch) {
+    const next = { ...readConfig() };
+    if (patch.theme === "dark" || patch.theme === "light")
+        next.theme = patch.theme;
+    if (patch.viewMode === "split" || patch.viewMode === "unified")
+        next.viewMode = patch.viewMode;
+    if (typeof patch.model === "string")
+        next.model = patch.model;
+    if (typeof patch.autoCollapseViewed === "boolean")
+        next.autoCollapseViewed = patch.autoCollapseViewed;
+    if (typeof patch.verbose === "boolean")
+        next.verbose = patch.verbose;
+    if (typeof patch.thinking === "string" && VALID_THINKING.includes(patch.thinking))
+        next.thinking = patch.thinking;
+    if (typeof patch.minSeverity === "string" && VALID_SEVERITY.includes(patch.minSeverity))
+        next.minSeverity = patch.minSeverity;
+    saveConfig(next);
 }
 export function createRequestHandler(html, resolveOnce, resetHeartbeat) {
     const routes = {
@@ -31,24 +37,15 @@ export function createRequestHandler(html, resolveOnce, resetHeartbeat) {
             res.writeHead(204);
             res.end();
         },
-        "POST /theme": configRoute((b) => {
-            const { theme } = b;
-            return theme === "dark" || theme === "light" ? { theme } : undefined;
-        }),
-        "POST /viewmode": configRoute((b) => {
-            const { viewMode } = b;
-            return viewMode === "split" || viewMode === "unified" ? { viewMode } : undefined;
-        }),
-        "POST /model": configRoute((b) => {
-            const { model } = b;
-            return typeof model === "string" ? { model } : undefined;
-        }),
-        "POST /thinking": configRoute((b) => {
-            const { thinking } = b;
-            return typeof thinking === "string" && VALID_THINKING.includes(thinking)
-                ? { thinking: thinking }
-                : undefined;
-        }),
+        "POST /config": async (req, res) => {
+            const raw = await readBody(req);
+            try {
+                applyConfigPatch(JSON.parse(raw));
+            }
+            catch { /* ignore */ }
+            res.writeHead(204);
+            res.end();
+        },
         "POST /action": async (req, res) => {
             const raw = await readBody(req);
             try {

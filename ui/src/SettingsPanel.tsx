@@ -1,24 +1,14 @@
-import { ModelInfo } from "./types";
+import { useSettings } from "./SettingsContext";
 
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as const;
 
 interface SettingsPanelProps {
-  viewMode: "split" | "unified";
-  onViewModeChange: (mode: "split" | "unified") => void;
-  defaultModel?: string;
-  availableModels: ModelInfo[];
-  onModelChange: (modelId: string) => void;
-  defaultThinking?: string;
-  onThinkingChange: (level: string) => void;
   onClose: () => void;
 }
 
-export function SettingsPanel({
-  viewMode, onViewModeChange,
-  defaultModel, availableModels, onModelChange,
-  defaultThinking, onThinkingChange,
-  onClose,
-}: SettingsPanelProps) {
+export function SettingsPanel({ onClose }: SettingsPanelProps) {
+  const { settings, availableModels, patchSettings } = useSettings();
+  const { viewMode, defaultModel, defaultThinking, autoCollapseViewed } = settings;
   const byProvider = groupByProvider(availableModels);
 
   return (
@@ -31,7 +21,7 @@ export function SettingsPanel({
           <button
             key={mode}
             className={`layout-option${viewMode === mode ? " layout-option-active" : ""}`}
-            onClick={() => { onViewModeChange(mode); onClose(); }}
+            onClick={() => { patchSettings({ viewMode: mode }); onClose(); }}
           >
             {viewMode === mode ? <Checkmark /> : <Spacer />}
             {mode.charAt(0).toUpperCase() + mode.slice(1)}
@@ -56,7 +46,7 @@ export function SettingsPanel({
                     <button
                       key={id}
                       className={`layout-option${isDefault ? " layout-option-active" : ""}`}
-                      onClick={() => { onModelChange(id); onClose(); }}
+                      onClick={() => { patchSettings({ defaultModel: id }); onClose(); }}
                     >
                       {isDefault ? <Checkmark /> : <Spacer />}
                       <span style={{ flex: 1, textAlign: "left" }}>{m.name}</span>
@@ -74,20 +64,30 @@ export function SettingsPanel({
           <button
             key={level}
             className={`layout-option${defaultThinking === level ? " layout-option-active" : ""}`}
-            onClick={() => { onThinkingChange(level); onClose(); }}
+            onClick={() => { patchSettings({ defaultThinking: level }); onClose(); }}
           >
             {defaultThinking === level ? <Checkmark /> : <Spacer />}
             {level}
           </button>
         ))}
 
+        <div className="layout-panel-divider" />
+        <div className="layout-section-label">Behaviour</div>
+        <button
+          className={`layout-option${autoCollapseViewed ? " layout-option-active" : ""}`}
+          onClick={() => patchSettings({ autoCollapseViewed: !autoCollapseViewed })}
+        >
+          {autoCollapseViewed ? <Checkmark /> : <Spacer />}
+          Auto-collapse viewed files
+        </button>
+
       </div>
     </>
   );
 }
 
-function groupByProvider(models: ModelInfo[]): Record<string, ModelInfo[]> {
-  const result: Record<string, ModelInfo[]> = {};
+function groupByProvider(models: ReturnType<typeof useSettings>["availableModels"]) {
+  const result: Record<string, typeof models> = {};
   for (const m of models) {
     if (!result[m.provider]) result[m.provider] = [];
     result[m.provider].push(m);
