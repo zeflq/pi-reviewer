@@ -19,6 +19,9 @@ interface ReviewHeaderProps {
   summary: string;
   currentModel?: string;
   currentThinking?: string;
+  severityCounts?: Record<string, number>;
+  allCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 export function ReviewHeader({
@@ -27,6 +30,7 @@ export function ReviewHeader({
   decidedCount, totalComments, allDone, hasAccepted,
   onJumpToNext, onAction, summary,
   currentModel, currentThinking,
+  severityCounts, allCollapsed, onToggleCollapse,
 }: ReviewHeaderProps) {
   const [submitOpen, setSubmitOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -77,7 +81,15 @@ export function ReviewHeader({
             </span>
           )}
         </div>
-        <span id="progress">{decidedCount} / {totalComments} decided</span>
+        {severityCounts && (
+          <span className="sev-counts">
+            {severityCounts["critical"] ? <span className="sev-pip sev-critical">🔴 {severityCounts["critical"]}</span> : null}
+            {severityCounts["warn"] ? <span className="sev-pip sev-warn">🟡 {severityCounts["warn"]}</span> : null}
+            {severityCounts["info"] ? <span className="sev-pip sev-info">🔵 {severityCounts["info"]}</span> : null}
+          </span>
+        )}
+        <span id="hdr2-sep" />
+        <span id="progress">{decidedCount} / {totalComments} <span style={{ color: "var(--text-muted)" }}>decided</span></span>
         <button className="icon-btn" disabled={allDone} onClick={onJumpToNext} data-tooltip="Jump to next undecided comment">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
         </button>
@@ -98,6 +110,14 @@ export function ReviewHeader({
             <SettingsPanel onClose={() => setSettingsOpen(false)} />
           )}
         </div>
+        <span id="hdr2-sep" />
+        <button className="icon-btn" onClick={onToggleCollapse} data-tooltip={allCollapsed ? "Expand all files" : "Collapse all files"}>
+          {allCollapsed ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><path d="m7 20 5-5 5 5"/><path d="m7 4 5 5 5-5"/></svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+          )}
+        </button>
         <span id="hdr2-sep" />
         <button className="icon-btn" onClick={onSummaryToggle} data-tooltip="Overview">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>

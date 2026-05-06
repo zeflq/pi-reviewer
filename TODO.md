@@ -269,11 +269,11 @@ tests/
 - [x] **Markdown rendering in comment bodies** — render backticks, bold, lists, and code blocks in comment body text instead of plain text; makes complex review comments significantly easier to scan
 - [ ] **Bulk decisions** — "Accept all INFO", "Reject all WARN", or "Reject all" buttons; reduces clicking on large diffs with many low-severity comments
 - [ ] **Decision undo indicator** — visual "changed" badge when a decision has been altered after first being set, so the user can track what they reconsidered
-- [ ] **Comment count badge by severity** — show `3 🔴 · 5 🟡 · 2 🔵` breakdown in the header progress area for at-a-glance severity distribution
+- [x] **Comment count badge by severity** — show `3 🔴 · 5 🟡 · 2 🔵` breakdown in the header progress area for at-a-glance severity distribution
 - [ ] **Expand context lines** — GitHub-style "…" button between diff hunks to load additional surrounding context lines without leaving the page
 - [ ] **Word-level diff highlighting** — within a changed line, highlight the exact words/tokens that differ rather than the whole line background
-- [ ] **Empty state** — when the review has zero comments, show a clear "No issues found" message instead of a blank file list
-- [ ] **Collapse all / Expand all** — single button in the header to collapse or expand every file at once
+- [x] **Empty state** — when the review has zero comments, show a clear "No issues found" message instead of a blank file list
+- [x] **Collapse all / Expand all** — single button in the header to collapse or expand every file at once
 
 ### 10. Custom system prompt
 

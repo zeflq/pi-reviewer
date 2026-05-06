@@ -22,6 +22,7 @@ interface Props {
   forceOpen?: boolean;
   viewed?: boolean;
   onToggleViewed?: () => void;
+  collapseSignal?: boolean;
 }
 
 type PlacedComment = { comment: ReviewComment; idx: number; snapped: boolean };
@@ -112,7 +113,7 @@ function hl(content: string | undefined, lang: string | null): React.ReactNode {
   return <span dangerouslySetInnerHTML={{ __html: highlightLine(content, lang) }} />;
 }
 
-export function FileDiff({ file, comments: fc, decisions, onDecide, selected, forceOpen, viewed, onToggleViewed }: Props) {
+export function FileDiff({ file, comments: fc, decisions, onDecide, selected, forceOpen, viewed, onToggleViewed, collapseSignal }: Props) {
   const { settings: { viewMode, autoCollapseViewed } } = useSettings();
   const autoCollapseRef = useRef(autoCollapseViewed);
   useEffect(() => { autoCollapseRef.current = autoCollapseViewed; }, [autoCollapseViewed]);
@@ -129,6 +130,10 @@ export function FileDiff({ file, comments: fc, decisions, onDecide, selected, fo
   useEffect(() => {
     if (forceOpen) setCollapsed(false);
   }, [forceOpen]);
+
+  useEffect(() => {
+    if (collapseSignal !== undefined) setCollapsed(collapseSignal);
+  }, [collapseSignal]);
 
   useEffect(() => {
     if (viewed && autoCollapseRef.current) setCollapsed(true);

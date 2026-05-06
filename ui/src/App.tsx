@@ -97,6 +97,17 @@ export default function App() {
   const allDone = totalComments > 0 && decidedCount === totalComments;
   const hasAccepted = Object.values(decisions).some((d) => d.decision && d.decision !== "reject");
 
+  const severityCounts = result.comments.reduce(
+    (acc: Record<string, number>, c: ReviewComment) => {
+      const s = (c.severity || "info").toLowerCase();
+      acc[s] = (acc[s] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
+  const [allCollapsed, setAllCollapsed] = useState(false);
+
   function jumpToNextPending() {
     for (let i = 0; i < totalComments; i++) {
       if (!decisions[i]?.decision) {
@@ -172,6 +183,9 @@ export default function App() {
         summary={result.summary}
         currentModel={data.currentModel}
         currentThinking={data.currentThinking}
+        severityCounts={severityCounts}
+        allCollapsed={allCollapsed}
+        onToggleCollapse={() => setAllCollapsed((c) => !c)}
       />
       <div id="layout">
         {sidebarOpen && (
@@ -184,6 +198,20 @@ export default function App() {
           />
         )}
         <div id="files">
+          {totalComments === 0 && (
+            <div className="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <p>No issues found</p>
+              <span>The review came back clean.</span>
+            </div>
+          )}
+          {parsed.length === 0 && totalComments > 0 && (
+            <div className="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+              <p>No diff available</p>
+              <span>Comments are shown below as orphans.</span>
+            </div>
+          )}
           {parsed.map((file, i) => (
             <FileDiff
               key={file.file + i}
@@ -195,6 +223,7 @@ export default function App() {
               forceOpen={openFiles[file.file] ?? false}
               viewed={viewedFiles[file.file] ?? false}
               onToggleViewed={() => setViewedFiles((prev) => ({ ...prev, [file.file]: !prev[file.file] }))}
+              collapseSignal={allCollapsed}
             />
           ))}
           <OrphanComments

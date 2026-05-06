@@ -126,7 +126,7 @@ body {
   white-space: nowrap;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text);
 }
 
 #wordmark {
@@ -150,10 +150,35 @@ body {
 
 #progress {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text);
   white-space: nowrap;
+}
+
+.sev-counts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-left: auto;
 }
+
+.sev-pip {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 80px 24px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.empty-state svg { opacity: 0.4; }
+.empty-state p { font-size: 16px; font-weight: 600; color: var(--text); }
+.empty-state span { font-size: 13px; }
 
 
 
