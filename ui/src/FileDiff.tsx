@@ -302,7 +302,12 @@ export function FileDiff({ file, comments: fc, decisions, onDecide, selected, fo
   return (
     <div className={`fblock${selected ? " fblock-selected" : ""}${viewed ? " fblock-viewed" : ""}`} id={`file-${CSS.escape(file.file)}`}>
       <div className="fhdr" onClick={() => setCollapsed((c) => !c)} style={{ cursor: "pointer" }}>
-        <span className="collapse-icon">{collapsed ? "▶" : "▼"}</span>
+        <span className="collapse-icon">
+          {collapsed
+            ? <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><polyline points="9 18 15 12 9 6"/></svg>
+            : <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><polyline points="6 9 12 15 18 9"/></svg>
+          }
+        </span>
         <span className="fname">{file.file}</span>
         {badge}
         {sizeBadge}

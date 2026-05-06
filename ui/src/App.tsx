@@ -14,6 +14,7 @@ declare global {
   interface Window {
     __DATA__: UIData | null;
   }
+  const __APP_VERSION__: string;
 }
 
 interface DecisionState {

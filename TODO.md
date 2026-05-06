@@ -274,6 +274,8 @@ tests/
 - [ ] **Word-level diff highlighting** — within a changed line, highlight the exact words/tokens that differ rather than the whole line background
 - [x] **Empty state** — when the review has zero comments, show a clear "No issues found" message instead of a blank file list
 - [x] **Collapse all / Expand all** — single button in the header to collapse or expand every file at once
+- [x] **File tree folder compression** — collapse single-child directory chains into combined names (e.g. `providers/oauth/handlers`) à la VS Code; contained hover highlight with margin + border-radius; widen sidebar to 296 px; bump tree and comment body font size to 13 px
+- [x] **Version in wordmark** — display `vX.Y.Z` next to the wordmark, injected at build time from `package.json` via Vite `define`
 
 ### 10. Custom system prompt
 

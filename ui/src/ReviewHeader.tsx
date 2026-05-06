@@ -51,6 +51,7 @@ export function ReviewHeader({
           </svg>
           {" "}
           <span>Review</span>
+          <span id="wordmark-version">v{__APP_VERSION__}</span>
         </h1>
         <button className="icon-btn" onClick={onThemeToggle} data-tooltip={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} style={{ color: theme === "dark" ? "#f0b429" : "#79c0ff" }}>
           {theme === "dark" ? (

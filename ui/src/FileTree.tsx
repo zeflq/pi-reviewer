@@ -34,7 +34,18 @@ export function buildTree(files: string[], commentsByFile: Record<string, number
   }
 
   root.forEach(sumCounts);
-  return root;
+
+  function compress(node: TreeNode): TreeNode {
+    if (!node.isDir) return node;
+    let n = { ...node, children: node.children.map(compress) };
+    while (n.children.length === 1 && n.children[0].isDir) {
+      const child = n.children[0];
+      n = { ...n, name: `${n.name}/${child.name}`, children: child.children };
+    }
+    return n;
+  }
+
+  return root.map(compress);
 }
 
 const FolderIcon = () => (
@@ -75,7 +86,12 @@ function TreeNodes({ nodes, depth, collapsedFolders, toggleFolder, folderPrefix,
                 style={{ paddingLeft: `${12 + depth * 16}px` }}
                 onClick={() => toggleFolder(folderPath)}
               >
-                <span className="tree-chevron">{collapsed ? "▶" : "▼"}</span>
+                <span className="tree-chevron">
+                  {collapsed
+                    ? <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><polyline points="9 18 15 12 9 6"/></svg>
+                    : <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><polyline points="6 9 12 15 18 9"/></svg>
+                  }
+                </span>
                 <FolderIcon />
                 <span className="tree-name">{node.name}</span>
                 {node.commentCount > 0 && <span className="cbadge">{node.commentCount}</span>}
