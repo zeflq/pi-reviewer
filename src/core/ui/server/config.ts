@@ -42,6 +42,10 @@ export function readModel(): string | undefined {
   return readConfig().model;
 }
 
+export function readAutoCollapseViewed(): boolean {
+  return readConfig().autoCollapseViewed ?? false;
+}
+
 export function readThinking(): string | undefined {
   return readConfig().thinking as ThinkingLevel | undefined;
 }

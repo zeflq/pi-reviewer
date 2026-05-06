@@ -279,6 +279,7 @@ export const mockData: UIData = {
   currentThinking: "low",
   defaultModel: "openai-codex/gpt-5.4-mini",
   defaultThinking: "low",
+  autoCollapseViewed: false,
   availableModels: [
     { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", provider: "openai-codex" },
     { id: "gpt-5.1-preview", name: "GPT-5.1 Preview", provider: "openai-codex" },

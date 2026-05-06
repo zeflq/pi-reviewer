@@ -9,6 +9,7 @@ export interface PiReviewerConfig {
   minSeverity?: MinSeverity;
   model?: string;
   thinking?: ThinkingLevel;
+  autoCollapseViewed?: boolean;
 }
 
 export interface ModelInfo {
@@ -23,6 +24,7 @@ export interface UIModelConfig {
   defaultModel?: string;
   availableModels?: ModelInfo[];
   defaultThinking?: string;
+  autoCollapseViewed?: boolean;
 }
 
 export type ActionType = "send" | "save" | "save-and-send" | "closed";

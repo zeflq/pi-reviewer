@@ -33,6 +33,9 @@ export function readMinSeverity() {
 export function readModel() {
     return readConfig().model;
 }
+export function readAutoCollapseViewed() {
+    return readConfig().autoCollapseViewed ?? false;
+}
 export function readThinking() {
     return readConfig().thinking;
 }

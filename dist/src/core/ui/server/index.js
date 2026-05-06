@@ -2,12 +2,15 @@ import { createServer } from "node:http";
 import { exec } from "node:child_process";
 import { platform } from "node:os";
 import { buildHTML } from "../template.js";
-import { readTheme, readViewMode } from "./config.js";
+import { readTheme, readViewMode, readAutoCollapseViewed } from "./config.js";
 import { createRequestHandler } from "./routes.js";
 export { readTheme, readViewMode, readVerbose, readMinSeverity, readModel, readThinking } from "./config.js";
 const HEARTBEAT_MS = 45_000;
 export async function startUIServer(result, diff, source, ssh, modelConfig) {
-    const html = buildHTML(result, diff, source, ssh, readTheme(), readViewMode(), modelConfig);
+    const html = buildHTML(result, diff, source, ssh, readTheme(), readViewMode(), {
+        ...modelConfig,
+        autoCollapseViewed: readAutoCollapseViewed(),
+    });
     let resolveAction;
     const actionPromise = new Promise((r) => { resolveAction = r; });
     let heartbeatTimer;

@@ -3,7 +3,7 @@ import { exec } from "node:child_process";
 import { platform } from "node:os";
 import type { ReviewResult } from "../../output.js";
 import { buildHTML } from "../template.js";
-import { readTheme, readViewMode } from "./config.js";
+import { readTheme, readViewMode, readAutoCollapseViewed } from "./config.js";
 import { createRequestHandler } from "./routes.js";
 import type { UIModelConfig, UIAction, UIServerHandle } from "./types.js";
 
@@ -19,7 +19,10 @@ export async function startUIServer(
   ssh?: boolean,
   modelConfig?: UIModelConfig,
 ): Promise<UIServerHandle> {
-  const html = buildHTML(result, diff, source, ssh, readTheme(), readViewMode(), modelConfig);
+  const html = buildHTML(result, diff, source, ssh, readTheme(), readViewMode(), {
+    ...modelConfig,
+    autoCollapseViewed: readAutoCollapseViewed(),
+  });
 
   let resolveAction!: (a: UIAction) => void;
   const actionPromise = new Promise<UIAction>((r) => { resolveAction = r; });

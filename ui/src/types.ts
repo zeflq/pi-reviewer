@@ -35,4 +35,5 @@ export interface UIData {
   defaultModel?: string;
   availableModels?: ModelInfo[];
   defaultThinking?: string;
+  autoCollapseViewed?: boolean;
 }

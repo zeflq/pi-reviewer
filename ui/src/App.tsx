@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { parseDiff } from "./diff-parser";
 import { FileDiff } from "./FileDiff";
 import { ReviewComment, UIData } from "./types";
@@ -7,6 +7,8 @@ import { FileTree, buildTree } from "./FileTree";
 import { ReviewHeader } from "./ReviewHeader";
 import { OrphanComments } from "./OrphanComments";
 import { SummaryPanel } from "./SummaryPanel";
+import { SettingsProvider } from "./SettingsContext";
+import { ScrollToTop } from "./ScrollToTop";
 
 declare global {
   interface Window {
@@ -32,13 +34,9 @@ export default function App() {
   const [decisions, setDecisions] = useState<Record<number, DecisionState>>({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [summaryOpen, setSummaryOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"split" | "unified">(data.viewMode ?? "split");
   const [submitted, setSubmitted] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(data.theme ?? "dark");
-  const [defaultModel, setDefaultModel] = useState<string | undefined>(data.defaultModel);
-  const modelMounted = useRef(false);
-  const [defaultThinking, setDefaultThinking] = useState<string | undefined>(data.defaultThinking);
-  const thinkingMounted = useRef(false);
+  const [viewedFiles, setViewedFiles] = useState<Record<string, boolean>>({});
   const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [openFiles, setOpenFiles] = useState<Record<string, boolean>>({});
@@ -49,22 +47,8 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    fetch("/theme", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ theme }) }).catch(() => {});
+    fetch("/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ theme }) }).catch(() => {});
   }, [theme]);
-
-  useEffect(() => {
-    fetch("/viewmode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ viewMode }) }).catch(() => {});
-  }, [viewMode]);
-
-  useEffect(() => {
-    if (!modelMounted.current) { modelMounted.current = true; return; }
-    fetch("/model", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: defaultModel }) }).catch(() => {});
-  }, [defaultModel]);
-
-  useEffect(() => {
-    if (!thinkingMounted.current) { thinkingMounted.current = true; return; }
-    fetch("/thinking",{ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ thinking: defaultThinking }) }).catch(() => {});
-  }, [defaultThinking]);
 
   useEffect(() => {
     const iv = setInterval(() => { fetch("/ping").catch(() => {}); }, 30_000);
@@ -90,6 +74,25 @@ export default function App() {
     return () => document.removeEventListener("click", handler);
   }, []);
 
+  useEffect(() => {
+    setViewedFiles((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      const fileIdxs: Record<string, number[]> = {};
+      result.comments.forEach((c: ReviewComment, i: number) => {
+        if (!fileIdxs[c.file]) fileIdxs[c.file] = [];
+        fileIdxs[c.file].push(i);
+      });
+      for (const [file, idxs] of Object.entries(fileIdxs)) {
+        if (!prev[file] && idxs.every((i) => decisions[i]?.decision)) {
+          next[file] = true;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [decisions]);
+
   const decidedCount = Object.values(decisions).filter((d) => d.decision).length;
   const allDone = totalComments > 0 && decidedCount === totalComments;
   const hasAccepted = Object.values(decisions).some((d) => d.decision && d.decision !== "reject");
@@ -98,9 +101,7 @@ export default function App() {
     for (let i = 0; i < totalComments; i++) {
       if (!decisions[i]?.decision) {
         const targetFile = result.comments[i]?.file;
-        if (targetFile) {
-          setOpenFiles((prev) => ({ ...prev, [targetFile]: true }));
-        }
+        if (targetFile) setOpenFiles((prev) => ({ ...prev, [targetFile]: true }));
         setTimeout(() => {
           document.getElementById(`cmt-${i}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 50);
@@ -145,7 +146,15 @@ export default function App() {
   const tree = buildTree(parsed.map((f) => f.file), commentsByFile);
 
   return (
-    <>
+    <SettingsProvider
+      initial={{
+        viewMode: data.viewMode ?? "split",
+        defaultModel: data.defaultModel,
+        defaultThinking: data.defaultThinking,
+        autoCollapseViewed: data.autoCollapseViewed ?? false,
+      }}
+      availableModels={data.availableModels ?? []}
+    >
       <ReviewHeader
         source={source}
         ssh={ssh}
@@ -161,15 +170,8 @@ export default function App() {
         onJumpToNext={jumpToNextPending}
         onAction={doAction}
         summary={result.summary}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
         currentModel={data.currentModel}
         currentThinking={data.currentThinking}
-        defaultModel={defaultModel}
-        availableModels={data.availableModels ?? []}
-        onModelChange={setDefaultModel}
-        defaultThinking={defaultThinking}
-        onThinkingChange={setDefaultThinking}
       />
       <div id="layout">
         {sidebarOpen && (
@@ -191,7 +193,8 @@ export default function App() {
               onDecide={onDecide}
               selected={file.file === selectedFile}
               forceOpen={openFiles[file.file] ?? false}
-              viewMode={viewMode}
+              viewed={viewedFiles[file.file] ?? false}
+              onToggleViewed={() => setViewedFiles((prev) => ({ ...prev, [file.file]: !prev[file.file] }))}
             />
           ))}
           <OrphanComments
@@ -204,6 +207,7 @@ export default function App() {
           <SummaryPanel summary={result.summary} onClose={() => setSummaryOpen(false)} />
         )}
       </div>
-    </>
+      <ScrollToTop />
+    </SettingsProvider>
   );
 }

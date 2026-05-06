@@ -435,6 +435,31 @@ body {
   flex-shrink: 0;
 }
 
+.fblock-viewed .diff-table {
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.fblock-viewed .fhdr .fname {
+  color: var(--text-muted);
+}
+
+.viewed-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.viewed-check input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--link);
+}
+
 .fblock-orphan {
   border-style: dashed;
   opacity: 0.85;
@@ -972,4 +997,30 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
   gap: 8px;
   padding-top: 4px;
   border-top: 1px solid var(--border);
+}
+
+
+/* ── Scroll to top ───────────────────────────────────────────────────────── */
+.scroll-to-top {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.15s, border-color 0.15s;
+  z-index: 100;
+}
+.scroll-to-top:hover {
+  opacity: 1;
+  border-color: var(--link);
+  color: var(--link);
 }
