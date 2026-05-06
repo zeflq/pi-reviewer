@@ -55,7 +55,7 @@ Opens a local browser-based review interface after the agent finishes. You can i
 
 Cards change color after each decision (accepted → green tint, rejected → dimmed) so you can see at a glance what still needs attention. A "jump to next pending" button lets you move through unreviewed comments quickly.
 
-The dark/light theme toggle is remembered across reviews via `~/.pi/pi-reviewer/config.json`.
+Theme, view mode, default model, and thinking level are all remembered across reviews via `~/.pi/pi-reviewer/config.json` and can be changed from the settings panel inside the UI.
 
 `--ssh --ui` works the same as local `--ui` — the diff is captured silently from the agent's tool output and displayed in the browser without a second SSH round-trip.
 
@@ -188,6 +188,9 @@ Then inside the pi TUI:
 | `--ssh` | SSH mode: agent fetches diff and conventions on the remote (requires SSH extension) | `--ssh` |
 | `--ui` | Open browser review UI after the agent finishes | `--ui` |
 | `--min-severity <level>` | Only report issues at this level and above: `info`, `warn`, or `critical` (default: `info`) | `--min-severity warn` |
+| `--model <id>` | Model to use for this review in `provider/id` format, overrides config default | `--model openai/gpt-4o` |
+| `--thinking <level>` | Agent thinking budget: `off`, `minimal`, `low`, `medium`, `high`, `xhigh` | `--thinking low` |
+| `--verbose` | Print full agent output to the console | |
 | `--dry-run` | Print the diff and prompt without calling the agent | |
 
 ### Diff coverage

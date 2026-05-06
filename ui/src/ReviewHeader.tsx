@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SubmitPanel } from "./SubmitPanel";
-import { LayoutPanel } from "./LayoutPanel";
+import { SettingsPanel } from "./SettingsPanel";
+import { ModelInfo } from "./types";
 
 interface ReviewHeaderProps {
   source?: string;
@@ -19,6 +20,13 @@ interface ReviewHeaderProps {
   summary: string;
   viewMode: "split" | "unified";
   onViewModeChange: (mode: "split" | "unified") => void;
+  currentModel?: string;
+  currentThinking?: string;
+  defaultModel?: string;
+  availableModels: ModelInfo[];
+  onModelChange: (modelId: string) => void;
+  defaultThinking?: string;
+  onThinkingChange: (level: string) => void;
 }
 
 export function ReviewHeader({
@@ -27,9 +35,14 @@ export function ReviewHeader({
   decidedCount, totalComments, allDone, hasAccepted,
   onJumpToNext, onAction, summary,
   viewMode, onViewModeChange,
+  currentModel, currentThinking, defaultModel, availableModels, onModelChange,
+  defaultThinking, onThinkingChange,
 }: ReviewHeaderProps) {
   const [submitOpen, setSubmitOpen] = useState(false);
-  const [layoutOpen, setLayoutOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const reviewedByParts = [currentModel?.split("/").pop(), currentThinking].filter(Boolean);
+  const reviewedByLabel = reviewedByParts.length ? reviewedByParts.join(" · ") : undefined;
 
   return (
     <div id="sticky-top">
@@ -66,7 +79,14 @@ export function ReviewHeader({
           </svg>
         </button>
         <span id="hdr2-sep" />
-        <span id="hdr2-source">{source ? (ssh ? `SSH · ${source}` : source) : ""}</span>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, overflow: "hidden", minWidth: 0 }}>
+          <span id="hdr2-source">{source ? (ssh ? `SSH · ${source}` : source) : ""}</span>
+          {reviewedByLabel && (
+            <span className="reviewed-by" data-tooltip={[currentModel, currentThinking].filter(Boolean).join(" · ")}>
+              {reviewedByLabel}
+            </span>
+          )}
+        </div>
         <span id="progress">{decidedCount} / {totalComments} decided</span>
         <button className="icon-btn" disabled={allDone} onClick={onJumpToNext} data-tooltip="Jump to next undecided comment">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -81,14 +101,19 @@ export function ReviewHeader({
           Finish review
         </button>
         <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-          <button className="icon-btn" onClick={() => setLayoutOpen((o) => !o)} data-tooltip="Layout settings">
+          <button className="icon-btn" onClick={() => setSettingsOpen((o) => !o)} data-tooltip="Settings">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
-          {layoutOpen && (
-            <LayoutPanel
+          {settingsOpen && (
+            <SettingsPanel
               viewMode={viewMode}
               onViewModeChange={onViewModeChange}
-              onClose={() => setLayoutOpen(false)}
+              defaultModel={defaultModel}
+              availableModels={availableModels}
+              onModelChange={onModelChange}
+              defaultThinking={defaultThinking}
+              onThinkingChange={onThinkingChange}
+              onClose={() => setSettingsOpen(false)}
             />
           )}
         </div>

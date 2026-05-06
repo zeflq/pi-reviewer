@@ -5,6 +5,7 @@ import { resolveDiff, detectCurrentBranch, detectOriginBase } from "../../src/co
 import { filterDiff } from "../../src/core/diff-filter.js";
 import { formatForTerminal } from "../../src/core/output.js";
 import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildSSHUserPrompt, buildUserPrompt } from "../../src/core/prompt-builder.js";
+import { readVerbose, readMinSeverity, readModel, readThinking } from "../../src/core/ui/server/index.js";
 import { parseArgs } from "./args.js";
 import { setReviewFooter } from "./footer.js";
 import { runLocalReview } from "./run-local.js";
@@ -36,16 +37,34 @@ export default function (pi) {
             let stopLoader = () => { };
             try {
                 const parsed = parseArgs(args);
+                const minSeverity = parsed.minSeverity ?? readMinSeverity();
+                const verbose = parsed.verbose ?? readVerbose();
+                const model = parsed.model ?? readModel();
+                const thinking = parsed.thinking ?? readThinking();
+                const availableModels = ctx.modelRegistry.getAvailable().map((m) => ({
+                    id: m.id,
+                    name: m.name,
+                    provider: m.provider,
+                }));
+                const currentModelEntry = model
+                    ? availableModels.find((m) => m.id === model || `${m.provider}/${m.id}` === model)
+                    : ctx.model
+                        ? { id: ctx.model.id, provider: ctx.model.provider }
+                        : undefined;
+                const currentModelId = currentModelEntry
+                    ? `${currentModelEntry.provider}/${currentModelEntry.id}`
+                    : model;
+                const defaultModel = readModel();
                 if (parsed.dryRun) {
                     if (parsed.ssh) {
-                        notify(`System prompt:\n\n${buildMarkdownSystemPrompt(parsed.minSeverity)}`);
+                        notify(`System prompt:\n\n${buildMarkdownSystemPrompt(minSeverity)}`);
                         notify(`User prompt:\n\n${buildSSHUserPrompt(buildSSHDiffCommand(parsed))}`);
                     }
                     else {
                         const { diff, source, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch, pr: parsed.pr });
                         const context = await loadContext({ cwd: ctx.cwd });
                         notify(`Diff source: ${source}`);
-                        notify(`System prompt:\n\n${buildJSONSystemPrompt(context, parsed.minSeverity)}`);
+                        notify(`System prompt:\n\n${buildJSONSystemPrompt(context, minSeverity)}`);
                         notify(`User prompt:\n\n${buildUserPrompt(diff, skippedFiles)}`);
                     }
                     return;
@@ -57,15 +76,15 @@ export default function (pi) {
                     const userPrompt = buildSSHUserPrompt(diffCommand);
                     if (!parsed.ui) {
                         // SSH-only: agent fetches diff, reviews, saves markdown
-                        const systemPrompt = buildMarkdownSystemPrompt(parsed.minSeverity);
-                        stopLoader = setReviewFooter(ctx, source);
+                        const systemPrompt = buildMarkdownSystemPrompt(minSeverity);
+                        stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
                         runSSHReview({ systemPrompt, userPrompt, pi, stopLoader, notify });
                         return;
                     }
                     // SSH+UI: agent fetches diff, reviews; diff is captured from bash tool result
-                    const systemPrompt = buildJSONSystemPrompt({ conventions: "", reviewRules: "" }, parsed.minSeverity);
-                    stopLoader = setReviewFooter(ctx, source);
-                    const result = await runSSHReviewAndWait({ systemPrompt, userPrompt, pi, minSeverity: parsed.minSeverity, stopLoader, notify });
+                    const systemPrompt = buildJSONSystemPrompt({ conventions: "", reviewRules: "" }, minSeverity);
+                    stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
+                    const result = await runSSHReviewAndWait({ systemPrompt, userPrompt, pi, minSeverity, stopLoader, notify });
                     if (!result.diff)
                         notify("Diff not captured — UI diff view will be empty", "warning");
                     const { diff, warning } = filterDiff(result.diff ?? "");
@@ -74,6 +93,7 @@ export default function (pi) {
                     let sshSaveTriggered = false;
                     const injectionMsg = await handleUIReview({
                         result, diff, conventions: "", source, ssh: true, cwd: ctx.cwd, notify,
+                        currentModel: currentModelId, currentThinking: thinking, defaultModel, availableModels, defaultThinking: readThinking(),
                         saveRemote: (md) => {
                             sshSaveTriggered = true;
                             pi.sendUserMessage(`Run \`git rev-parse --show-toplevel\` to get the project root path, then write the following content to that path + "/pi-review.md" (e.g. if the root is /some/path, write to /some/path/pi-review.md):\n\n${md}`);
@@ -106,12 +126,12 @@ export default function (pi) {
                 if ((context.loadedFiles?.length ?? 0) > 0)
                     notify(`Context: ${context.loadedFiles?.join(", ")}`);
                 const conventions = [context.conventions, context.reviewRules].filter(Boolean).join("\n\n");
-                const systemPrompt = buildJSONSystemPrompt(context, parsed.minSeverity);
+                const systemPrompt = buildJSONSystemPrompt(context, minSeverity);
                 const userPrompt = buildUserPrompt(diff, skippedFiles);
-                stopLoader = setReviewFooter(ctx, source);
-                const result = await runLocalReview({ systemPrompt, userPrompt, cwd: ctx.cwd, minSeverity: parsed.minSeverity, stopLoader, notify });
+                stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
+                const result = await runLocalReview({ systemPrompt, userPrompt, cwd: ctx.cwd, minSeverity, verbose, model, thinking, stopLoader, notify });
                 if (parsed.ui) {
-                    const injectionMsg = await handleUIReview({ result, diff, conventions, source, cwd: ctx.cwd, notify });
+                    const injectionMsg = await handleUIReview({ result, diff, conventions, source, cwd: ctx.cwd, notify, currentModel: currentModelId, defaultModel, availableModels });
                     if (injectionMsg)
                         pi.sendUserMessage(injectionMsg);
                     return;

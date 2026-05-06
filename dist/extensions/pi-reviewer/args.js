@@ -1,6 +1,6 @@
 export function parseArgs(rawArgs) {
     const tokens = rawArgs.trim() ? rawArgs.trim().split(/\s+/) : [];
-    const parsed = { dryRun: false, ssh: false, ui: false, minSeverity: "INFO" };
+    const parsed = { dryRun: false, ssh: false, ui: false };
     for (let i = 0; i < tokens.length; i += 1) {
         const token = tokens[i];
         if (token === "--dry-run") {
@@ -13,6 +13,29 @@ export function parseArgs(rawArgs) {
         }
         if (token === "--ui") {
             parsed.ui = true;
+            continue;
+        }
+        if (token === "--verbose") {
+            parsed.verbose = true;
+            continue;
+        }
+        if (token === "--model") {
+            const value = tokens[i + 1];
+            if (!value)
+                throw new Error("Missing value for --model");
+            parsed.model = value;
+            i += 1;
+            continue;
+        }
+        if (token === "--thinking") {
+            const value = tokens[i + 1];
+            if (!value)
+                throw new Error("Missing value for --thinking");
+            const valid = ["off", "minimal", "low", "medium", "high", "xhigh"];
+            if (!valid.includes(value))
+                throw new Error(`Invalid thinking level: ${value}. Expected: ${valid.join(", ")}`);
+            parsed.thinking = value;
+            i += 1;
             continue;
         }
         if (token === "--diff") {

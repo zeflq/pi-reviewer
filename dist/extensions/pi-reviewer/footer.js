@@ -1,6 +1,6 @@
 import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-export function setReviewFooter(ctx, source) {
+export function setReviewFooter(ctx, source, opts) {
     let spinnerIndex = 0;
     let spinnerTimer;
     ctx.ui.setFooter((tui, theme, footerData) => {
@@ -24,7 +24,13 @@ export function setReviewFooter(ctx, source) {
                     .filter(([key]) => key !== "pi-reviewer")
                     .map(([, text]) => text)
                     .join("  ");
-                const right = statuses ? theme.fg("dim", statuses) : "";
+                const modelParts = [];
+                if (opts?.model)
+                    modelParts.push(opts.model.split("/").pop() ?? opts.model);
+                if (opts?.thinking)
+                    modelParts.push(opts.thinking);
+                const modelTag = modelParts.length ? theme.fg("dim", modelParts.join(" · ")) : "";
+                const right = [modelTag, statuses ? theme.fg("dim", statuses) : ""].filter(Boolean).join("  ");
                 const left = spinner + label;
                 const pad = right
                     ? " ".repeat(Math.max(1, width - visibleWidth(left) - visibleWidth(right)))

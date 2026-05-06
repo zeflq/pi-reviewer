@@ -6,11 +6,19 @@ import path from "node:path";
 import { parseAgentResponse } from "../../src/core/output.js";
 import { createEventAccumulator } from "./events.js";
 export async function runLocalReview(opts) {
-    const { systemPrompt, userPrompt, cwd, minSeverity, stopLoader, notify } = opts;
+    const { systemPrompt, userPrompt, cwd, minSeverity, verbose, model, thinking, stopLoader, notify } = opts;
     const tempPath = path.join(tmpdir(), `pi-reviewer-system-prompt-${randomUUID()}.md`);
     await writeFile(tempPath, systemPrompt, { encoding: "utf-8", mode: 0o600 });
     try {
-        const proc = spawn("pi", ["--mode", "json", "-p", "--no-session", "--append-system-prompt", tempPath, userPrompt], { cwd, env: process.env, shell: false, stdio: ["ignore", "pipe", "pipe"] });
+        const piArgs = [
+            "--mode", "json", "-p", "--no-session",
+            ...(verbose ? ["--verbose"] : []),
+            ...(model ? ["--model", model] : []),
+            ...(thinking ? ["--thinking", thinking] : []),
+            "--append-system-prompt", tempPath,
+            userPrompt,
+        ];
+        const proc = spawn("pi", piArgs, { cwd, env: process.env, shell: false, stdio: ["ignore", "pipe", "pipe"] });
         let stderr = "";
         let stdoutBuffer = "";
         const accumulator = createEventAccumulator(() => { }, {

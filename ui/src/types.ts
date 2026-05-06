@@ -17,6 +17,12 @@ export interface CommentDecision {
   discussText?: string;
 }
 
+export interface ModelInfo {
+  id: string;
+  name: string;
+  provider: string;
+}
+
 export interface UIData {
   result: ReviewResult;
   diff: string;
@@ -24,4 +30,9 @@ export interface UIData {
   ssh?: boolean;
   theme?: "dark" | "light";
   viewMode?: "split" | "unified";
+  currentModel?: string;
+  currentThinking?: string;
+  defaultModel?: string;
+  availableModels?: ModelInfo[];
+  defaultThinking?: string;
 }

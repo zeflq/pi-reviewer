@@ -119,7 +119,6 @@ body {
 }
 
 #hdr2-source {
-  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -811,6 +810,38 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
 
 .layout-option-active {
   font-weight: 500;
+}
+
+.layout-panel-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 0;
+}
+
+.model-list-scroll {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.model-provider-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 4px 14px 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
+}
+
+.reviewed-by {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
 }
 
 /* ── Summary overview panel ──────────────────────────────────────────────── */

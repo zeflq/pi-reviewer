@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { parseDiff } from "./diff-parser";
 import { FileDiff } from "./FileDiff";
 import { ReviewComment, UIData } from "./types";
@@ -35,6 +35,10 @@ export default function App() {
   const [viewMode, setViewMode] = useState<"split" | "unified">(data.viewMode ?? "split");
   const [submitted, setSubmitted] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(data.theme ?? "dark");
+  const [defaultModel, setDefaultModel] = useState<string | undefined>(data.defaultModel);
+  const modelMounted = useRef(false);
+  const [defaultThinking, setDefaultThinking] = useState<string | undefined>(data.defaultThinking);
+  const thinkingMounted = useRef(false);
   const [collapsedFolders, setCollapsedFolders] = useState<Record<string, boolean>>({});
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [openFiles, setOpenFiles] = useState<Record<string, boolean>>({});
@@ -51,6 +55,16 @@ export default function App() {
   useEffect(() => {
     fetch("/viewmode", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ viewMode }) }).catch(() => {});
   }, [viewMode]);
+
+  useEffect(() => {
+    if (!modelMounted.current) { modelMounted.current = true; return; }
+    fetch("/model", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: defaultModel }) }).catch(() => {});
+  }, [defaultModel]);
+
+  useEffect(() => {
+    if (!thinkingMounted.current) { thinkingMounted.current = true; return; }
+    fetch("/thinking",{ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ thinking: defaultThinking }) }).catch(() => {});
+  }, [defaultThinking]);
 
   useEffect(() => {
     const iv = setInterval(() => { fetch("/ping").catch(() => {}); }, 30_000);
@@ -149,6 +163,13 @@ export default function App() {
         summary={result.summary}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        currentModel={data.currentModel}
+        currentThinking={data.currentThinking}
+        defaultModel={defaultModel}
+        availableModels={data.availableModels ?? []}
+        onModelChange={setDefaultModel}
+        defaultThinking={defaultThinking}
+        onThinkingChange={setDefaultThinking}
       />
       <div id="layout">
         {sidebarOpen && (

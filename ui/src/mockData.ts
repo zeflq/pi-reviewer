@@ -275,6 +275,17 @@ function makeFirstFileDiff(): string {
 export const mockData: UIData = {
   source: "main vs origin/main",
   ssh: true,
+  currentModel: "openai-codex/gpt-5.4-mini",
+  currentThinking: "low",
+  defaultModel: "openai-codex/gpt-5.4-mini",
+  defaultThinking: "low",
+  availableModels: [
+    { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", provider: "openai-codex" },
+    { id: "gpt-5.1-preview", name: "GPT-5.1 Preview", provider: "openai-codex" },
+    { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", provider: "anthropic" },
+    { id: "claude-opus-4-7", name: "Claude Opus 4.7", provider: "anthropic" },
+    { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", provider: "google" },
+  ],
   result: {
     summary:
       "Overall the auth refactor is solid — replacing the legacy hash function and adding brute-force protection are clear wins. A few issues worth addressing before merge: the in-memory lockout map is lost on restart, the token HMAC doesn't include an expiry in the signed payload, and the user DB is read from disk on every lookup without any caching.",
