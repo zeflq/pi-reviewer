@@ -1,8 +1,13 @@
 import http from "node:http";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReviewResult } from "../../../src/core/output.js";
 import { buildHTML } from "../../../src/core/ui/template.js";
-import { startUIServer, openBrowser, type UIAction } from "../../../src/core/ui/server.js";
+import { startUIServer, openBrowser, type UIAction } from "../../../src/core/ui/server/index.js";
+
+const CONFIG_FILE = join(homedir(), ".pi", "pi-reviewer", "config.json");
 
 const RESULT: ReviewResult = {
   summary: "Looks good overall.",
@@ -53,6 +58,17 @@ describe("buildHTML", () => {
     const html = buildHTML(RESULT, DIFF);
     expect(html).toContain("src/foo.ts");
   });
+
+  it("embeds modelConfig fields in the page", () => {
+    const html = buildHTML(RESULT, DIFF, undefined, undefined, undefined, undefined, {
+      currentModel: "openai/gpt-4o",
+      defaultModel: "anthropic/claude-sonnet-4",
+      availableModels: [{ id: "gpt-4o", name: "GPT-4o", provider: "openai" }],
+    });
+    expect(html).toContain("gpt-4o");
+    expect(html).toContain("GPT-4o");
+    expect(html).toContain("claude-sonnet-4");
+  });
 });
 
 // ── startUIServer ────────────────────────────────────────────────────────────
@@ -84,6 +100,22 @@ function post(url: string, body: unknown): Promise<{ status: number }> {
 describe("startUIServer", () => {
   // Prevent actual browser from opening during tests
   vi.spyOn({ openBrowser }, "openBrowser").mockImplementation(() => {});
+
+  // Save and restore config around every test to prevent disk pollution
+  let savedConfig: string | undefined;
+  beforeEach(() => {
+    try { savedConfig = readFileSync(CONFIG_FILE, "utf-8"); }
+    catch { savedConfig = undefined; }
+  });
+  afterEach(() => {
+    try {
+      if (savedConfig !== undefined) {
+        writeFileSync(CONFIG_FILE, savedConfig, "utf-8");
+      } else {
+        try { unlinkSync(CONFIG_FILE); } catch { /* didn't exist before */ }
+      }
+    } catch { /* ignore */ }
+  });
 
   it("starts a server and returns a localhost URL", async () => {
     const handle = await startUIServer(RESULT, DIFF);
@@ -144,6 +176,41 @@ describe("startUIServer", () => {
       req.end("not-json");
     });
     expect(status).toBe(400);
+    await handle.close();
+  });
+
+  it("POST /model with valid string returns 204", async () => {
+    const handle = await startUIServer(RESULT, DIFF);
+    const { status } = await post(handle.url + "/model", { model: "openai/gpt-4o" });
+    expect(status).toBe(204);
+    await handle.close();
+  });
+
+  it("POST /model with invalid JSON body returns 204 (ignored gracefully)", async () => {
+    const handle = await startUIServer(RESULT, DIFF);
+    const { status } = await new Promise<{ status: number }>((resolve, reject) => {
+      const req = http.request(handle.url + "/model", { method: "POST" }, (res) => {
+        res.resume();
+        res.on("end", () => resolve({ status: res.statusCode ?? 0 }));
+      });
+      req.on("error", reject);
+      req.end("not-json");
+    });
+    expect(status).toBe(204);
+    await handle.close();
+  });
+
+  it("POST /model with empty body returns 204 (ignored gracefully)", async () => {
+    const handle = await startUIServer(RESULT, DIFF);
+    const { status } = await new Promise<{ status: number }>((resolve, reject) => {
+      const req = http.request(handle.url + "/model", { method: "POST" }, (res) => {
+        res.resume();
+        res.on("end", () => resolve({ status: res.statusCode ?? 0 }));
+      });
+      req.on("error", reject);
+      req.end("");
+    });
+    expect(status).toBe(204);
     await handle.close();
   });
 });

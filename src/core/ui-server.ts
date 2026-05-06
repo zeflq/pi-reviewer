@@ -1,2 +1,2 @@
-export type { UIServerHandle, UIAction, ActionType, CommentDecision } from "./ui/server.js";
-export { startUIServer } from "./ui/server.js";
+export type { UIServerHandle, UIAction, ActionType, CommentDecision, ModelInfo, UIModelConfig } from "./ui/server/index.js";
+export { startUIServer } from "./ui/server/index.js";

@@ -41,7 +41,8 @@ jobs:
 ### 2. Pi extension (local dev, inside pi TUI)
 
 Registers a `/review` command inside the pi TUI.
-Spawns `pi --mode json -p --no-session` as a subprocess — same pattern as the official subagent example.
+**Local mode** spawns `pi --mode json -p --no-session` as a subprocess — accepts `--model` and `--thinking` to control the review agent independently of the parent session.
+**SSH mode** does not spawn a subprocess — it runs directly inside the current pi agent session, which already has SSH bash tool access to the remote machine. Because of this, `--model` and `--thinking` have no effect in SSH mode; the model and thinking level are fixed to whatever the parent session uses.
 No shared code with the GitHub Action.
 
 ```
@@ -234,15 +235,19 @@ tests/
 - [x] Stream thinking sentences via `thinking_delta` from `message_update` events
 - [x] Show `Writing review…` when model starts writing the JSON output (`text_start`)
 - [x] Note: local mode makes no tool calls (diff + context are pre-loaded in prompt) — no tool-call log available unlike SSH mode where the agent fetches them itself
+- [x] Footer shows active model short name and thinking level during review (e.g. `gpt-5.4-mini · low`); omitted when neither is set
 
-### 17. User config (`~/.pi/pi-reviewer/config.json`)
+### ✅ 17. User config (`~/.pi/pi-reviewer/config.json`)
 
-Config file already created for theme persistence. Future settings to add:
-
-- [ ] `verbose` — default `false`; when `true`, behave as if `--verbose` is always passed
-- [ ] `minSeverity` — default `"info"`; persist last used value so it doesn't need to be repeated
-- [ ] `theme` — already implemented ✅
-- [ ] `model` — default model override (e.g. `anthropic/claude-opus-4-6`) so user doesn't need to set it per-run
+- [x] `theme` — persisted via `POST /theme`; default `"dark"`
+- [x] `viewMode` — persisted via `POST /viewmode`; default `"split"`
+- [x] `verbose` — read from config; set via `--verbose` flag or manually in config file
+- [x] `minSeverity` — read from config; set via `--min-severity` flag or manually in config file
+- [x] `model` — persisted via `POST /model` from the UI settings panel; default `undefined` (uses parent session model)
+- [x] `thinking` — persisted via `POST /thinking` from the UI settings panel; default `undefined` (no thinking override)
+- [x] All persistence goes through HTTP routes only — CLI reads config but never writes it
+- [x] Refactored `src/core/ui/server.ts` → `server/{types,config,routes,index}.ts`
+- [x] Route table + `configRoute()` helper replace if/else chain in request handler
 
 ### 18. UI improvements (GitHub-inspired)
 
@@ -251,6 +256,8 @@ Config file already created for theme persistence. Future settings to add:
 - [x] **Submit review panel** — replace Save / Send / Save & Send buttons with a single "Finish review" button; click opens a panel with a global comment textarea and 3 radio options (Send / Save / Save & Send); submit triggers the selected action with the comment injected
 - [x] **Summary overview panel** — replace the inline summary dropdown with an ⓘ icon button; click opens a side panel (GitHub-style Overview) rendering the summary markdown; add a separator between the left icon cluster and the right action cluster in hdr2
 - [x] **Layout settings panel** — replace the split/unified toggle icon with a ⚙ gear icon; click opens a dropdown panel (GitHub-style) with layout options: Unified / Split (radio); extracted as `LayoutPanel` component; gear button placed next to "Finish review"
+- [x] **Model/thinking display** — read-only "reviewed by" chip next to the diff source showing the model short name and thinking level used for this review (e.g. `gpt-5.4-mini · low`)
+- [x] **Settings panel** — unified settings panel (replaces LayoutPanel) with three sections: Layout (split/unified), Default model (scrollable list grouped by provider, checkmark on active default), Default thinking level; selections persisted to config via HTTP
 - [ ] **Viewed file checkbox** — add a "Viewed" toggle in each file header; checked files are visually dimmed and tracked so the user knows what they've already reviewed; state persists in session
 - [ ] **Annotate** — unified annotation feature: click a line or the file header to attach a free-form note; line-level and file-level notes both injected into agent context on Send
 - [ ] **Keyboard shortcuts** — `n`/`p` next/prev comment, `a`/`r`/`d` accept/reject/discuss, `f` finish review; show shortcut hints on hover

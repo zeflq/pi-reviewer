@@ -30,7 +30,7 @@ Progress is shown in the pi TUI as the review runs — diff fetch, context load,
 
 ### SSH mode (`--ssh`)
 
-For reviewing code on a remote machine. Instead of fetching the diff locally, the agent fetches it on the remote via its SSH-redirected bash tool — no local git access needed. Requires an SSH extension (e.g. [ssh.ts](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/examples/extensions/ssh.ts)) to be active.
+For reviewing code on a remote machine. Instead of spawning a subprocess, SSH mode runs directly inside the current pi agent session — which already has SSH bash tool access to the remote. The agent fetches the diff and conventions on the remote, runs the review, and saves `pi-review.md` there. No local git access needed. Requires an SSH extension (e.g. [ssh.ts](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/examples/extensions/ssh.ts)) to be active.
 
 ```
 /review --ssh
@@ -39,6 +39,8 @@ For reviewing code on a remote machine. Instead of fetching the diff locally, th
 ```
 
 The agent reads `AGENTS.md` / `CLAUDE.md` and `REVIEW.md` from the remote project root, runs the review, and saves `pi-review.md` directly on the remote.
+
+> **Note:** `--model` and `--thinking` have no effect in SSH mode. Because the review runs inside the existing pi session (not a subprocess), the model and thinking level are fixed to whatever the parent session is using.
 
 ### UI mode (`--ui`)
 
@@ -188,8 +190,8 @@ Then inside the pi TUI:
 | `--ssh` | SSH mode: agent fetches diff and conventions on the remote (requires SSH extension) | `--ssh` |
 | `--ui` | Open browser review UI after the agent finishes | `--ui` |
 | `--min-severity <level>` | Only report issues at this level and above: `info`, `warn`, or `critical` (default: `info`) | `--min-severity warn` |
-| `--model <id>` | Model to use for this review in `provider/id` format, overrides config default | `--model openai/gpt-4o` |
-| `--thinking <level>` | Agent thinking budget: `off`, `minimal`, `low`, `medium`, `high`, `xhigh` | `--thinking low` |
+| `--model <id>` | Model to use for this review in `provider/id` format, overrides config default. **Local mode only** — ignored in `--ssh`. | `--model openai/gpt-4o` |
+| `--thinking <level>` | Agent thinking budget: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`. **Local mode only** — ignored in `--ssh`. | `--thinking low` |
 | `--verbose` | Print full agent output to the console | |
 | `--dry-run` | Print the diff and prompt without calling the agent | |
 

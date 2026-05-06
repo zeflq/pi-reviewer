@@ -27,6 +27,15 @@ export function readTheme() {
 export function readViewMode() {
     return readConfig().viewMode ?? "split";
 }
+export function readVerbose() {
+    return readConfig().verbose ?? false;
+}
+export function readMinSeverity() {
+    return readConfig().minSeverity ?? "INFO";
+}
+export function readModel() {
+    return readConfig().model;
+}
 // Fallback: resolve if no ping received for this long.
 // The UI sends an explicit pagehide signal on tab close, so this only
 // triggers on browser crash or network drop. 45s = one missed ping + grace.
