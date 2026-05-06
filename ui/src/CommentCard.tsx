@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ReviewComment } from "./types";
+import { renderMarkdown } from "./renderMarkdown";
 
 interface Props {
   comment: ReviewComment;
@@ -42,7 +43,7 @@ export function CommentCard({ comment, idx, decision, discussText = "", onDecide
         {comment.file}:{comment.line}&nbsp;&nbsp;[{comment.severity}]
         {decisionLabel && <span className="cc-status">{decisionLabel}</span>}
       </div>
-      <div className="cc-body">{comment.body}</div>
+      <div className="cc-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(comment.body) }} />
       <div className="cc-actions">
         <button
           className={`dbtn${decision === "accept" ? " a-accept" : ""}`}

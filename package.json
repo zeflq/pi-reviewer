@@ -19,14 +19,16 @@
   },
   "dependencies": {
     "@mariozechner/pi-coding-agent": "^0.55.1",
+    "dompurify": "^3.4.2",
     "highlight.js": "^11.11.1"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.0.5",
     "@types/node": "^24.3.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
-    "marked": "^17.0.4",
+    "marked": "^17.0.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "tsx": "^4.20.5",

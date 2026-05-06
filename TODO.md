@@ -239,15 +239,18 @@ tests/
 
 ### ✅ 17. User config (`~/.pi/pi-reviewer/config.json`)
 
-- [x] `theme` — persisted via `POST /theme`; default `"dark"`
-- [x] `viewMode` — persisted via `POST /viewmode`; default `"split"`
+- [x] `theme` — persisted via `POST /config`; default `"dark"`
+- [x] `viewMode` — persisted via `POST /config`; default `"split"`
 - [x] `verbose` — read from config; set via `--verbose` flag or manually in config file
 - [x] `minSeverity` — read from config; set via `--min-severity` flag or manually in config file
-- [x] `model` — persisted via `POST /model` from the UI settings panel; default `undefined` (uses parent session model)
-- [x] `thinking` — persisted via `POST /thinking` from the UI settings panel; default `undefined` (no thinking override)
-- [x] All persistence goes through HTTP routes only — CLI reads config but never writes it
+- [x] `model` — persisted via `POST /config` from the UI settings panel; default `undefined` (uses parent session model)
+- [x] `thinking` — persisted via `POST /config` from the UI settings panel; default `undefined` (no thinking override)
+- [x] `autoCollapseViewed` — persisted via `POST /config`; default `false`
+- [x] All persistence goes through a single `POST /config` route with `applyConfigPatch()` per-key validation
+- [x] CLI reads config but never writes it
 - [x] Refactored `src/core/ui/server.ts` → `server/{types,config,routes,index}.ts`
-- [x] Route table + `configRoute()` helper replace if/else chain in request handler
+- [x] Route table replaces if/else chain; individual config routes consolidated into one
+- [x] `SettingsContext` eliminates prop drilling — components read/write settings via `useSettings()`
 
 ### 18. UI improvements (GitHub-inspired)
 
@@ -258,11 +261,19 @@ tests/
 - [x] **Layout settings panel** — replace the split/unified toggle icon with a ⚙ gear icon; click opens a dropdown panel (GitHub-style) with layout options: Unified / Split (radio); extracted as `LayoutPanel` component; gear button placed next to "Finish review"
 - [x] **Model/thinking display** — read-only "reviewed by" chip next to the diff source showing the model short name and thinking level used for this review (e.g. `gpt-5.4-mini · low`)
 - [x] **Settings panel** — unified settings panel (replaces LayoutPanel) with three sections: Layout (split/unified), Default model (scrollable list grouped by provider, checkmark on active default), Default thinking level; selections persisted to config via HTTP
-- [ ] **Viewed file checkbox** — add a "Viewed" toggle in each file header; checked files are visually dimmed and tracked so the user knows what they've already reviewed; state persists in session
+- [x] **Viewed file checkbox** — "Viewed" toggle in each file header; disabled while comments are unresolved; auto-checked when the last comment in the file is decided; viewed files are visually dimmed; auto-collapse on viewed (off by default, toggle in settings panel); scroll-to-top button appears after 400 px, fixed bottom-right
 - [ ] **Annotate** — unified annotation feature: click a line or the file header to attach a free-form note; line-level and file-level notes both injected into agent context on Send
 - [ ] **Keyboard shortcuts** — `n`/`p` next/prev comment, `a`/`r`/`d` accept/reject/discuss, `f` finish review; show shortcut hints on hover
 - [ ] **Comment severity filter** — in-UI toggle to show/hide INFO / WARN / CRITICAL comments without re-running the agent; lets user focus on what matters on large diffs
 - [ ] **Re-run review** — button available before finishing; re-sends the same diff to the agent with optionally different settings (model, min-severity); replaces the current comments with the new result; useful when you edit `REVIEW.md` or want a stricter/looser severity pass before acting
+- [x] **Markdown rendering in comment bodies** — render backticks, bold, lists, and code blocks in comment body text instead of plain text; makes complex review comments significantly easier to scan
+- [ ] **Bulk decisions** — "Accept all INFO", "Reject all WARN", or "Reject all" buttons; reduces clicking on large diffs with many low-severity comments
+- [ ] **Decision undo indicator** — visual "changed" badge when a decision has been altered after first being set, so the user can track what they reconsidered
+- [ ] **Comment count badge by severity** — show `3 🔴 · 5 🟡 · 2 🔵` breakdown in the header progress area for at-a-glance severity distribution
+- [ ] **Expand context lines** — GitHub-style "…" button between diff hunks to load additional surrounding context lines without leaving the page
+- [ ] **Word-level diff highlighting** — within a changed line, highlight the exact words/tokens that differ rather than the whole line background
+- [ ] **Empty state** — when the review has zero comments, show a clear "No issues found" message instead of a blank file list
+- [ ] **Collapse all / Expand all** — single button in the header to collapse or expand every file at once
 
 ### 10. Custom system prompt
 

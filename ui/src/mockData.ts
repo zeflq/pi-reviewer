@@ -303,7 +303,7 @@ export const mockData: UIData = {
         line: 47,
         side: "RIGHT",
         severity: "CRITICAL",
-        body: "The lockout state lives in `this.attempts` (an in-memory Map). Every server restart resets all counters, making the brute-force protection ineffective in any multi-process or serverless deployment. Persist this to Redis or the DB.",
+        body: "The lockout state lives in `this.attempts` (an in-memory `Map`). Every server restart resets all counters.\n\n**Why this is critical:**\n- Brute-force protection is **ineffective** in any multi-process or serverless deployment\n- An attacker can bypass it with a simple restart or by hitting a different instance\n\n**Fix:** persist counters to Redis or the DB:\n\n```ts\nawait redis.incr(`lockout:${userId}`);\nawait redis.expire(`lockout:${userId}`, WINDOW_SECONDS);\n```",
       },
       {
         file: "src/core/auth-service.ts",
