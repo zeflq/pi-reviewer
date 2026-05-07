@@ -32,6 +32,8 @@ export function extractLastAssistantText(messages: unknown): string {
 export interface EventAccumulator {
   process(line: string): void;
   getLastReviewText(): string;
+  hadThinkingOnly(): boolean;
+  hadAPIError(): boolean;
 }
 
 export interface EventAccumulatorOptions {
@@ -45,6 +47,8 @@ export function createEventAccumulator(
   let lastReviewText = "";
   let thinkingBuf = "";
   let textStarted = false;
+  let hadThinking = false;
+  let apiError = false;
 
   return {
     process(line: string) {
@@ -65,11 +69,20 @@ export function createEventAccumulator(
       };
 
       if (ev?.type === "turn_end") {
+        const msg = ev.message as { stopReason?: string; model?: string } | undefined;
+        if (msg?.stopReason === "error") {
+          apiError = true;
+          return;
+        }
         const text = extractAssistantText(ev.message);
         if (text) lastReviewText = text;
       } else if (ev?.type === "message_update") {
         const aev = ev.assistantMessageEvent;
         if (!aev || !options?.onProgress) return;
+
+        if (aev.type === "thinking_start" || aev.type === "thinking_delta") {
+          hadThinking = true;
+        }
 
         if (aev.type === "thinking_start") {
           options.onProgress("Thinking…");
@@ -89,6 +102,14 @@ export function createEventAccumulator(
 
     getLastReviewText() {
       return lastReviewText;
+    },
+
+    hadThinkingOnly() {
+      return hadThinking && !lastReviewText;
+    },
+
+    hadAPIError() {
+      return apiError;
     },
   };
 }

@@ -159,9 +159,16 @@ tests/
 - [x] Fix truncation to drop whole file sections instead of slicing the string mid-diff (section-boundary truncation)
 - [x] Append skipped file names to the user prompt so the agent acknowledges them in its summary
 
-### 19. Untracked file support
+### ✅ 19. Untracked file support
 
-- [ ] Run `git add -N .` before diffing to register untracked new files as intent-to-add, making them visible to `git diff` without staging their content; restore index state after diff is captured
+- [x] Run `git add -N` on untracked files before diffing to register them as intent-to-add, making them visible to `git diff` without staging their content; restore index state after diff is captured with `git rm --cached`
+
+### 20. Monorepo path scoping (`--path`)
+
+- [ ] Add `--path <dir>` flag to `/review` command — limit the diff to a subdirectory (e.g. `--path packages/frontend` or `--path packages/backend`)
+- [ ] Pass the path to `git diff` as a pathspec so only files under that directory are included
+- [ ] Surface the scoped path in the footer and UI source label so it's clear what was reviewed
+- [ ] Works with all diff modes (`--branch`, `--pr`, `--diff`, `--ssh`)
 
 ### ✅ 9. SSH support (`--ssh`)
 

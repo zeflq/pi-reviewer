@@ -29,7 +29,9 @@ describe("resolveDiff", () => {
   });
 
   it("uses git diff <ref> for --diff", async () => {
-    execSyncMock.mockReturnValue("some-diff");
+    execSyncMock
+      .mockReturnValueOnce("")          // git ls-files --others --exclude-standard
+      .mockReturnValueOnce("some-diff"); // git diff HEAD~2
 
     const result = await resolveDiff({ diff: "HEAD~2", cwd: "/repo" });
 
@@ -44,6 +46,7 @@ describe("resolveDiff", () => {
     execSyncMock
       .mockReturnValueOnce("feature-branch\n") // detectCurrentBranch
       .mockReturnValueOnce("abc123\n")          // git merge-base dev HEAD
+      .mockReturnValueOnce("")                  // git ls-files --others --exclude-standard
       .mockReturnValueOnce("some-diff");         // git diff abc123
 
     const result = await resolveDiff({ branch: "dev", cwd: "/repo" });
@@ -57,7 +60,7 @@ describe("resolveDiff", () => {
       cwd: "/repo",
       encoding: "utf-8",
     }));
-    expect(execSyncMock).toHaveBeenNthCalledWith(3, "git diff abc123", expect.objectContaining({
+    expect(execSyncMock).toHaveBeenNthCalledWith(4, "git diff abc123", expect.objectContaining({
       cwd: "/repo",
       encoding: "utf-8",
     }));
@@ -90,6 +93,7 @@ describe("resolveDiff", () => {
       .mockReturnValueOnce("feature-branch\n") // detectCurrentBranch
       .mockReturnValueOnce("origin/main\n")    // detectOriginBase
       .mockReturnValueOnce("abc123\n")          // git merge-base origin/main HEAD
+      .mockReturnValueOnce("")                  // git ls-files --others --exclude-standard
       .mockReturnValueOnce("some-diff");         // git diff abc123
 
     const result = await resolveDiff({ cwd: "/repo" });
@@ -112,7 +116,7 @@ describe("resolveDiff", () => {
       cwd: "/repo",
       encoding: "utf-8",
     }));
-    expect(execSyncMock).toHaveBeenNthCalledWith(4, "git diff abc123", expect.objectContaining({
+    expect(execSyncMock).toHaveBeenNthCalledWith(5, "git diff abc123", expect.objectContaining({
       cwd: "/repo",
       encoding: "utf-8",
     }));
@@ -126,6 +130,7 @@ describe("resolveDiff", () => {
         throw new Error("symbolic-ref failed");
       })
       .mockReturnValueOnce("abc123\n")  // git merge-base origin/main HEAD
+      .mockReturnValueOnce("")          // git ls-files --others --exclude-standard
       .mockReturnValueOnce("some-diff"); // git diff abc123
 
     const result = await resolveDiff({ cwd: "/repo" });
@@ -134,7 +139,9 @@ describe("resolveDiff", () => {
   });
 
   it("throws when resolved diff is empty", async () => {
-    execSyncMock.mockReturnValue("   \n");
+    execSyncMock
+      .mockReturnValueOnce("")        // git ls-files --others --exclude-standard
+      .mockReturnValueOnce("   \n"); // git diff HEAD~1
 
     await expect(resolveDiff({ diff: "HEAD~1", cwd: "/repo" })).rejects.toThrow(
       "No changes found. Make sure you are on a feature branch with commits ahead of the base."

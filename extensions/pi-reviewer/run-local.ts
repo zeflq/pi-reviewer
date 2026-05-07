@@ -39,8 +39,9 @@ export async function runLocalReview(opts: RunLocalOptions): Promise<ReviewResul
 
     let stderr = "";
     let stdoutBuffer = "";
+    let rawLines: string[] = [];
     const accumulator = createEventAccumulator(
-      () => { /* ignore non-JSON lines from subprocess */ },
+      (line) => { rawLines.push(line); },
       {
         onProgress(text) { notify(text); },
       }
@@ -64,9 +65,14 @@ export async function runLocalReview(opts: RunLocalOptions): Promise<ReviewResul
         reject(error);
       });
 
-      proc.on("close", (code) => {
+      proc.on("close", (code, signal) => {
         if (stdoutBuffer.trim()) accumulator.process(stdoutBuffer);
         stopLoader();
+
+        if (signal) {
+          reject(new Error(`pi process killed by signal ${signal}`));
+          return;
+        }
 
         if (code && code !== 0) {
           reject(new Error(`pi process exited with code ${code}${stderr ? `: ${stderr.trim()}` : ""}`));
@@ -75,8 +81,18 @@ export async function runLocalReview(opts: RunLocalOptions): Promise<ReviewResul
 
         const reviewText = accumulator.getLastReviewText();
         if (!reviewText) {
-          const hint = stderr.trim() ? `\n${stderr.trim()}` : "";
-          reject(new Error(`pi process exited without producing a review.${hint}`));
+          if (accumulator.hadAPIError()) {
+            reject(new Error(`The model API returned an error (stopReason: error). Check your API key or try a different model — e.g. /review --model anthropic/claude-sonnet-4-6. You can also reset the default model in the settings panel or delete ~/.pi/pi-reviewer/config.json.`));
+            return;
+          }
+          if (accumulator.hadThinkingOnly()) {
+            reject(new Error("The model produced thinking output but no text response. It may not support structured JSON output — try a different model (e.g. /review --model anthropic/claude-sonnet-4-6)."));
+            return;
+          }
+          const parts: string[] = [];
+          if (stderr.trim()) parts.push(stderr.trim());
+          if (rawLines.length > 0) parts.push(`unexpected output:\n${rawLines.slice(-5).join("\n")}`);
+          reject(new Error(`pi process exited without producing a review.${parts.length ? `\n${parts.join("\n")}` : ""}`));
           return;
         }
 

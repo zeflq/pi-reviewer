@@ -44,9 +44,28 @@ export function detectCurrentBranch(cwd: string): string {
   }
 }
 
+function withUntrackedFiles(cwd: string, fn: () => string): string {
+  const untracked = run("git ls-files --others --exclude-standard", cwd)
+    .split("\n")
+    .map((f) => f.trim())
+    .filter(Boolean);
+  if (untracked.length > 0) {
+    const quoted = untracked.map((f) => JSON.stringify(f)).join(" ");
+    try { run(`git add -N -- ${quoted}`, cwd); } catch { /* ignore */ }
+  }
+  try {
+    return fn();
+  } finally {
+    if (untracked.length > 0) {
+      const quoted = untracked.map((f) => JSON.stringify(f)).join(" ");
+      try { run(`git rm -r --cached --ignore-unmatch -- ${quoted}`, cwd); } catch { /* ignore */ }
+    }
+  }
+}
+
 function mergeBaseDiff(base: string, cwd: string): string {
   const mergeBase = run(`git merge-base ${base} HEAD`, cwd).trim();
-  return run(`git diff ${mergeBase}`, cwd);
+  return withUntrackedFiles(cwd, () => run(`git diff ${mergeBase}`, cwd));
 }
 
 export function detectOriginBase(cwd: string): string {
@@ -79,7 +98,7 @@ export async function resolveDiff(options: DiffOptions): Promise<DiffResult> {
     }
     source = `PR #${options.pr}`;
   } else if (options.diff) {
-    raw = run(`git diff ${options.diff}`, cwd);
+    raw = withUntrackedFiles(cwd, () => run(`git diff ${options.diff}`, cwd));
     source = `git diff ${options.diff}`;
   } else {
     const currentBranch = detectCurrentBranch(cwd);
