@@ -44,7 +44,7 @@ The agent reads `AGENTS.md` / `CLAUDE.md` and `REVIEW.md` from the remote projec
 
 ### UI mode (`--ui`)
 
-Opens a local browser-based review interface after the agent finishes. You can inspect every finding against the diff, decide per-comment (accept / reject / discuss), and choose what to do:
+Opens a local browser-based review interface after the agent finishes. You can inspect every finding against the diff, decide per-comment (accept / reject / discuss), then click **Finish review** to open a panel with three options and an optional global comment:
 
 - **Save** — write decisions to `pi-review.md`
 - **Send** — inject accepted findings into the agent as a follow-up turn
@@ -55,7 +55,7 @@ Opens a local browser-based review interface after the agent finishes. You can i
 /review --ssh --ui
 ```
 
-Cards change color after each decision (accepted → green tint, rejected → dimmed) so you can see at a glance what still needs attention. A "jump to next pending" button lets you move through unreviewed comments quickly.
+The UI includes a file tree sidebar, split and unified diff views, severity breakdown in the header, and a summary overview panel. Cards change color after each decision (accepted → green tint, rejected → dimmed). A "jump to next pending" button moves through unreviewed comments quickly. Files can be marked as viewed once all their comments are resolved, and collapsed individually or all at once.
 
 Theme, view mode, default model, and thinking level are all remembered across reviews via `~/.pi/pi-reviewer/config.json` and can be changed from the settings panel inside the UI.
 
@@ -194,6 +194,8 @@ Then inside the pi TUI:
 | `--thinking <level>` | Agent thinking budget: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`. **Local mode only** — ignored in `--ssh`. | `--thinking low` |
 | `--verbose` | Print full agent output to the console | |
 | `--dry-run` | Print the diff and prompt without calling the agent | |
+
+`--model` and `--thinking` are one-shot overrides — they apply to the current run only and do not update the saved default. To change the permanent default, use the settings panel inside `--ui`. You can also edit `~/.pi/pi-reviewer/config.json` directly — useful if a saved model is no longer available and you need to clear it without opening a review.
 
 ### Diff coverage
 

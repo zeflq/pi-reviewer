@@ -161,8 +161,8 @@ export default function App() {
     <SettingsProvider
       initial={{
         viewMode: data.viewMode ?? "split",
-        defaultModel: data.defaultModel,
-        defaultThinking: data.defaultThinking,
+        model: data.defaultModel,
+        thinking: data.defaultThinking,
         autoCollapseViewed: data.autoCollapseViewed ?? false,
       }}
       availableModels={data.availableModels ?? []}

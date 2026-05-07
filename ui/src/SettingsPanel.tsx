@@ -8,7 +8,7 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ onClose }: SettingsPanelProps) {
   const { settings, availableModels, patchSettings } = useSettings();
-  const { viewMode, defaultModel, defaultThinking, autoCollapseViewed } = settings;
+  const { viewMode, model, thinking, autoCollapseViewed } = settings;
   const byProvider = groupByProvider(availableModels);
 
   return (
@@ -41,12 +41,12 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
                 <div className="model-provider-label">{provider}</div>
                 {models.map((m) => {
                   const id = `${m.provider}/${m.id}`;
-                  const isDefault = id === defaultModel || m.id === defaultModel;
+                  const isDefault = id === model || m.id === model;
                   return (
                     <button
                       key={id}
                       className={`layout-option${isDefault ? " layout-option-active" : ""}`}
-                      onClick={() => { patchSettings({ defaultModel: id }); onClose(); }}
+                      onClick={() => { patchSettings({ model: id }); onClose(); }}
                     >
                       {isDefault ? <Checkmark /> : <Spacer />}
                       <span style={{ flex: 1, textAlign: "left" }}>{m.name}</span>
@@ -63,10 +63,10 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
         {THINKING_LEVELS.map((level) => (
           <button
             key={level}
-            className={`layout-option${defaultThinking === level ? " layout-option-active" : ""}`}
-            onClick={() => { patchSettings({ defaultThinking: level }); onClose(); }}
+            className={`layout-option${thinking === level ? " layout-option-active" : ""}`}
+            onClick={() => { patchSettings({ thinking: level }); onClose(); }}
           >
-            {defaultThinking === level ? <Checkmark /> : <Spacer />}
+            {thinking === level ? <Checkmark /> : <Spacer />}
             {level}
           </button>
         ))}

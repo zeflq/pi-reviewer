@@ -3,8 +3,8 @@ import type { ModelInfo } from "./types";
 
 export interface Settings {
   viewMode: "split" | "unified";
-  defaultModel?: string;
-  defaultThinking?: string;
+  model?: string;
+  thinking?: string;
   autoCollapseViewed: boolean;
 }
 
