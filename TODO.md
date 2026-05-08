@@ -162,6 +162,7 @@ tests/
 ### ✅ 19. Untracked file support
 
 - [x] Run `git add -N` on untracked files before diffing to register them as intent-to-add, making them visible to `git diff` without staging their content; restore index state after diff is captured with `git rm --cached`
+- [x] Applied to both `--branch` / default merge-base path and `--diff` path; `--pr` uses remote diff as-is
 
 ### 20. Monorepo path scoping (`--path`)
 
@@ -243,6 +244,7 @@ tests/
 - [x] Show `Writing review…` when model starts writing the JSON output (`text_start`)
 - [x] Note: local mode makes no tool calls (diff + context are pre-loaded in prompt) — no tool-call log available unlike SSH mode where the agent fetches them itself
 - [x] Footer shows active model short name and thinking level during review (e.g. `gpt-5.4-mini · low`); omitted when neither is set
+- [x] Actionable error messages for API errors (`stopReason: error`) and thinking-only responses (model returned reasoning but no text output)
 
 ### ✅ 17. User config (`~/.pi/pi-reviewer/config.json`)
 
@@ -254,10 +256,12 @@ tests/
 - [x] `thinking` — persisted via `POST /config` from the UI settings panel; default `undefined` (no thinking override)
 - [x] `autoCollapseViewed` — persisted via `POST /config`; default `false`
 - [x] All persistence goes through a single `POST /config` route with `applyConfigPatch()` per-key validation
+- [x] `applyConfigPatch` uses a `VALID` lookup table for enum fields — no per-field if-chains
 - [x] CLI reads config but never writes it
-- [x] Refactored `src/core/ui/server.ts` → `server/{types,config,routes,index}.ts`
+- [x] Refactored `src/core/ui/server.ts` → `server/{types,config,routes,index}.ts`; config logic moved to `src/core/config.ts` (shared, not UI-specific)
 - [x] Route table replaces if/else chain; individual config routes consolidated into one
 - [x] `SettingsContext` eliminates prop drilling — components read/write settings via `useSettings()`
+- [x] `defaultBranch` — config-only (no UI); falls back to `git symbolic-ref refs/remotes/origin/HEAD` when unset
 
 ### 18. UI improvements (GitHub-inspired)
 

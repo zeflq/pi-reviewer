@@ -1,10 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { readConfig, saveConfig } from "./config.js";
-import type { PiReviewerConfig, ThinkingLevel, UIAction } from "./types.js";
-import type { MinSeverity } from "../../prompt-builder.js";
-
-const VALID_THINKING: readonly ThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh"];
-const VALID_SEVERITY: readonly MinSeverity[] = ["INFO", "WARN", "CRITICAL"];
+import { applyConfigPatch } from "../../config.js";
+import type { PiReviewerConfig } from "../../config.js";
+import type { UIAction } from "./types.js";
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((res) => {
@@ -12,20 +9,6 @@ function readBody(req: IncomingMessage): Promise<string> {
     req.on("data", (c: Buffer) => { body += c; });
     req.on("end", () => res(body));
   });
-}
-
-function applyConfigPatch(patch: Partial<PiReviewerConfig>): void {
-  const next = { ...readConfig() };
-  if (patch.theme === "dark" || patch.theme === "light") next.theme = patch.theme;
-  if (patch.viewMode === "split" || patch.viewMode === "unified") next.viewMode = patch.viewMode;
-  if (typeof patch.model === "string") next.model = patch.model;
-  if (typeof patch.autoCollapseViewed === "boolean") next.autoCollapseViewed = patch.autoCollapseViewed;
-  if (typeof patch.verbose === "boolean") next.verbose = patch.verbose;
-  if (typeof patch.thinking === "string" && (VALID_THINKING as string[]).includes(patch.thinking))
-    next.thinking = patch.thinking as ThinkingLevel;
-  if (typeof patch.minSeverity === "string" && (VALID_SEVERITY as string[]).includes(patch.minSeverity))
-    next.minSeverity = patch.minSeverity as MinSeverity;
-  saveConfig(next);
 }
 
 type RouteHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void> | void;

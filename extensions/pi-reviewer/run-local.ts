@@ -81,12 +81,13 @@ export async function runLocalReview(opts: RunLocalOptions): Promise<ReviewResul
 
         const reviewText = accumulator.getLastReviewText();
         if (!reviewText) {
+          const modelLabel = model ? `"${model}"` : "the current model";
           if (accumulator.hadAPIError()) {
-            reject(new Error(`The model API returned an error (stopReason: error). Check your API key or try a different model — e.g. /review --model anthropic/claude-sonnet-4-6. You can also reset the default model in the settings panel or delete ~/.pi/pi-reviewer/config.json.`));
+            reject(new Error(`${modelLabel} returned an API error. Check your API key or switch models with /review --model anthropic/claude-sonnet-4-6. You can also change the default in the settings panel or delete ~/.pi/pi-reviewer/config.json.`));
             return;
           }
           if (accumulator.hadThinkingOnly()) {
-            reject(new Error("The model produced thinking output but no text response. It may not support structured JSON output — try a different model (e.g. /review --model anthropic/claude-sonnet-4-6)."));
+            reject(new Error(`${modelLabel} produced thinking output but no text response — it may not support structured JSON output. Try /review --model anthropic/claude-sonnet-4-6.`));
             return;
           }
           const parts: string[] = [];
