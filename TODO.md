@@ -287,6 +287,23 @@ tests/
 - [x] **File tree folder compression** — collapse single-child directory chains into combined names (e.g. `providers/oauth/handlers`) à la VS Code; contained hover highlight with margin + border-radius; widen sidebar to 296 px; bump tree and comment body font size to 13 px
 - [x] **Version in wordmark** — display `vX.Y.Z` next to the wordmark, injected at build time from `package.json` via Vite `define`
 
+### 21. Pluggable context provider API
+
+See [`docs/context-providers/README.md`](./docs/context-providers/README.md) for the full design.
+
+- [ ] Export `ContextFile { path, content }`, `ContextProvider`, `ContextProviderEvent`, `CONTEXT_PROVIDER_EVENT` from `src/core/context.ts`
+- [ ] Add `extractDiffFiles(diff: string): string[]` to `src/core/diff-resolver.ts` — parses `diff --git` headers to extract changed file paths
+- [ ] Update `buildJSONSystemPrompt` in `src/core/prompt-builder.ts` to accept optional `contextFiles: ContextFile[]` — append each `content` to the system prompt
+- [ ] In `extensions/pi-reviewer/index.ts` (local path): emit `CONTEXT_PROVIDER_EVENT` with `{ cwd, diffFiles, register(name, provider) }`, collect results, pass to `buildJSONSystemPrompt`
+- [ ] Tests: `extractDiffFiles` unit tests; `buildJSONSystemPrompt` tests for extra content injection
+
+### 22. UI: Context tab
+
+- [ ] Add a **Context** tab in the review UI (alongside the file tree / summary) listing all files loaded for the review
+- [ ] Eagerly loaded section: `AGENTS.md`, `REVIEW.md`, and markdown-linked files (from `loadedFiles` in `ContextResult`)
+- [ ] Provider-contributed section: files listed in `<context-files>` block; mark each as "loaded" if the agent called Read on it during the review
+- [ ] Lets users verify the right context reached the agent before acting on findings
+
 ### 10. Custom system prompt
 
 - [ ] Add `system-prompt` input to `action.yml` (file path relative to project root)
