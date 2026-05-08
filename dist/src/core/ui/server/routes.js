@@ -1,30 +1,10 @@
-import { readConfig, saveConfig } from "./config.js";
-const VALID_THINKING = ["off", "minimal", "low", "medium", "high", "xhigh"];
-const VALID_SEVERITY = ["INFO", "WARN", "CRITICAL"];
+import { applyConfigPatch } from "../../config.js";
 function readBody(req) {
     return new Promise((res) => {
         let body = "";
         req.on("data", (c) => { body += c; });
         req.on("end", () => res(body));
     });
-}
-function applyConfigPatch(patch) {
-    const next = { ...readConfig() };
-    if (patch.theme === "dark" || patch.theme === "light")
-        next.theme = patch.theme;
-    if (patch.viewMode === "split" || patch.viewMode === "unified")
-        next.viewMode = patch.viewMode;
-    if (typeof patch.model === "string")
-        next.model = patch.model;
-    if (typeof patch.autoCollapseViewed === "boolean")
-        next.autoCollapseViewed = patch.autoCollapseViewed;
-    if (typeof patch.verbose === "boolean")
-        next.verbose = patch.verbose;
-    if (typeof patch.thinking === "string" && VALID_THINKING.includes(patch.thinking))
-        next.thinking = patch.thinking;
-    if (typeof patch.minSeverity === "string" && VALID_SEVERITY.includes(patch.minSeverity))
-        next.minSeverity = patch.minSeverity;
-    saveConfig(next);
 }
 export function createRequestHandler(html, resolveOnce, resetHeartbeat) {
     const routes = {
