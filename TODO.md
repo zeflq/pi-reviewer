@@ -164,12 +164,11 @@ tests/
 - [x] Run `git add -N` on untracked files before diffing to register them as intent-to-add, making them visible to `git diff` without staging their content; restore index state after diff is captured with `git rm --cached`
 - [x] Applied to both `--branch` / default merge-base path and `--diff` path; `--pr` uses remote diff as-is
 
-### 20. Monorepo path scoping (`--path`)
+### ✅ 20. Monorepo / sub-project scoping (`--dir`)
 
-- [ ] Add `--path <dir>` flag to `/review` command — limit the diff to a subdirectory (e.g. `--path packages/frontend` or `--path packages/backend`)
-- [ ] Pass the path to `git diff` as a pathspec so only files under that directory are included
-- [ ] Surface the scoped path in the footer and UI source label so it's clear what was reviewed
-- [ ] Works with all diff modes (`--branch`, `--pr`, `--diff`, `--ssh`)
+- [x] Add `--dir <path>` flag to `/review` command — run the review in a specific directory (e.g. a sub-project in a monorepo); path must be a git repository
+- [x] Resolves path against the current cwd, switches all git commands to that directory
+- [x] Works with all diff modes (`--branch`, `--pr`, `--diff`); SSH uses the remote cwd so `--dir` is local-only
 
 ### ✅ 9. SSH support (`--ssh`)
 

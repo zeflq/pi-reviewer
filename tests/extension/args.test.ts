@@ -6,6 +6,10 @@ describe("parseArgs defaults", () => {
     expect(parseArgs("").minSeverity).toBeUndefined();
   });
 
+  it("dir is undefined when not passed", () => {
+    expect(parseArgs("").dir).toBeUndefined();
+  });
+
   it("thinking is undefined when not passed", () => {
     expect(parseArgs("").thinking).toBeUndefined();
   });
@@ -50,6 +54,16 @@ describe("parseArgs --thinking", () => {
 
   it("throws when --thinking has no value", () => {
     expect(() => parseArgs("--thinking")).toThrow("Missing value for --thinking");
+  });
+});
+
+describe("parseArgs --dir", () => {
+  it("parses --dir with a directory", () => {
+    expect(parseArgs("--dir packages/frontend").dir).toBe("packages/frontend");
+  });
+
+  it("throws when --dir has no value", () => {
+    expect(() => parseArgs("--dir")).toThrow("Missing value for --dir");
   });
 });
 

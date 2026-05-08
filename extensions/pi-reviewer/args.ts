@@ -6,6 +6,7 @@ export interface ReviewCommandArgs {
   diff?: string;
   branch?: string;
   pr?: number;
+  dir?: string;
   dryRun: boolean;
   ssh: boolean;
   ui: boolean;
@@ -93,6 +94,14 @@ export function parseArgs(rawArgs: string): ReviewCommandArgs {
       const pr = Number.parseInt(value, 10);
       if (Number.isNaN(pr)) throw new Error(`Invalid PR number: ${value}`);
       parsed.pr = pr;
+      i += 1;
+      continue;
+    }
+
+    if (token === "--dir") {
+      const value = tokens[i + 1];
+      if (!value) throw new Error("Missing value for --dir");
+      parsed.dir = value;
       i += 1;
       continue;
     }

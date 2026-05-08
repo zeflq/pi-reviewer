@@ -76,6 +76,14 @@ export function parseArgs(rawArgs) {
             i += 1;
             continue;
         }
+        if (token === "--dir") {
+            const value = tokens[i + 1];
+            if (!value)
+                throw new Error("Missing value for --dir");
+            parsed.dir = value;
+            i += 1;
+            continue;
+        }
         throw new Error(`Unknown argument: ${token}`);
     }
     return parsed;

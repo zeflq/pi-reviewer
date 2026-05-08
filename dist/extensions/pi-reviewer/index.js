@@ -5,7 +5,7 @@ import { resolveDiff, detectCurrentBranch, detectOriginBase } from "../../src/co
 import { filterDiff } from "../../src/core/diff-filter.js";
 import { formatForTerminal } from "../../src/core/output.js";
 import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildSSHUserPrompt, buildUserPrompt } from "../../src/core/prompt-builder.js";
-import { readVerbose, readMinSeverity, readModel, readThinking, readDefaultBranch } from "../../src/core/config.js";
+import { readVerbose, readMinSeverity, readModel, readThinking, readDefaultBranch } from "../../src/core/ui/server/index.js";
 import { parseArgs } from "./args.js";
 import { setReviewFooter } from "./footer.js";
 import { runLocalReview } from "./run-local.js";
@@ -61,7 +61,7 @@ export default function (pi) {
                         notify(`User prompt:\n\n${buildSSHUserPrompt(buildSSHDiffCommand(parsed))}`);
                     }
                     else {
-                        const { diff, source, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch ?? readDefaultBranch(), pr: parsed.pr });
+                        const { diff, source, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch ?? readDefaultBranch(), pr: parsed.pr, dir: parsed.dir });
                         const context = await loadContext({ cwd: ctx.cwd });
                         notify(`Diff source: ${source}`);
                         notify(`System prompt:\n\n${buildJSONSystemPrompt(context, minSeverity)}`);
@@ -118,7 +118,7 @@ export default function (pi) {
                 }
                 // ── Local ─────────────────────────────────────────────────────────
                 notify("Fetching diff…");
-                const { diff, source, warning, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch ?? readDefaultBranch(), pr: parsed.pr });
+                const { diff, source, warning, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch ?? readDefaultBranch(), pr: parsed.pr, dir: parsed.dir });
                 if (warning)
                     notify(warning, "warning");
                 notify("Loading context…");

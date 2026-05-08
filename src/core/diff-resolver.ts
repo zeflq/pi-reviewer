@@ -1,4 +1,6 @@
 import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { filterDiff } from "./diff-filter.js";
 
@@ -7,6 +9,7 @@ export interface DiffOptions {
   diff?: string;
   branch?: string;
   cwd?: string;
+  dir?: string;
 }
 
 export interface DiffResult {
@@ -81,7 +84,14 @@ export function detectOriginBase(cwd: string): string {
 }
 
 export async function resolveDiff(options: DiffOptions): Promise<DiffResult> {
-  const cwd = options.cwd ?? process.cwd();
+  let cwd = options.cwd ?? process.cwd();
+
+  if (options.dir) {
+    cwd = resolve(cwd, options.dir);
+    if (!existsSync(resolve(cwd, ".git"))) {
+      throw new Error(`--dir "${options.dir}" is not a git repository`);
+    }
+  }
 
   let raw: string;
   let source: string;

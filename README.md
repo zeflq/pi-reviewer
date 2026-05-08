@@ -192,6 +192,7 @@ Then inside the pi TUI:
 | `--min-severity <level>` | Only report issues at this level and above: `info`, `warn`, or `critical` (default: `info`) | `--min-severity warn` |
 | `--model <id>` | Model to use for this review in `provider/id` format, overrides config default. **Local mode only** — ignored in `--ssh`. | `--model openai/gpt-4o` |
 | `--thinking <level>` | Agent thinking budget: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`. **Local mode only** — ignored in `--ssh`. | `--thinking low` |
+| `--dir <path>` | Run the review in a specific directory (e.g. a sub-project in a monorepo). The path must be a git repository. | `--dir packages/api` |
 | `--verbose` | Print full agent output to the console | |
 | `--dry-run` | Print the diff and prompt without calling the agent | |
 

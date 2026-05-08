@@ -1,4 +1,6 @@
 import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { filterDiff } from "./diff-filter.js";
 const EMPTY_DIFF_ERROR = "No changes found. Make sure you are on a feature branch with commits ahead of the base.";
 const extraPaths = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"].filter(Boolean);
@@ -65,7 +67,13 @@ export function detectOriginBase(cwd) {
     }
 }
 export async function resolveDiff(options) {
-    const cwd = options.cwd ?? process.cwd();
+    let cwd = options.cwd ?? process.cwd();
+    if (options.dir) {
+        cwd = resolve(cwd, options.dir);
+        if (!existsSync(resolve(cwd, ".git"))) {
+            throw new Error(`--dir "${options.dir}" is not a git repository`);
+        }
+    }
     let raw;
     let source;
     if (typeof options.pr === "number") {

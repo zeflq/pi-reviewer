@@ -138,6 +138,23 @@ describe("resolveDiff", () => {
     expect(result.source).toBe("feature-branch vs origin/main");
   });
 
+  it("uses --dir as cwd when it is a git repo", async () => {
+    execSyncMock
+      .mockReturnValueOnce("")           // git ls-files
+      .mockReturnValueOnce("some-diff"); // git diff HEAD~1
+
+    const projectRoot = process.cwd();
+    const result = await resolveDiff({ diff: "HEAD~1", cwd: "/unrelated", dir: projectRoot });
+
+    expect(execSyncMock).toHaveBeenCalledWith("git diff HEAD~1", expect.objectContaining({ cwd: projectRoot }));
+    expect(result.source).toBe("git diff HEAD~1");
+  });
+
+  it("throws when --dir does not contain a git repo", async () => {
+    await expect(resolveDiff({ cwd: "/repo", dir: "/nonexistent/project" }))
+      .rejects.toThrow('--dir "/nonexistent/project" is not a git repository');
+  });
+
   it("throws when resolved diff is empty", async () => {
     execSyncMock
       .mockReturnValueOnce("")        // git ls-files --others --exclude-standard
