@@ -197,6 +197,40 @@ Then inside the pi TUI:
 
 `--model` and `--thinking` are one-shot overrides — they apply to the current run only and do not update the saved default. To change the permanent default, use the settings panel inside `--ui`. You can also edit `~/.pi/pi-reviewer/config.json` directly — useful if a saved model is no longer available and you need to clear it without opening a review.
 
+### Configuration
+
+Persistent settings are stored in `~/.pi/pi-reviewer/config.json`. All fields are optional. Example of a fully populated file:
+
+```json
+{
+  "theme": "dark",
+  "viewMode": "split",
+  "model": "anthropic/claude-sonnet-4-6",
+  "thinking": "low",
+  "minSeverity": "INFO",
+  "defaultBranch": "main",
+  "autoCollapseViewed": false,
+  "verbose": false
+}
+```
+
+| Field | Values | Default | How to set |
+|---|---|---|---|
+| `theme` | `"dark"` \| `"light"` | `"dark"` | Settings panel in `--ui` |
+| `viewMode` | `"split"` \| `"unified"` | `"split"` | Settings panel in `--ui` |
+| `model` | `"provider/id"` string | _(parent session's model)_ | Settings panel in `--ui`, or edit directly |
+| `thinking` | `"off"` \| `"minimal"` \| `"low"` \| `"medium"` \| `"high"` \| `"xhigh"` | _(parent session's level)_ | Settings panel in `--ui`, or edit directly |
+| `minSeverity` | `"INFO"` \| `"WARN"` \| `"CRITICAL"` | `"INFO"` | Edit directly — no UI |
+| `defaultBranch` | any branch name | _(auto-detected from `origin/HEAD`)_ | Edit directly — no UI |
+| `autoCollapseViewed` | `true` \| `false` | `false` | Settings panel in `--ui` |
+| `verbose` | `true` \| `false` | `false` | Edit directly — no UI |
+
+**`minSeverity`** filters which findings the agent is asked to report. `"INFO"` (default) reports everything; `"WARN"` skips informational notes; `"CRITICAL"` only surfaces blockers. The `--min-severity` CLI flag uses lowercase (`info`, `warn`, `critical`) but the config file uses uppercase.
+
+**`defaultBranch`** sets the base branch used when no `--branch` flag is given. If unset, pi-reviewer auto-detects it from `git symbolic-ref refs/remotes/origin/HEAD`. Set this when auto-detection is unreliable (e.g. `origin/HEAD` not configured, monorepo with a non-standard base).
+
+**`model`** and **`thinking`** default to whatever the parent pi session is using when not set. The `--model` and `--thinking` CLI flags override for a single run without touching this file.
+
 ### Diff coverage
 
 `/review` and `--branch` use `git merge-base` to diff from the point where your branch diverged — committed changes, staged files, and unstaged edits are all included. You don't need to commit before reviewing.

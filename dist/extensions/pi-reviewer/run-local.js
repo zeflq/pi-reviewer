@@ -21,7 +21,8 @@ export async function runLocalReview(opts) {
         const proc = spawn("pi", piArgs, { cwd, env: process.env, shell: false, stdio: ["ignore", "pipe", "pipe"] });
         let stderr = "";
         let stdoutBuffer = "";
-        const accumulator = createEventAccumulator(() => { }, {
+        let rawLines = [];
+        const accumulator = createEventAccumulator((line) => { rawLines.push(line); }, {
             onProgress(text) { notify(text); },
         });
         return await new Promise((resolve, reject) => {
@@ -40,18 +41,35 @@ export async function runLocalReview(opts) {
                 }
                 reject(error);
             });
-            proc.on("close", (code) => {
+            proc.on("close", (code, signal) => {
                 if (stdoutBuffer.trim())
                     accumulator.process(stdoutBuffer);
                 stopLoader();
+                if (signal) {
+                    reject(new Error(`pi process killed by signal ${signal}`));
+                    return;
+                }
                 if (code && code !== 0) {
                     reject(new Error(`pi process exited with code ${code}${stderr ? `: ${stderr.trim()}` : ""}`));
                     return;
                 }
                 const reviewText = accumulator.getLastReviewText();
                 if (!reviewText) {
-                    const hint = stderr.trim() ? `\n${stderr.trim()}` : "";
-                    reject(new Error(`pi process exited without producing a review.${hint}`));
+                    const modelLabel = model ? `"${model}"` : "the current model";
+                    if (accumulator.hadAPIError()) {
+                        reject(new Error(`${modelLabel} returned an API error. Check your API key or switch models with /review --model anthropic/claude-sonnet-4-6. You can also change the default in the settings panel or delete ~/.pi/pi-reviewer/config.json.`));
+                        return;
+                    }
+                    if (accumulator.hadThinkingOnly()) {
+                        reject(new Error(`${modelLabel} produced thinking output but no text response — it may not support structured JSON output. Try /review --model anthropic/claude-sonnet-4-6.`));
+                        return;
+                    }
+                    const parts = [];
+                    if (stderr.trim())
+                        parts.push(stderr.trim());
+                    if (rawLines.length > 0)
+                        parts.push(`unexpected output:\n${rawLines.slice(-5).join("\n")}`);
+                    reject(new Error(`pi process exited without producing a review.${parts.length ? `\n${parts.join("\n")}` : ""}`));
                     return;
                 }
                 resolve(parseAgentResponse(reviewText, minSeverity));

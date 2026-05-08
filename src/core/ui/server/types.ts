@@ -1,17 +1,3 @@
-import type { MinSeverity } from "../../prompt-builder.js";
-
-export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
-
-export interface PiReviewerConfig {
-  theme?: "dark" | "light";
-  viewMode?: "split" | "unified";
-  verbose?: boolean;
-  minSeverity?: MinSeverity;
-  model?: string;
-  thinking?: ThinkingLevel;
-  autoCollapseViewed?: boolean;
-}
-
 export interface ModelInfo {
   id: string;
   name: string;
