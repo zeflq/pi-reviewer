@@ -30,7 +30,7 @@ Progress is shown in the pi TUI as the review runs — diff fetch, context load,
 
 ### SSH mode (`--ssh`)
 
-For reviewing code on a remote machine. Instead of spawning a subprocess, SSH mode runs directly inside the current pi agent session — which already has SSH bash tool access to the remote. The agent fetches the diff and conventions on the remote, runs the review, and saves `pi-review.md` there. No local git access needed. Requires an SSH extension (e.g. [ssh.ts](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/examples/extensions/ssh.ts)) to be active.
+For reviewing code on a remote machine. Instead of spawning a subprocess, SSH mode runs directly inside the current pi agent session — which already has SSH bash tool access to the remote. The agent fetches the diff on the remote, runs the review, and saves `pi-review.md` there. No local git access needed. Requires an SSH extension (e.g. [ssh.ts](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/examples/extensions/ssh.ts)) to be active.
 
 ```
 /review --ssh
@@ -38,7 +38,7 @@ For reviewing code on a remote machine. Instead of spawning a subprocess, SSH mo
 /review --ssh --branch dev
 ```
 
-The agent reads `AGENTS.md` / `CLAUDE.md` and `REVIEW.md` from the remote project root, runs the review, and saves `pi-review.md` directly on the remote.
+pi-reviewer reads `AGENTS.md` / `CLAUDE.md` and `REVIEW.md` from the remote project root over SSH before starting the agent, then injects them into the system prompt. The agent fetches the diff, runs the review, and saves `pi-review.md` directly on the remote.
 
 > **Note:** `--model` and `--thinking` have no effect in SSH mode. Because the review runs inside the existing pi session (not a subprocess), the model and thinking level are fixed to whatever the parent session is using.
 
@@ -192,7 +192,7 @@ Then inside the pi TUI:
 | `--min-severity <level>` | Only report issues at this level and above: `info`, `warn`, or `critical` (default: `info`) | `--min-severity warn` |
 | `--model <id>` | Model to use for this review in `provider/id` format, overrides config default. **Local mode only** — ignored in `--ssh`. | `--model openai/gpt-4o` |
 | `--thinking <level>` | Agent thinking budget: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`. **Local mode only** — ignored in `--ssh`. | `--thinking low` |
-| `--dir <path>` | Run the review in a specific directory (e.g. a sub-project in a monorepo). The path must be a git repository. | `--dir packages/api` |
+| `--dir <path>` | Run the review in a specific directory (e.g. a sub-project in a monorepo). The path must be a git repository. Context files (`AGENTS.md`, `REVIEW.md`) are loaded from the sub-project and all ancestor directories up to the outer project root. | `--dir packages/api` |
 | `--verbose` | Print full agent output to the console | |
 | `--dry-run` | Print the diff and prompt without calling the agent | |
 
@@ -260,8 +260,9 @@ Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the review
 
 - `AGENTS.md` is checked first; `CLAUDE.md` is used as a fallback if `AGENTS.md` is not found.
 - Filenames are matched case-insensitively (`agents.md`, `Agents.md`, and `AGENTS.md` all work).
+- Files can also live in `.pi/`, `.claude/`, or `.agents/` subdirectories — e.g. `.pi/AGENTS.md`.
 - `REVIEW.md` is always loaded alongside `AGENTS.md`/`CLAUDE.md` when present — use it for review-specific rules that don't belong in your general conventions.
-- Markdown links to other `.md` files (e.g. `[api conventions](./docs/api.md)`) are automatically inlined so the agent sees the full context.
+- **Monorepo support:** pi-reviewer walks up from the working directory to the git root and collects `AGENTS.md`/`REVIEW.md` at every ancestor level (root first, package last). When using `--dir`, the walk-up extends to the outer project root so shared root conventions are always included alongside package-specific ones.
 
 **`AGENTS.md`** — general project conventions:
 ```markdown
@@ -271,8 +272,6 @@ Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the review
 - Prefix async data fetchers with `fetch` (e.g. `fetchUser`, `fetchOrders`)
 - Prefix boolean functions with `is`, `has`, or `can`
 - Prefix mutations with a verb: `update`, `delete`, `create`, `reset`
-
-[API conventions](./docs/api-conventions.md)
 ```
 
 **`REVIEW.md`** — review-only rules (what to flag, what to skip):

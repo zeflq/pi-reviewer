@@ -1,4 +1,4 @@
-import type { ContextResult } from "./context.js";
+import type { ContextFile, ContextResult } from "./context.js";
 
 export type MinSeverity = "CRITICAL" | "WARN" | "INFO";
 
@@ -7,6 +7,10 @@ const SEVERITY_RULE: Record<MinSeverity, string | null> = {
   WARN: "- Only report CRITICAL and WARN issues — skip INFO",
   CRITICAL: "- Only report CRITICAL issues — skip WARN and INFO",
 };
+
+function mergeContent(files: ContextFile[]): string {
+  return files.map(f => f.content).join("\n\n");
+}
 
 // ── Shared base ───────────────────────────────────────────────────────────────
 
@@ -64,12 +68,12 @@ export function buildJSONSystemPrompt(
     "- body: inline comment text, may use Markdown",
   ].join("\n");
 
-  const conventions = typeof context === "string" ? context : context.conventions;
-  const reviewRules = typeof context === "string" ? "" : context.reviewRules;
+  const conventionsStr = typeof context === "string" ? context : mergeContent(context.conventions);
+  const reviewRulesStr = typeof context === "string" ? "" : mergeContent(context.reviewRules);
 
   const sections: string[] = [base];
-  if (conventions.trim()) sections.push(`<conventions>\n${conventions}\n</conventions>`);
-  if (reviewRules.trim()) sections.push(`<review_rules>\n${reviewRules}\n</review_rules>`);
+  if (conventionsStr.trim()) sections.push(`<conventions>\n${conventionsStr}\n</conventions>`);
+  if (reviewRulesStr.trim()) sections.push(`<review_rules>\n${reviewRulesStr}\n</review_rules>`);
 
   return sections.join("\n\n");
 }
@@ -78,8 +82,8 @@ export function buildJSONSystemPrompt(
  * Markdown system prompt — used by SSH-only mode.
  * Agent writes a human-readable markdown review and saves it to pi-review.md.
  */
-export function buildMarkdownSystemPrompt(minSeverity: MinSeverity = "INFO"): string {
-  return [
+export function buildMarkdownSystemPrompt(minSeverity: MinSeverity = "INFO", context?: ContextResult | string): string {
+  const base = [
     ...buildSharedBase(minSeverity),
     "",
     "Write your review as Markdown with:",
@@ -88,6 +92,14 @@ export function buildMarkdownSystemPrompt(minSeverity: MinSeverity = "INFO"): st
     "",
     "After writing your review, save it to pi-review.md in the project root using the Write tool.",
   ].join("\n");
+
+  if (!context) return base;
+  const conventionsStr = typeof context === "string" ? context : mergeContent(context.conventions);
+  const reviewRulesStr = typeof context === "string" ? "" : mergeContent(context.reviewRules);
+  const sections: string[] = [base];
+  if (conventionsStr.trim()) sections.push(`<conventions>\n${conventionsStr}\n</conventions>`);
+  if (reviewRulesStr.trim()) sections.push(`<review_rules>\n${reviewRulesStr}\n</review_rules>`);
+  return sections.join("\n\n");
 }
 
 // ── User prompts ──────────────────────────────────────────────────────────────
@@ -116,9 +128,6 @@ export function buildSSHUserPrompt(diffCommand: string): string {
     `    <command>${diffCommand}</command>`,
     "  </step>",
     "  <step index=\"2\">",
-    "    Read AGENTS.md or CLAUDE.md from the project root if either exists. Scan for markdown links matching [text](./path.md) and read each linked .md file recursively (at any depth). Also read REVIEW.md from the project root if it exists (same recursive rule). These files contain project conventions and review-specific rules.",
-    "  </step>",
-    "  <step index=\"3\">",
     "    Review the diff according to the system prompt instructions.",
     "  </step>",
     "</request>",

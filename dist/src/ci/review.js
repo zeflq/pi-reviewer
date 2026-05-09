@@ -20,8 +20,9 @@ export async function review(options) {
     if (warning)
         console.warn(`[pi-reviewer] ${warning}`);
     const context = await loadContext({ cwd });
-    if ((context.loadedFiles?.length ?? 0) > 0) {
-        console.log(`[pi-reviewer] context loaded: ${context.loadedFiles?.join(", ")}`);
+    const loadedPaths = [...context.conventions, ...context.reviewRules].map(f => f.path);
+    if (loadedPaths.length > 0) {
+        console.log(`[pi-reviewer] context loaded: ${loadedPaths.join(", ")}`);
     }
     else {
         console.log("[pi-reviewer] context: no conventions found (AGENTS.md / CLAUDE.md / REVIEW.md)");

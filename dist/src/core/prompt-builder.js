@@ -3,6 +3,9 @@ const SEVERITY_RULE = {
     WARN: "- Only report CRITICAL and WARN issues — skip INFO",
     CRITICAL: "- Only report CRITICAL issues — skip WARN and INFO",
 };
+function mergeContent(files) {
+    return files.map(f => f.content).join("\n\n");
+}
 // ── Shared base ───────────────────────────────────────────────────────────────
 function buildSharedBase(minSeverity) {
     const severityRule = SEVERITY_RULE[minSeverity];
@@ -52,21 +55,21 @@ export function buildJSONSystemPrompt(context, minSeverity = "INFO") {
         '- severity: "CRITICAL" | "WARN" | "INFO"',
         "- body: inline comment text, may use Markdown",
     ].join("\n");
-    const conventions = typeof context === "string" ? context : context.conventions;
-    const reviewRules = typeof context === "string" ? "" : context.reviewRules;
+    const conventionsStr = typeof context === "string" ? context : mergeContent(context.conventions);
+    const reviewRulesStr = typeof context === "string" ? "" : mergeContent(context.reviewRules);
     const sections = [base];
-    if (conventions.trim())
-        sections.push(`<conventions>\n${conventions}\n</conventions>`);
-    if (reviewRules.trim())
-        sections.push(`<review_rules>\n${reviewRules}\n</review_rules>`);
+    if (conventionsStr.trim())
+        sections.push(`<conventions>\n${conventionsStr}\n</conventions>`);
+    if (reviewRulesStr.trim())
+        sections.push(`<review_rules>\n${reviewRulesStr}\n</review_rules>`);
     return sections.join("\n\n");
 }
 /**
  * Markdown system prompt — used by SSH-only mode.
  * Agent writes a human-readable markdown review and saves it to pi-review.md.
  */
-export function buildMarkdownSystemPrompt(minSeverity = "INFO") {
-    return [
+export function buildMarkdownSystemPrompt(minSeverity = "INFO", context) {
+    const base = [
         ...buildSharedBase(minSeverity),
         "",
         "Write your review as Markdown with:",
@@ -75,6 +78,16 @@ export function buildMarkdownSystemPrompt(minSeverity = "INFO") {
         "",
         "After writing your review, save it to pi-review.md in the project root using the Write tool.",
     ].join("\n");
+    if (!context)
+        return base;
+    const conventionsStr = typeof context === "string" ? context : mergeContent(context.conventions);
+    const reviewRulesStr = typeof context === "string" ? "" : mergeContent(context.reviewRules);
+    const sections = [base];
+    if (conventionsStr.trim())
+        sections.push(`<conventions>\n${conventionsStr}\n</conventions>`);
+    if (reviewRulesStr.trim())
+        sections.push(`<review_rules>\n${reviewRulesStr}\n</review_rules>`);
+    return sections.join("\n\n");
 }
 // ── User prompts ──────────────────────────────────────────────────────────────
 /** Local mode — diff only, conventions already in system prompt. */
@@ -98,9 +111,6 @@ export function buildSSHUserPrompt(diffCommand) {
         `    <command>${diffCommand}</command>`,
         "  </step>",
         "  <step index=\"2\">",
-        "    Read AGENTS.md or CLAUDE.md from the project root if either exists. Scan for markdown links matching [text](./path.md) and read each linked .md file recursively (at any depth). Also read REVIEW.md from the project root if it exists (same recursive rule). These files contain project conventions and review-specific rules.",
-        "  </step>",
-        "  <step index=\"3\">",
         "    Review the diff according to the system prompt instructions.",
         "  </step>",
         "</request>",

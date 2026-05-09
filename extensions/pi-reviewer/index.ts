@@ -8,6 +8,8 @@ import { filterDiff } from "../../src/core/diff-filter.js";
 import { formatForTerminal } from "../../src/core/output.js";
 import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildSSHUserPrompt, buildUserPrompt } from "../../src/core/prompt-builder.js";
 import { readVerbose, readMinSeverity, readModel, readThinking, readDefaultBranch } from "../../src/core/ui/server/index.js";
+import { loadContextSSH } from "../../src/core/context.js";
+import { readSshFlag, resolveSshState } from "../../src/core/ssh.js";
 import type { ReviewCommandArgs } from "./args.js";
 import { parseArgs } from "./args.js";
 import { setReviewFooter } from "./footer.js";
@@ -65,7 +67,7 @@ export default function (pi: ExtensionAPI): void {
             notify(`User prompt:\n\n${buildSSHUserPrompt(buildSSHDiffCommand(parsed))}`);
           } else {
             const { diff, source, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch ?? readDefaultBranch(), pr: parsed.pr, dir: parsed.dir });
-            const context = await loadContext({ cwd: ctx.cwd });
+            const context = await loadContext({ cwd: parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd, gitRoot: parsed.dir ? ctx.cwd : undefined });
             notify(`Diff source: ${source}`);
             notify(`System prompt:\n\n${buildJSONSystemPrompt(context, minSeverity)}`);
             notify(`User prompt:\n\n${buildUserPrompt(diff, skippedFiles)}`);
@@ -79,24 +81,37 @@ export default function (pi: ExtensionAPI): void {
           const source = buildSSHSource(parsed, ctx.cwd);
           const userPrompt = buildSSHUserPrompt(diffCommand);
 
+          notify("Loading context…");
+          const sshFlag = readSshFlag();
+          const sshContext = sshFlag
+            ? await resolveSshState(sshFlag).then(s => {
+                const remoteCwd = parsed.dir ? path.posix.join(s.remoteCwd, parsed.dir) : s.remoteCwd;
+                const gitRoot = parsed.dir ? s.remoteCwd : undefined;
+                return loadContextSSH(s.remote, remoteCwd, gitRoot);
+              }).catch(() => ({ conventions: [], reviewRules: [] }))
+            : { conventions: [], reviewRules: [] };
+          const sshLoadedPaths = [...sshContext.conventions, ...sshContext.reviewRules].map(f => f.path);
+          if (sshLoadedPaths.length > 0) notify(`Context: ${sshLoadedPaths.join(", ")}`);
+
           if (!parsed.ui) {
             // SSH-only: agent fetches diff, reviews, saves markdown
-            const systemPrompt = buildMarkdownSystemPrompt(minSeverity);
+            const systemPrompt = buildMarkdownSystemPrompt(minSeverity, sshContext);
             stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
             runSSHReview({ systemPrompt, userPrompt, pi, stopLoader, notify });
             return;
           }
 
           // SSH+UI: agent fetches diff, reviews; diff is captured from bash tool result
-          const systemPrompt = buildJSONSystemPrompt({ conventions: "", reviewRules: "" }, minSeverity);
+          const systemPrompt = buildJSONSystemPrompt(sshContext, minSeverity);
           stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
           const result = await runSSHReviewAndWait({ systemPrompt, userPrompt, pi, minSeverity, stopLoader, notify });
           if (!result.diff) notify("Diff not captured — UI diff view will be empty", "warning");
           const { diff, warning } = filterDiff(result.diff ?? "");
           if (warning) notify(warning, "warning");
+          const conventions = [...sshContext.conventions, ...sshContext.reviewRules].map(f => f.content).join("\n\n");
           let sshSaveTriggered = false;
           const injectionMsg = await handleUIReview({
-            result, diff, conventions: "", source, ssh: true, cwd: ctx.cwd, notify,
+            result, diff, conventions, source, ssh: true, cwd: ctx.cwd, notify,
             currentModel: currentModelId, currentThinking: thinking, defaultModel, availableModels, defaultThinking: readThinking(),
             saveRemote: (md) => {
               sshSaveTriggered = true;
@@ -124,9 +139,10 @@ export default function (pi: ExtensionAPI): void {
         const { diff, source, warning, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch ?? readDefaultBranch(), pr: parsed.pr, dir: parsed.dir });
         if (warning) notify(warning, "warning");
         notify("Loading context…");
-        const context = await loadContext({ cwd: ctx.cwd });
-        if ((context.loadedFiles?.length ?? 0) > 0) notify(`Context: ${context.loadedFiles?.join(", ")}`);
-        const conventions = [context.conventions, context.reviewRules].filter(Boolean).join("\n\n");
+        const context = await loadContext({ cwd: parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd, gitRoot: parsed.dir ? ctx.cwd : undefined });
+        const loadedPaths = [...context.conventions, ...context.reviewRules].map(f => f.path);
+        if (loadedPaths.length > 0) notify(`Context: ${loadedPaths.join(", ")}`);
+        const conventions = [...context.conventions, ...context.reviewRules].map(f => f.content).join("\n\n");
         const systemPrompt = buildJSONSystemPrompt(context, minSeverity);
         const userPrompt = buildUserPrompt(diff, skippedFiles);
 
