@@ -33,9 +33,9 @@ export function applyConfigPatch(patch) {
             if (typeof value === "string" && allowed.includes(value))
                 next[key] = value;
         }
-        else if (key === "defaultBranch") {
+        else if (key === "branch") {
             if (typeof value === "string")
-                next.defaultBranch = value || undefined;
+                next.branch = value || undefined;
         }
         else if (typeof value === "string" || typeof value === "boolean") {
             next[key] = value;
@@ -50,4 +50,4 @@ export function readMinSeverity() { return readConfig().minSeverity ?? "INFO"; }
 export function readModel() { return readConfig().model; }
 export function readThinking() { return readConfig().thinking; }
 export function readAutoCollapseViewed() { return readConfig().autoCollapseViewed ?? false; }
-export function readDefaultBranch() { return readConfig().defaultBranch; }
+export function readDefaultBranch() { return readConfig().branch; }

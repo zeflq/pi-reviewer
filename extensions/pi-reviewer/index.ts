@@ -3,26 +3,26 @@ import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 import { loadContext, collectProviderContext, mergeContextFiles, type ContextGroup } from "../../src/core/context.js";
-import { resolveDiff, detectCurrentBranch, detectOriginBase, extractDiffFiles } from "../../src/core/diff-resolver.js";
+import { resolveDiff, extractDiffFiles } from "../../src/core/diff-resolver.js";
 import { filterDiff } from "../../src/core/diff-filter.js";
 import { formatForTerminal } from "../../src/core/output.js";
 import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildSSHUserPrompt, buildUserPrompt } from "../../src/core/prompt-builder.js";
 import { readVerbose, readMinSeverity, readModel, readThinking, readDefaultBranch } from "../../src/core/ui/server/index.js";
 import { loadContextSSH } from "../../src/core/context.js";
-import { readSshFlag, resolveSshState, localFs, sshFs as makeSshFs } from "../../src/core/ssh.js";
+import { readSshFlag, resolveSshState, localFs, sshFs as makeSshFs, sshExec } from "../../src/core/ssh.js";
 import type { ReviewCommandArgs } from "./args.js";
-import { parseArgs, buildSSHDiffCommand } from "./args.js";
+import { parseArgs, buildSSHDiffCommand, buildSSHOriginBaseCommand } from "./args.js";
 import { resolveCurrentModelId } from "./model.js";
 import { setReviewFooter } from "./footer.js";
 import { runLocalReview } from "./run-local.js";
 import { runSSHReview, runSSHReviewAndWait } from "./run-ssh.js";
 import { handleUIReview } from "./ui-handler.js";
 
-export function buildSSHSource(parsed: ReviewCommandArgs, cwd: string): string {
+export function buildSSHSource(parsed: ReviewCommandArgs, opts: { branch?: string; head?: string; detectedBase?: string } = {}): string {
   if (typeof parsed.pr === "number") return `PR #${parsed.pr}`;
   if (parsed.diff) return `git diff ${parsed.diff}`;
-  const head = detectCurrentBranch(cwd);
-  const base = parsed.branch ?? detectOriginBase(cwd);
+  const head = opts.head ?? "HEAD";
+  const base = parsed.branch ?? opts.branch ?? opts.detectedBase ?? "origin/HEAD";
   return `${head} vs ${base}`;
 }
 
@@ -32,8 +32,10 @@ export default function (pi: ExtensionAPI): void {
     async handler(args, ctx) {
       const notify = ctx.ui.notify.bind(ctx.ui);
       let stopLoader: () => void = () => {};
+      let sshMode = false;
       try {
         const parsed = parseArgs(args);
+        sshMode = parsed.ssh ?? false;
 
         const minSeverity = parsed.minSeverity ?? readMinSeverity();
         const verbose = parsed.verbose ?? readVerbose();
@@ -68,21 +70,37 @@ export default function (pi: ExtensionAPI): void {
 
         // ── SSH ───────────────────────────────────────────────────────────
         if (parsed.ssh) {
-          const diffCommand = buildSSHDiffCommand(parsed);
-          const source = buildSSHSource(parsed, ctx.cwd);
-          const userPrompt = buildSSHUserPrompt(diffCommand);
-
-          notify("Loading context…");
+          notify("Fetching SSH diff and context…");
           const sshFlag = readSshFlag();
           const sshState = sshFlag ? await resolveSshState(sshFlag).catch(() => null) : null;
           const sshRemoteCwd = sshState ? (parsed.dir ? path.posix.join(sshState.remoteCwd, parsed.dir) : sshState.remoteCwd) : ctx.cwd;
           const providerFs = sshState ? makeSshFs(sshState.remote) : localFs();
-          const sshContext = sshState
-            ? await loadContextSSH(sshState.remote, sshRemoteCwd, parsed.dir ? sshState.remoteCwd : undefined)
-                .catch(() => ({ conventions: [], reviewRules: [] }))
-            : { conventions: [], reviewRules: [] };
-          // diffFiles unavailable in SSH mode (agent fetches diff itself) — providers run with []
-          const sshProviderGroups = await collectProviderContext(pi.events, sshRemoteCwd, [], providerFs);
+
+          const g = `git -C ${JSON.stringify(sshRemoteCwd)}`;
+          const [sshContext, rawSshDiff, sshHeadBranch, sshOriginBase] = await Promise.all([
+            sshState
+              ? loadContextSSH(sshState.remote, sshRemoteCwd, parsed.dir ? sshState.remoteCwd : undefined)
+                  .catch(() => ({ conventions: [], reviewRules: [] }))
+              : Promise.resolve({ conventions: [], reviewRules: [] }),
+            sshState
+              ? sshExec(sshState.remote, buildSSHDiffCommand(parsed, { remoteCwd: sshRemoteCwd, branch: readDefaultBranch() })).catch(() => "")
+              : Promise.resolve(""),
+            sshState
+              ? sshExec(sshState.remote, `${g} rev-parse --abbrev-ref HEAD`).catch(() => "HEAD")
+              : Promise.resolve("HEAD"),
+            sshState
+              ? sshExec(sshState.remote, buildSSHOriginBaseCommand(g)).catch(() => "origin/main")
+              : Promise.resolve("origin/main"),
+          ]);
+
+          const source = buildSSHSource(parsed, { branch: readDefaultBranch(), head: sshHeadBranch.trim() || "HEAD", detectedBase: sshOriginBase.trim() || undefined });
+
+          const { diff: sshDiff, warning: sshDiffWarning, skippedFiles: sshSkippedFiles } = filterDiff(rawSshDiff);
+          if (sshDiffWarning) notify(sshDiffWarning, "warning");
+
+          const sshDiffFiles = extractDiffFiles(rawSshDiff);
+
+          const sshProviderGroups = await collectProviderContext(pi.events, sshRemoteCwd, sshDiffFiles, providerFs);
           const sshContextFiles = sshProviderGroups.flatMap(g => g.files);
           const allSshContextPaths = [...mergeContextFiles(sshContext).map(f => f.path), ...sshContextFiles.map(f => f.path)];
           if (allSshContextPaths.length > 0) notify(`Context: ${allSshContextPaths.join(", ")}`);
@@ -92,25 +110,24 @@ export default function (pi: ExtensionAPI): void {
             ...sshProviderGroups,
           ];
 
+          const userPrompt = buildUserPrompt(sshDiff, sshSkippedFiles);
+
           if (!parsed.ui) {
-            // SSH-only: agent fetches diff, reviews, saves markdown
+            // SSH-only: diff pre-fetched; agent reviews and saves markdown
             const systemPrompt = buildMarkdownSystemPrompt(minSeverity, sshContext, sshContextFiles);
             stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
             runSSHReview({ systemPrompt, userPrompt, pi, stopLoader, notify });
             return;
           }
 
-          // SSH+UI: agent fetches diff, reviews; diff is captured from bash tool result
+          // SSH+UI: diff pre-fetched; agent reviews only
           const systemPrompt = buildJSONSystemPrompt(sshContext, minSeverity, sshContextFiles);
           stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
-          const result = await runSSHReviewAndWait({ systemPrompt, userPrompt, pi, minSeverity, stopLoader, notify });
-          if (!result.diff) notify("Diff not captured — UI diff view will be empty", "warning");
-          const { diff, warning } = filterDiff(result.diff ?? "");
-          if (warning) notify(warning, "warning");
+          const result = await runSSHReviewAndWait({ systemPrompt, userPrompt, diff: sshDiff, pi, minSeverity, stopLoader, notify });
           const conventions = mergeContextFiles(sshContext).map(f => f.content).join("\n\n");
           let sshSaveTriggered = false;
           const injectionMsg = await handleUIReview({
-            result, diff, conventions, source, ssh: true, cwd: ctx.cwd, notify,
+            result, diff: sshDiff, conventions, source, ssh: true, cwd: ctx.cwd, notify,
             currentModel: currentModelId, currentThinking: thinking, defaultModel, availableModels, defaultThinking: readThinking(),
             contextGroups: sshAllContextGroups,
             saveRemote: (md) => {
@@ -169,7 +186,11 @@ export default function (pi: ExtensionAPI): void {
         notify("Review saved → pi-review.md");
       } catch (error) {
         stopLoader();
-        notify(`Review failed: ${error instanceof Error ? error.message : String(error)}`, "error");
+        const message = error instanceof Error ? error.message : String(error);
+        const hint = !sshMode && message.includes("not a git repository")
+          ? "\n\nNot in a git repository — if you're in an SSH session, try adding --ssh."
+          : "";
+        notify(`Review failed: ${message}${hint}`, "error");
       }
     },
   });

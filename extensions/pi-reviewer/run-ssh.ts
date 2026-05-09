@@ -33,6 +33,7 @@ export function runSSHReview(opts: RunSSHOptions): void {
 export interface RunSSHWaitOptions {
   systemPrompt: string;
   userPrompt: string;
+  diff: string;
   pi: ExtensionAPI;
   minSeverity: MinSeverity;
   stopLoader: () => void;
@@ -40,23 +41,10 @@ export interface RunSSHWaitOptions {
 }
 
 export function runSSHReviewAndWait(opts: RunSSHWaitOptions): Promise<ReviewResult> {
-  const { systemPrompt, userPrompt, pi, minSeverity, stopLoader, notify } = opts;
+  const { systemPrompt, userPrompt, diff, pi, minSeverity, stopLoader, notify } = opts;
   let done = false;
-  let capturedDiff: string | undefined;
 
   return new Promise<ReviewResult>((resolve, reject) => {
-    // Capture the diff from the bash tool result so we can pass it to the UI
-    // without asking the agent to echo it back in the JSON response.
-    pi.on("tool_result", async (event) => {
-      if (done || event.toolName !== "bash") return;
-      const output = event.content
-        .map((c) => ("text" in c ? (c as { text: string }).text : ""))
-        .join("");
-      if (output.includes("diff --git ")) {
-        capturedDiff = output;
-      }
-    });
-
     pi.on("before_agent_start", async () => {
       if (done) return {};
       return { systemPrompt };
@@ -75,7 +63,7 @@ export function runSSHReviewAndWait(opts: RunSSHWaitOptions): Promise<ReviewResu
 
       try {
         const result = parseAgentResponse(text, minSeverity);
-        resolve({ ...result, ...(capturedDiff !== undefined ? { diff: capturedDiff } : {}) });
+        resolve({ ...result, diff });
       } catch (err) {
         reject(err instanceof Error ? err : new Error(String(err)));
       }

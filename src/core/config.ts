@@ -13,7 +13,7 @@ export interface PiReviewerConfig {
   model?: string;
   thinking?: ThinkingLevel;
   autoCollapseViewed?: boolean;
-  defaultBranch?: string;
+  branch?: string;
 }
 
 export const CONFIG_DIR = join(homedir(), ".pi", "pi-reviewer");
@@ -48,8 +48,8 @@ export function applyConfigPatch(patch: Partial<PiReviewerConfig>): void {
     const allowed = VALID[key];
     if (allowed) {
       if (typeof value === "string" && allowed.includes(value)) (next as Record<string, unknown>)[key] = value;
-    } else if (key === "defaultBranch") {
-      if (typeof value === "string") next.defaultBranch = value || undefined;
+    } else if (key === "branch") {
+      if (typeof value === "string") next.branch = value || undefined;
     } else if (typeof value === "string" || typeof value === "boolean") {
       (next as Record<string, unknown>)[key] = value;
     }
@@ -64,4 +64,4 @@ export function readMinSeverity(): MinSeverity { return readConfig().minSeverity
 export function readModel(): string | undefined { return readConfig().model; }
 export function readThinking(): string | undefined { return readConfig().thinking as ThinkingLevel | undefined; }
 export function readAutoCollapseViewed(): boolean { return readConfig().autoCollapseViewed ?? false; }
-export function readDefaultBranch(): string | undefined { return readConfig().defaultBranch; }
+export function readDefaultBranch(): string | undefined { return readConfig().branch; }
