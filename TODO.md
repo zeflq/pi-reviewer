@@ -304,6 +304,13 @@ See [`docs/context-providers/README.md`](./docs/context-providers/README.md) for
 - [ ] Provider-contributed section: files listed in `<context-files>` block; mark each as "loaded" if the agent called Read on it during the review
 - [ ] Lets users verify the right context reached the agent before acting on findings
 
+### 23. Built-in doc-context ContextProvider extension
+
+- [ ] Create a new extension in pi-reviewer (e.g. `extensions/pi-reviewer/doc-context-provider.ts`) that registers a `ContextProvider` via `CONTEXT_PROVIDER_EVENT`
+- [ ] Scans `.pi/`, `.claude/`, `.agents/` config dirs for `.md` files that have a `description` frontmatter field
+- [ ] Decides which files to load eagerly based on `diffFiles` (diff-aware selection)
+- [ ] Injects file content directly into the system prompt (eager, unlike pi-context's `context-files` which is lazy/on-demand)
+
 ### 10. Custom system prompt
 
 - [ ] Add `system-prompt` input to `action.yml` (file path relative to project root)

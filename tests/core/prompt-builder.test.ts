@@ -96,6 +96,41 @@ describe("prompt-builder", () => {
   });
 });
 
+describe("buildJSONSystemPrompt — contextFiles injection", () => {
+  it("does not change output when contextFiles is undefined", () => {
+    const without = buildJSONSystemPrompt({ conventions: [], reviewRules: [] });
+    const withUndefined = buildJSONSystemPrompt({ conventions: [], reviewRules: [] }, "INFO", undefined);
+    expect(withUndefined).toBe(without);
+  });
+
+  it("does not change output when contextFiles is empty", () => {
+    const without = buildJSONSystemPrompt({ conventions: [], reviewRules: [] });
+    const withEmpty = buildJSONSystemPrompt({ conventions: [], reviewRules: [] }, "INFO", []);
+    expect(withEmpty).toBe(without);
+  });
+
+  it("appends single file content to system prompt", () => {
+    const prompt = buildJSONSystemPrompt(
+      { conventions: [], reviewRules: [] },
+      "INFO",
+      [{ path: "docs/arch.md", content: "Architecture notes" }],
+    );
+    expect(prompt).toContain("Architecture notes");
+  });
+
+  it("appends multiple file contents separated by double newline", () => {
+    const prompt = buildJSONSystemPrompt(
+      { conventions: [], reviewRules: [] },
+      "INFO",
+      [
+        { path: "docs/arch.md", content: "Architecture notes" },
+        { path: "docs/api.md", content: "API notes" },
+      ],
+    );
+    expect(prompt).toContain("Architecture notes\n\nAPI notes");
+  });
+});
+
 describe("buildMarkdownSystemPrompt", () => {
   it("returns markdown format, not JSON schema", () => {
     const prompt = buildMarkdownSystemPrompt();
@@ -121,6 +156,25 @@ describe("buildMarkdownSystemPrompt", () => {
     const prompt = buildMarkdownSystemPrompt("WARN");
 
     expect(prompt).toContain("skip INFO");
+  });
+});
+
+describe("buildMarkdownSystemPrompt — contextFiles injection", () => {
+  it("does not change output when contextFiles is undefined", () => {
+    const without = buildMarkdownSystemPrompt();
+    const withUndefined = buildMarkdownSystemPrompt("INFO", undefined, undefined);
+    expect(withUndefined).toBe(without);
+  });
+
+  it("does not change output when contextFiles is empty", () => {
+    const without = buildMarkdownSystemPrompt();
+    const withEmpty = buildMarkdownSystemPrompt("INFO", undefined, []);
+    expect(withEmpty).toBe(without);
+  });
+
+  it("appends provider file content to system prompt", () => {
+    const prompt = buildMarkdownSystemPrompt("INFO", undefined, [{ path: "docs/arch.md", content: "Architecture notes" }]);
+    expect(prompt).toContain("Architecture notes");
   });
 });
 

@@ -2,8 +2,8 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-import { loadContext } from "../../src/core/context.js";
-import { resolveDiff, detectCurrentBranch, detectOriginBase } from "../../src/core/diff-resolver.js";
+import { loadContext, collectProviderContext } from "../../src/core/context.js";
+import { resolveDiff, detectCurrentBranch, detectOriginBase, extractDiffFiles } from "../../src/core/diff-resolver.js";
 import { filterDiff } from "../../src/core/diff-filter.js";
 import { formatForTerminal } from "../../src/core/output.js";
 import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildSSHUserPrompt, buildUserPrompt } from "../../src/core/prompt-builder.js";
@@ -63,13 +63,16 @@ export default function (pi: ExtensionAPI): void {
 
         if (parsed.dryRun) {
           if (parsed.ssh) {
-            notify(`System prompt:\n\n${buildMarkdownSystemPrompt(minSeverity)}`);
+            const drySSHContextFiles = await collectProviderContext(pi.events, ctx.cwd, []);
+            notify(`System prompt:\n\n${buildMarkdownSystemPrompt(minSeverity, undefined, drySSHContextFiles)}`);
             notify(`User prompt:\n\n${buildSSHUserPrompt(buildSSHDiffCommand(parsed))}`);
           } else {
             const { diff, source, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch ?? readDefaultBranch(), pr: parsed.pr, dir: parsed.dir });
             const context = await loadContext({ cwd: parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd, gitRoot: parsed.dir ? ctx.cwd : undefined });
+            const dryDiffFiles = extractDiffFiles(diff);
+            const dryContextFiles = await collectProviderContext(pi.events, ctx.cwd, dryDiffFiles);
             notify(`Diff source: ${source}`);
-            notify(`System prompt:\n\n${buildJSONSystemPrompt(context, minSeverity)}`);
+            notify(`System prompt:\n\n${buildJSONSystemPrompt(context, minSeverity, dryContextFiles)}`);
             notify(`User prompt:\n\n${buildUserPrompt(diff, skippedFiles)}`);
           }
           return;
@@ -93,16 +96,20 @@ export default function (pi: ExtensionAPI): void {
           const sshLoadedPaths = [...sshContext.conventions, ...sshContext.reviewRules].map(f => f.path);
           if (sshLoadedPaths.length > 0) notify(`Context: ${sshLoadedPaths.join(", ")}`);
 
+          // diffFiles unavailable in SSH mode (agent fetches diff itself) — providers run with []
+          const sshContextFiles = await collectProviderContext(pi.events, ctx.cwd, []);
+          if (sshContextFiles.length > 0) notify(`Provider context: ${sshContextFiles.map(f => f.path).join(", ")}`);
+
           if (!parsed.ui) {
             // SSH-only: agent fetches diff, reviews, saves markdown
-            const systemPrompt = buildMarkdownSystemPrompt(minSeverity, sshContext);
+            const systemPrompt = buildMarkdownSystemPrompt(minSeverity, sshContext, sshContextFiles);
             stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
             runSSHReview({ systemPrompt, userPrompt, pi, stopLoader, notify });
             return;
           }
 
           // SSH+UI: agent fetches diff, reviews; diff is captured from bash tool result
-          const systemPrompt = buildJSONSystemPrompt(sshContext, minSeverity);
+          const systemPrompt = buildJSONSystemPrompt(sshContext, minSeverity, sshContextFiles);
           stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
           const result = await runSSHReviewAndWait({ systemPrompt, userPrompt, pi, minSeverity, stopLoader, notify });
           if (!result.diff) notify("Diff not captured — UI diff view will be empty", "warning");
@@ -143,7 +150,10 @@ export default function (pi: ExtensionAPI): void {
         const loadedPaths = [...context.conventions, ...context.reviewRules].map(f => f.path);
         if (loadedPaths.length > 0) notify(`Context: ${loadedPaths.join(", ")}`);
         const conventions = [...context.conventions, ...context.reviewRules].map(f => f.content).join("\n\n");
-        const systemPrompt = buildJSONSystemPrompt(context, minSeverity);
+        const diffFiles = extractDiffFiles(diff);
+        const contextFiles = await collectProviderContext(pi.events, ctx.cwd, diffFiles);
+        if (contextFiles.length > 0) notify(`Provider context: ${contextFiles.map(f => f.path).join(", ")}`);
+        const systemPrompt = buildJSONSystemPrompt(context, minSeverity, contextFiles);
         const userPrompt = buildUserPrompt(diff, skippedFiles);
 
         stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
