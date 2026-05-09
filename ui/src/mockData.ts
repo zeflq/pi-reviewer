@@ -280,6 +280,21 @@ export const mockData: UIData = {
   defaultModel: "openai-codex/gpt-5.4-mini",
   defaultThinking: "low",
   autoCollapseViewed: false,
+  contextGroups: [
+    {
+      name: "built-in",
+      files: [
+        { path: "AGENTS.md", content: "# Project conventions\n- Use strict TypeScript\n- All public functions must be typed\n- Prefer functional patterns over classes" },
+        { path: "REVIEW.md", content: "# Review rules\n- Always check error handling\n- Validate inputs at system boundaries" },
+      ],
+    },
+    {
+      name: "pi-context",
+      files: [
+        { path: "docs/architecture.md", content: "# Architecture\n\nThis project follows a layered architecture:\n1. Extensions layer (extensions/)\n2. Core layer (src/core/)\n3. CI layer (src/ci/)" },
+      ],
+    },
+  ],
   availableModels: [
     { id: "gpt-5.4-mini", name: "GPT-5.4 Mini", provider: "openai-codex" },
     { id: "gpt-5.1-preview", name: "GPT-5.1 Preview", provider: "openai-codex" },

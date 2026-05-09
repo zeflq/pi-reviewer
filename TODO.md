@@ -287,22 +287,28 @@ tests/
 - [x] **File tree folder compression** — collapse single-child directory chains into combined names (e.g. `providers/oauth/handlers`) à la VS Code; contained hover highlight with margin + border-radius; widen sidebar to 296 px; bump tree and comment body font size to 13 px
 - [x] **Version in wordmark** — display `vX.Y.Z` next to the wordmark, injected at build time from `package.json` via Vite `define`
 
-### 21. Pluggable context provider API
+### 21. Pluggable context provider API ✅
 
 See [`docs/context-providers/README.md`](./docs/context-providers/README.md) for the full design.
 
-- [ ] Export `ContextFile { path, content }`, `ContextProvider`, `ContextProviderEvent`, `CONTEXT_PROVIDER_EVENT` from `src/core/context.ts`
-- [ ] Add `extractDiffFiles(diff: string): string[]` to `src/core/diff-resolver.ts` — parses `diff --git` headers to extract changed file paths
-- [ ] Update `buildJSONSystemPrompt` in `src/core/prompt-builder.ts` to accept optional `contextFiles: ContextFile[]` — append each `content` to the system prompt
-- [ ] In `extensions/pi-reviewer/index.ts` (local path): emit `CONTEXT_PROVIDER_EVENT` with `{ cwd, diffFiles, register(name, provider) }`, collect results, pass to `buildJSONSystemPrompt`
-- [ ] Tests: `extractDiffFiles` unit tests; `buildJSONSystemPrompt` tests for extra content injection
+- [x] `ContextFile`, `ContextGroup`, `ContextProvider`, `ContextProviderEvent`, `CONTEXT_PROVIDER_EVENT`, `MinimalEventBus` exported from `src/core/context.ts`
+- [x] `collectProviderContext(events, cwd, diffFiles): Promise<ContextGroup[]>` — sync emit, async provider calls, groups filtered if empty
+- [x] `mergeContextFiles(result: ContextResult): ContextFile[]` — replaces repeated `[...conventions, ...reviewRules]` spreads
+- [x] `extractDiffFiles(diff: string): string[]` added to `src/core/diff-resolver.ts`
+- [x] `buildJSONSystemPrompt` and `buildMarkdownSystemPrompt` accept optional `contextFiles: ContextFile[]`
+- [x] All 4 paths in `extensions/pi-reviewer/index.ts` wired: dry-run SSH, dry-run local, SSH, local
+- [x] Refactors: `buildSSHDiffCommand` → `args.ts`, `resolveCurrentModelId` → `model.ts`, `extractAssistantText` → `src/core/output.ts`
+- [x] Tests: `extractDiffFiles`, `collectProviderContext`, `buildJSONSystemPrompt`/`buildMarkdownSystemPrompt` with context files, integration test in `tests/extensions/index.test.ts`
 
-### 22. UI: Context tab
+### 22. UI: Context tab ✅
 
-- [ ] Add a **Context** tab in the review UI (alongside the file tree / summary) listing all files loaded for the review
-- [ ] Eagerly loaded section: `AGENTS.md`, `REVIEW.md`, and markdown-linked files (from `loadedFiles` in `ContextResult`)
-- [ ] Provider-contributed section: files listed in `<context-files>` block; mark each as "loaded" if the agent called Read on it during the review
-- [ ] Lets users verify the right context reached the agent before acting on findings
+- [x] Context right panel in the review UI — toggles exclusively with Overview (one panel at a time)
+- [x] Built-in group: `AGENTS.md`, `REVIEW.md` (all files from `mergeContextFiles`) shown under "built-in"
+- [x] Provider group: one section per registered `ContextProvider` (name from `register(name, provider)`)
+- [x] Each file expandable — click path to reveal content injected into the system prompt
+- [x] `SidePanelLayout` / `SidePanel` shared shell — FileTree, Summary, and Context all use the same 296 px sticky container
+- [ ] ~~markdown-linked files~~ — superseded; context files are now typed `ContextFile[]` end-to-end, no separate `loadedFiles` field needed
+- [ ] Mark provider files as "loaded" if the agent called Read on them during the review — deferred, requires tool-call interception
 
 ### 23. Built-in doc-context ContextProvider extension
 

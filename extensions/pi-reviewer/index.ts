@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-import { loadContext, collectProviderContext, mergeContextFiles } from "../../src/core/context.js";
+import { loadContext, collectProviderContext, mergeContextFiles, type ContextGroup } from "../../src/core/context.js";
 import { resolveDiff, detectCurrentBranch, detectOriginBase, extractDiffFiles } from "../../src/core/diff-resolver.js";
 import { filterDiff } from "../../src/core/diff-filter.js";
 import { formatForTerminal } from "../../src/core/output.js";
@@ -51,14 +51,14 @@ export default function (pi: ExtensionAPI): void {
 
         if (parsed.dryRun) {
           if (parsed.ssh) {
-            const drySSHContextFiles = await collectProviderContext(pi.events, ctx.cwd, []);
+            const drySSHContextFiles = (await collectProviderContext(pi.events, ctx.cwd, [])).flatMap(g => g.files);
             notify(`System prompt:\n\n${buildMarkdownSystemPrompt(minSeverity, undefined, drySSHContextFiles)}`);
             notify(`User prompt:\n\n${buildSSHUserPrompt(buildSSHDiffCommand(parsed))}`);
           } else {
             const { diff, source, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch ?? readDefaultBranch(), pr: parsed.pr, dir: parsed.dir });
             const context = await loadContext({ cwd: parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd, gitRoot: parsed.dir ? ctx.cwd : undefined });
             const dryDiffFiles = extractDiffFiles(diff);
-            const dryContextFiles = await collectProviderContext(pi.events, ctx.cwd, dryDiffFiles);
+            const dryContextFiles = (await collectProviderContext(pi.events, ctx.cwd, dryDiffFiles)).flatMap(g => g.files);
             notify(`Diff source: ${source}`);
             notify(`System prompt:\n\n${buildJSONSystemPrompt(context, minSeverity, dryContextFiles)}`);
             notify(`User prompt:\n\n${buildUserPrompt(diff, skippedFiles)}`);
@@ -85,8 +85,14 @@ export default function (pi: ExtensionAPI): void {
           if (sshLoadedPaths.length > 0) notify(`Context: ${sshLoadedPaths.join(", ")}`);
 
           // diffFiles unavailable in SSH mode (agent fetches diff itself) — providers run with []
-          const sshContextFiles = await collectProviderContext(pi.events, ctx.cwd, []);
+          const sshProviderGroups = await collectProviderContext(pi.events, ctx.cwd, []);
+          const sshContextFiles = sshProviderGroups.flatMap(g => g.files);
           if (sshContextFiles.length > 0) notify(`Provider context: ${sshContextFiles.map(f => f.path).join(", ")}`);
+          const sshBuiltInFiles = mergeContextFiles(sshContext);
+          const sshAllContextGroups: ContextGroup[] = [
+            ...(sshBuiltInFiles.length > 0 ? [{ name: "built-in", files: sshBuiltInFiles }] : []),
+            ...sshProviderGroups,
+          ];
 
           if (!parsed.ui) {
             // SSH-only: agent fetches diff, reviews, saves markdown
@@ -108,6 +114,7 @@ export default function (pi: ExtensionAPI): void {
           const injectionMsg = await handleUIReview({
             result, diff, conventions, source, ssh: true, cwd: ctx.cwd, notify,
             currentModel: currentModelId, currentThinking: thinking, defaultModel, availableModels, defaultThinking: readThinking(),
+            contextGroups: sshAllContextGroups,
             saveRemote: (md) => {
               sshSaveTriggered = true;
               pi.sendUserMessage(`Run \`git rev-parse --show-toplevel\` to get the project root path, then write the following content to that path + "/pi-review.md" (e.g. if the root is /some/path, write to /some/path/pi-review.md):\n\n${md}`);
@@ -139,16 +146,22 @@ export default function (pi: ExtensionAPI): void {
         if (loadedPaths.length > 0) notify(`Context: ${loadedPaths.join(", ")}`);
         const conventions = mergeContextFiles(context).map(f => f.content).join("\n\n");
         const diffFiles = extractDiffFiles(diff);
-        const contextFiles = await collectProviderContext(pi.events, ctx.cwd, diffFiles);
+        const providerGroups = await collectProviderContext(pi.events, ctx.cwd, diffFiles);
+        const contextFiles = providerGroups.flatMap(g => g.files);
         if (contextFiles.length > 0) notify(`Provider context: ${contextFiles.map(f => f.path).join(", ")}`);
         const systemPrompt = buildJSONSystemPrompt(context, minSeverity, contextFiles);
+        const builtInFiles = mergeContextFiles(context);
+        const allContextGroups: ContextGroup[] = [
+          ...(builtInFiles.length > 0 ? [{ name: "built-in", files: builtInFiles }] : []),
+          ...providerGroups,
+        ];
         const userPrompt = buildUserPrompt(diff, skippedFiles);
 
         stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
         const result = await runLocalReview({ systemPrompt, userPrompt, cwd: ctx.cwd, minSeverity, verbose, model, thinking, stopLoader, notify });
 
         if (parsed.ui) {
-          const injectionMsg = await handleUIReview({ result, diff, conventions, source, cwd: ctx.cwd, notify, currentModel: currentModelId, defaultModel, availableModels });
+          const injectionMsg = await handleUIReview({ result, diff, conventions, source, cwd: ctx.cwd, notify, currentModel: currentModelId, defaultModel, availableModels, contextGroups: allContextGroups });
           if (injectionMsg) pi.sendUserMessage(injectionMsg);
           return;
         }

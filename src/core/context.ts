@@ -13,6 +13,11 @@ export interface ContextFile {
   content: string;
 }
 
+export interface ContextGroup {
+  name: string;
+  files: ContextFile[];
+}
+
 export interface ContextResult {
   conventions: ContextFile[]; // AGENTS.md / CLAUDE.md, root → cwd order
   reviewRules: ContextFile[]; // REVIEW.md, root → cwd order
@@ -107,14 +112,20 @@ export async function collectProviderContext(
   events: MinimalEventBus,
   cwd: string,
   diffFiles: string[],
-): Promise<ContextFile[]> {
+): Promise<ContextGroup[]> {
   const registrations: Array<{ name: string; provider: ContextProvider }> = [];
   events.emit(CONTEXT_PROVIDER_EVENT, {
     cwd,
     diffFiles,
     register: (name: string, provider: ContextProvider) => registrations.push({ name, provider }),
   } satisfies ContextProviderEvent);
-  return (await Promise.all(registrations.map(({ provider }) => provider({ cwd, diffFiles })))).flat();
+  const groups = await Promise.all(
+    registrations.map(async ({ name, provider }) => ({
+      name,
+      files: await provider({ cwd, diffFiles }),
+    })),
+  );
+  return groups.filter(g => g.files.length > 0);
 }
 
 export async function loadContext(options: ContextOptions = {}): Promise<ContextResult> {

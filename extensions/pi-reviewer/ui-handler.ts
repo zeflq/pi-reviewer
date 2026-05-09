@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { type ReviewResult } from "../../src/core/output.js";
-import { startUIServer, type CommentDecision, type ModelInfo } from "../../src/core/ui-server.js";
+import { startUIServer, type CommentDecision, type ModelInfo, type ContextGroup } from "../../src/core/ui-server.js";
 
 export interface UIHandlerOptions {
   result: ReviewResult;
@@ -17,6 +17,7 @@ export interface UIHandlerOptions {
   defaultModel?: string;
   availableModels?: ModelInfo[];
   defaultThinking?: string;
+  contextGroups?: ContextGroup[];
   /** When set, save is delegated to the remote (SSH) instead of written locally. */
   saveRemote?: (markdown: string) => void;
 }
@@ -27,9 +28,9 @@ export interface UIHandlerOptions {
  * message at the right time (after any agent-side save has completed).
  */
 export async function handleUIReview(opts: UIHandlerOptions): Promise<string | undefined> {
-  const { result, diff, conventions, source, ssh, cwd, notify, saveRemote, currentModel, currentThinking, defaultModel, availableModels, defaultThinking } = opts;
+  const { result, diff, conventions, source, ssh, cwd, notify, saveRemote, currentModel, currentThinking, defaultModel, availableModels, defaultThinking, contextGroups } = opts;
 
-  const handle = await startUIServer(result, diff, source, ssh, { currentModel, currentThinking, defaultModel, availableModels, defaultThinking });
+  const handle = await startUIServer(result, diff, source, ssh, { currentModel, currentThinking, defaultModel, availableModels, defaultThinking }, contextGroups);
   notify(`Review UI → ${handle.url}`);
 
   const action = await handle.waitForAction();

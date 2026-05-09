@@ -435,13 +435,8 @@ body {
 
 /* ── File sidebar ────────────────────────────────────────────────────────── */
 #file-sidebar {
-  width: 296px;
-  flex-shrink: 0;
-  position: sticky;
-  top: 80px;
-  max-height: calc(100vh - 80px);
   overflow-y: auto;
-  border-right: 1px solid var(--border);
+  flex: 1;
   padding: 16px 0 8px;
 }
 
@@ -944,11 +939,10 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
   user-select: none;
 }
 
-/* ── Summary overview panel ──────────────────────────────────────────────── */
-.summary-panel {
-  width: 300px;
+/* ── Side panel shell (FileTree left, Summary/Context right) ─────────────── */
+.side-panel {
+  width: 296px;
   flex-shrink: 0;
-  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -958,7 +952,11 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
   max-height: calc(100vh - var(--hdr-h, 0px));
 }
 
-.summary-panel-hdr {
+.side-panel--left  { border-right: 1px solid var(--border); }
+.side-panel--right { border-left:  1px solid var(--border); }
+
+/* ── Shared side panel header + body ─────────────────────────────────────── */
+.side-panel-hdr {
   display: flex;
   align-items: center;
   padding: 10px 12px;
@@ -966,17 +964,88 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
   flex-shrink: 0;
 }
 
-.summary-panel-title {
+.side-panel-title {
   font-size: 13px;
   font-weight: 600;
   flex: 1;
 }
 
-.summary-panel-body {
-  padding: 16px;
+.side-panel-body {
   overflow-y: auto;
+  flex: 1;
+}
+
+/* ── Summary panel content ───────────────────────────────────────────────── */
+.summary-body {
+  padding: 16px;
   font-size: 13px;
   line-height: 1.6;
+}
+
+.ctx-empty {
+  padding: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.ctx-group {
+  border-bottom: 1px solid var(--border);
+}
+
+.ctx-group-name {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 8px 12px 4px;
+}
+
+.ctx-file-item {
+  border-top: 1px solid var(--border-subtle, var(--border));
+}
+
+.ctx-file-path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ctx-file-path:hover {
+  background: var(--bg-hover, var(--bg-subtle));
+}
+
+.ctx-file-path svg {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.ctx-file-path[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+
+.ctx-file-content {
+  margin: 0;
+  padding: 8px 12px 8px 30px;
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--bg-subtle);
+  border-top: 1px solid var(--border-subtle, var(--border));
+  max-height: 300px;
+  overflow-y: auto;
+  color: var(--text-muted);
 }
 
 /* ── Submit review panel ─────────────────────────────────────────────────── */

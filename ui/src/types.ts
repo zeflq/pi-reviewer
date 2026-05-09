@@ -1,3 +1,13 @@
+export interface ContextFile {
+  path: string;
+  content: string;
+}
+
+export interface ContextGroup {
+  name: string;
+  files: ContextFile[];
+}
+
 export interface ReviewComment {
   file: string;
   line: number;
@@ -36,4 +46,5 @@ export interface UIData {
   availableModels?: ModelInfo[];
   defaultThinking?: string;
   autoCollapseViewed?: boolean;
+  contextGroups?: ContextGroup[];
 }
