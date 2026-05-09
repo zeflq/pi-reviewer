@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createEventAccumulator, extractAssistantText } from "../../extensions/pi-reviewer/events.js";
+import { extractAssistantText } from "../../src/core/output.js";
+import { createEventAccumulator } from "../../extensions/pi-reviewer/events.js";
 
 describe("extractAssistantText", () => {
   it("returns empty string for non-assistant message", () => {

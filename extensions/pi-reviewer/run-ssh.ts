@@ -1,8 +1,7 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-import { parseAgentResponse, type ReviewResult } from "../../src/core/output.js";
+import { parseAgentResponse, extractLastAssistantText, type ReviewResult } from "../../src/core/output.js";
 import type { MinSeverity } from "../../src/core/prompt-builder.js";
-import { extractLastAssistantText } from "./events.js";
 
 export interface RunSSHOptions {
   systemPrompt: string;

@@ -1,3 +1,12 @@
+export function buildSSHDiffCommand(parsed) {
+    if (typeof parsed.pr === "number")
+        return `gh pr diff ${parsed.pr}`;
+    if (parsed.diff)
+        return `git diff ${parsed.diff}`;
+    if (parsed.branch)
+        return `git diff $(git merge-base ${parsed.branch} HEAD)`;
+    return `git diff $(git merge-base $(git symbolic-ref refs/remotes/origin/HEAD --short 2>/dev/null || echo origin/main) HEAD)`;
+}
 export function parseArgs(rawArgs) {
     const tokens = rawArgs.trim() ? rawArgs.trim().split(/\s+/) : [];
     const parsed = { dryRun: false, ssh: false, ui: false };

@@ -5,7 +5,7 @@ vi.mock("node:child_process", () => ({
 }));
 
 import { execSync } from "node:child_process";
-import { resolveDiff } from "../../src/core/diff-resolver.js";
+import { resolveDiff, extractDiffFiles } from "../../src/core/diff-resolver.js";
 
 const execSyncMock = vi.mocked(execSync);
 
@@ -163,5 +163,31 @@ describe("resolveDiff", () => {
     await expect(resolveDiff({ diff: "HEAD~1", cwd: "/repo" })).rejects.toThrow(
       "No changes found. Make sure you are on a feature branch with commits ahead of the base."
     );
+  });
+});
+
+describe("extractDiffFiles", () => {
+  it("returns empty array for empty diff", () => {
+    expect(extractDiffFiles("")).toEqual([]);
+  });
+
+  it("extracts single file path", () => {
+    const diff = "diff --git a/src/foo.ts b/src/foo.ts\nindex 000..111 100644\n";
+    expect(extractDiffFiles(diff)).toEqual(["src/foo.ts"]);
+  });
+
+  it("extracts multiple file paths", () => {
+    const diff = [
+      "diff --git a/src/foo.ts b/src/foo.ts",
+      "index 000..111 100644",
+      "diff --git a/src/bar.ts b/src/bar.ts",
+      "index 000..111 100644",
+    ].join("\n");
+    expect(extractDiffFiles(diff)).toEqual(["src/foo.ts", "src/bar.ts"]);
+  });
+
+  it("uses the b/ path for renamed files", () => {
+    const diff = "diff --git a/src/old.ts b/src/new.ts\nindex 000..111 100644\n";
+    expect(extractDiffFiles(diff)).toEqual(["src/new.ts"]);
   });
 });

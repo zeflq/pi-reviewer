@@ -6,7 +6,7 @@ pi-reviewer exposes a hook that lets any pi extension contribute additional cont
 
 Providers return `ContextFile[]` — path + content pairs. pi-reviewer:
 - Appends each `content` to the system prompt alongside `AGENTS.md` / `REVIEW.md`
-- Uses each `path` for the notify message and the Context tab UI
+- Uses each `path` in the `Provider context: …` notify message
 
 `AGENTS.md` / `CLAUDE.md` and `REVIEW.md` are always loaded eagerly as before. Providers add supplementary context on top.
 
@@ -15,7 +15,10 @@ Providers return `ContextFile[]` — path + content pairs. pi-reviewer:
 pi-reviewer emits `"pi-reviewer:collect-context-providers"` on `pi.events` when `/review` runs. Register a provider by calling `register(name, fn)` in the handler:
 
 ```typescript
-pi.events.on("pi-reviewer:collect-context-providers", ({ cwd, diffFiles, register }) => {
+import type { ContextProviderEvent } from "pi-reviewer/src/core/context.js";
+
+pi.events.on("pi-reviewer:collect-context-providers", (data) => {
+  const { cwd, diffFiles, register } = data as ContextProviderEvent;
   register("my-extension", async ({ cwd, diffFiles }) => {
     // diffFiles: file paths changed in this diff (e.g. ["src/api/users.ts"])
     // Read and return only what's relevant
@@ -32,7 +35,7 @@ pi.events.on("pi-reviewer:collect-context-providers", ({ cwd, diffFiles, registe
 export const CONTEXT_PROVIDER_EVENT = "pi-reviewer:collect-context-providers";
 
 export interface ContextFile {
-  path: string;    // relative to cwd — shown in notify + Context tab
+  path: string;    // relative to cwd — shown in notify message and Context tab (TODO #22)
   content: string; // injected into the system prompt
 }
 
@@ -50,27 +53,36 @@ export interface ContextProviderEvent {
 
 ## Filtering by diff files
 
-Use `diffFiles` to avoid loading irrelevant context. Example — return frontend docs only if frontend files changed:
+Use `diffFiles` to avoid loading irrelevant context:
 
 ```typescript
-register("my-extension", async ({ cwd, diffFiles }) => {
-  if (!diffFiles.some(f => f.startsWith("packages/frontend/"))) return [];
-  return [
-    { path: "packages/frontend/docs/components.md", content: await fs.readFile(...) },
-  ];
+pi.events.on("pi-reviewer:collect-context-providers", (data) => {
+  const { register } = data as ContextProviderEvent;
+  register("my-extension", async ({ cwd, diffFiles }) => {
+    if (!diffFiles.some(f => f.startsWith("packages/frontend/"))) return [];
+    return [
+      { path: "packages/frontend/docs/components.md", content: await fs.readFile(...) },
+    ];
+  });
 });
 ```
 
 Return `[]` to contribute nothing for this review.
 
+## SSH mode
+
+In SSH mode the agent fetches the diff itself, so `diffFiles` is always `[]` when providers are called. Providers that filter by `diffFiles` will contribute nothing; providers that always return files work normally.
+
 ## Timing
 
-Register your `pi.events.on` listener at **extension load time** (inside the extension's default export function). pi-reviewer emits the collect event at review time, firing all registered handlers synchronously — no load-order dependency.
+The emit is **synchronous** — `pi.events.emit` calls all registered handlers immediately and returns. Each handler calls `register(name, provider)` synchronously to enqueue the provider. pi-reviewer then calls all collected providers in parallel with `Promise.all` and awaits their results before building the system prompt.
 
-## Context tab
+Register your `pi.events.on` listener at **extension load time** (inside the extension's default export function) to avoid missing the emit.
 
-The review UI groups loaded files by source:
-- **Built-in**: `AGENTS.md`, `REVIEW.md`, markdown-linked files
+## Context tab (TODO #22)
+
+The review UI will group loaded files by source:
+- **Built-in**: `AGENTS.md`, `REVIEW.md`
 - **your extension name**: files returned by your provider
 
-The `name` passed to `register(name, provider)` becomes the group header in the Context tab.
+The `name` passed to `register(name, provider)` will become the group header. This is not yet implemented.

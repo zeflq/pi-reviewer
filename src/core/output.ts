@@ -33,6 +33,34 @@ export interface OutputOptions {
   minSeverity?: Severity;
 }
 
+export function extractAssistantText(message: unknown): string {
+  const msg = message as { role?: string; content?: unknown };
+  if (msg?.role !== "assistant") return "";
+  if (typeof msg.content === "string") return msg.content;
+  if (Array.isArray(msg.content)) {
+    return msg.content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (part && typeof part === "object" && "type" in part && (part as { type?: string }).type === "text") {
+          return (part as { text?: string }).text ?? "";
+        }
+        return "";
+      })
+      .join("")
+      .trim();
+  }
+  return "";
+}
+
+export function extractLastAssistantText(messages: unknown): string {
+  if (!Array.isArray(messages)) return "";
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const text = extractAssistantText(messages[i]);
+    if (text) return text;
+  }
+  return "";
+}
+
 function normalizeSeverity(value: unknown): Severity {
   if (value === "CRITICAL" || value === "WARN" || value === "INFO") return value;
   return "INFO";

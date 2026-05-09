@@ -83,6 +83,10 @@ export function detectOriginBase(cwd: string): string {
   }
 }
 
+export function extractDiffFiles(diff: string): string[] {
+  return [...diff.matchAll(/^diff --git a\/.+ b\/(.+)$/gm)].map(m => m[1]);
+}
+
 export async function resolveDiff(options: DiffOptions): Promise<DiffResult> {
   let cwd = options.cwd ?? process.cwd();
 

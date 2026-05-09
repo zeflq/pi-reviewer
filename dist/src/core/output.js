@@ -2,6 +2,37 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 const SEVERITY_RANK = { INFO: 0, WARN: 1, CRITICAL: 2 };
 const SEVERITY_EMOJI = { CRITICAL: "🔴", WARN: "🟡", INFO: "🔵" };
+export function extractAssistantText(message) {
+    const msg = message;
+    if (msg?.role !== "assistant")
+        return "";
+    if (typeof msg.content === "string")
+        return msg.content;
+    if (Array.isArray(msg.content)) {
+        return msg.content
+            .map((part) => {
+            if (typeof part === "string")
+                return part;
+            if (part && typeof part === "object" && "type" in part && part.type === "text") {
+                return part.text ?? "";
+            }
+            return "";
+        })
+            .join("")
+            .trim();
+    }
+    return "";
+}
+export function extractLastAssistantText(messages) {
+    if (!Array.isArray(messages))
+        return "";
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+        const text = extractAssistantText(messages[i]);
+        if (text)
+            return text;
+    }
+    return "";
+}
 function normalizeSeverity(value) {
     if (value === "CRITICAL" || value === "WARN" || value === "INFO")
         return value;

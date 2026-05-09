@@ -1,33 +1,4 @@
-export function extractAssistantText(message: unknown): string {
-  const msg = message as { role?: string; content?: unknown };
-  if (msg?.role !== "assistant") return "";
-
-  if (typeof msg.content === "string") return msg.content;
-
-  if (Array.isArray(msg.content)) {
-    return msg.content
-      .map((part) => {
-        if (typeof part === "string") return part;
-        if (part && typeof part === "object" && "type" in part && (part as { type?: string }).type === "text") {
-          return (part as { text?: string }).text ?? "";
-        }
-        return "";
-      })
-      .join("")
-      .trim();
-  }
-
-  return "";
-}
-
-export function extractLastAssistantText(messages: unknown): string {
-  if (!Array.isArray(messages)) return "";
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    const text = extractAssistantText(messages[i]);
-    if (text) return text;
-  }
-  return "";
-}
+import { extractAssistantText, extractLastAssistantText } from "../../src/core/output.js";
 
 export interface EventAccumulator {
   process(line: string): void;

@@ -2,9 +2,10 @@ import { execSync } from "node:child_process";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { loadContext, walkUpContextFiles } from "../../src/core/context.js";
+import { loadContext, walkUpContextFiles, collectProviderContext, CONTEXT_PROVIDER_EVENT } from "../../src/core/context.js";
+import type { ContextProviderEvent, MinimalEventBus } from "../../src/core/context.js";
 import { localFs } from "../../src/core/ssh.js";
 
 const createdDirs: string[] = [];
@@ -285,5 +286,82 @@ describe("walkUpContextFiles", () => {
     const result = await walkUpContextFiles(localFs(), dir, ["AGENTS.md", "CLAUDE.md"], dir);
 
     expect(result).toEqual([{ path: path.join(".pi", "AGENTS.md"), content: "pi conventions" }]);
+  });
+});
+
+function createStubEventBus(): MinimalEventBus & { _emit(channel: string, data: unknown): void } {
+  const handlers = new Map<string, Array<(data: unknown) => void>>();
+  return {
+    emit(channel, data) {
+      for (const h of handlers.get(channel) ?? []) h(data);
+    },
+    on(channel, handler) {
+      if (!handlers.has(channel)) handlers.set(channel, []);
+      handlers.get(channel)!.push(handler);
+      return () => {};
+    },
+    _emit(channel, data) { this.emit(channel, data); },
+  };
+}
+
+describe("collectProviderContext", () => {
+  it("returns empty array when no providers are registered", async () => {
+    const events = createStubEventBus();
+    const result = await collectProviderContext(events, "/project", ["src/foo.ts"]);
+    expect(result).toEqual([]);
+  });
+
+  it("calls registered provider with cwd and diffFiles", async () => {
+    const events = createStubEventBus();
+    const provider = vi.fn().mockResolvedValue([]);
+    events.on(CONTEXT_PROVIDER_EVENT, ({ register }: ContextProviderEvent) => {
+      register("test-ext", provider);
+    });
+
+    await collectProviderContext(events, "/project", ["src/foo.ts"]);
+
+    expect(provider).toHaveBeenCalledWith({ cwd: "/project", diffFiles: ["src/foo.ts"] });
+  });
+
+  it("returns files from a registered provider", async () => {
+    const events = createStubEventBus();
+    events.on(CONTEXT_PROVIDER_EVENT, ({ register }: ContextProviderEvent) => {
+      register("test-ext", async () => [{ path: "docs/arch.md", content: "Architecture" }]);
+    });
+
+    const result = await collectProviderContext(events, "/project", []);
+
+    expect(result).toEqual([{ path: "docs/arch.md", content: "Architecture" }]);
+  });
+
+  it("flattens results from multiple providers", async () => {
+    const events = createStubEventBus();
+    events.on(CONTEXT_PROVIDER_EVENT, ({ register }: ContextProviderEvent) => {
+      register("ext-a", async () => [{ path: "docs/a.md", content: "A" }]);
+      register("ext-b", async () => [{ path: "docs/b.md", content: "B" }]);
+    });
+
+    const result = await collectProviderContext(events, "/project", []);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].path).toBe("docs/a.md");
+    expect(result[1].path).toBe("docs/b.md");
+  });
+
+  it("passes diffFiles so providers can filter by changed files", async () => {
+    const events = createStubEventBus();
+    events.on(CONTEXT_PROVIDER_EVENT, ({ register, diffFiles }: ContextProviderEvent) => {
+      register("test-ext", async () =>
+        diffFiles.some(f => f.startsWith("src/auth/"))
+          ? [{ path: "docs/auth.md", content: "Auth docs" }]
+          : [],
+      );
+    });
+
+    const withMatch = await collectProviderContext(events, "/project", ["src/auth/login.ts"]);
+    const withoutMatch = await collectProviderContext(events, "/project", ["src/utils.ts"]);
+
+    expect(withMatch).toHaveLength(1);
+    expect(withoutMatch).toHaveLength(0);
   });
 });

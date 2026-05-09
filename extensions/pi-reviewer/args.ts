@@ -2,6 +2,13 @@ import type { MinSeverity } from "../../src/core/prompt-builder.js";
 
 export type { MinSeverity };
 
+export function buildSSHDiffCommand(parsed: ReviewCommandArgs): string {
+  if (typeof parsed.pr === "number") return `gh pr diff ${parsed.pr}`;
+  if (parsed.diff) return `git diff ${parsed.diff}`;
+  if (parsed.branch) return `git diff $(git merge-base ${parsed.branch} HEAD)`;
+  return `git diff $(git merge-base $(git symbolic-ref refs/remotes/origin/HEAD --short 2>/dev/null || echo origin/main) HEAD)`;
+}
+
 export interface ReviewCommandArgs {
   diff?: string;
   branch?: string;

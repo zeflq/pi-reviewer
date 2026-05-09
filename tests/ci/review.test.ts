@@ -6,11 +6,13 @@ vi.mock("../../src/core/diff-resolver.js", () => ({
 
 vi.mock("../../src/core/context.js", () => ({
   loadContext: vi.fn(),
+  mergeContextFiles: vi.fn((ctx) => [...(ctx.conventions ?? []), ...(ctx.reviewRules ?? [])]),
 }));
 
-vi.mock("../../src/core/output.js", () => ({
-  sendOutput: vi.fn(),
-}));
+vi.mock("../../src/core/output.js", async (importActual) => {
+  const actual = await importActual<typeof import("../../src/core/output.js")>();
+  return { ...actual, sendOutput: vi.fn() };
+});
 
 vi.mock("@mariozechner/pi-agent-core", () => ({
   Agent: vi.fn(),

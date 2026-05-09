@@ -18,6 +18,16 @@ export interface ContextResult {
   reviewRules: ContextFile[]; // REVIEW.md, root → cwd order
 }
 
+export const CONTEXT_PROVIDER_EVENT = "pi-reviewer:collect-context-providers";
+
+export type ContextProvider = (opts: { cwd: string; diffFiles: string[] }) => Promise<ContextFile[]>;
+
+export interface ContextProviderEvent {
+  cwd: string;
+  diffFiles: string[];
+  register: (name: string, provider: ContextProvider) => void;
+}
+
 function findGitRoot(cwd: string): string | null {
   try {
     return execSync("git rev-parse --show-toplevel", {
@@ -81,6 +91,30 @@ export async function walkUpContextFiles(
   }
 
   return result;
+}
+
+/** Merges conventions and reviewRules into a single ordered array. */
+export function mergeContextFiles(result: ContextResult): ContextFile[] {
+  return [...result.conventions, ...result.reviewRules];
+}
+
+export interface MinimalEventBus {
+  emit(channel: string, data: unknown): void;
+  on(channel: string, handler: (data: unknown) => void): () => void;
+}
+
+export async function collectProviderContext(
+  events: MinimalEventBus,
+  cwd: string,
+  diffFiles: string[],
+): Promise<ContextFile[]> {
+  const registrations: Array<{ name: string; provider: ContextProvider }> = [];
+  events.emit(CONTEXT_PROVIDER_EVENT, {
+    cwd,
+    diffFiles,
+    register: (name: string, provider: ContextProvider) => registrations.push({ name, provider }),
+  } satisfies ContextProviderEvent);
+  return (await Promise.all(registrations.map(({ provider }) => provider({ cwd, diffFiles })))).flat();
 }
 
 export async function loadContext(options: ContextOptions = {}): Promise<ContextResult> {

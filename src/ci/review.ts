@@ -2,10 +2,9 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
 import { createReadOnlyTools } from "@mariozechner/pi-coding-agent";
 
-import { extractLastAssistantText } from "../../extensions/pi-reviewer/events.js";
-import { loadContext } from "../core/context.js";
+import { loadContext, mergeContextFiles } from "../core/context.js";
 import { resolveDiff } from "../core/diff-resolver.js";
-import { sendOutput, type OutputTarget, type Severity } from "../core/output.js";
+import { sendOutput, extractLastAssistantText, type OutputTarget, type Severity } from "../core/output.js";
 import { buildJSONSystemPrompt, buildUserPrompt, type MinSeverity } from "../core/prompt-builder.js";
 
 export interface ReviewOptions {
@@ -39,7 +38,7 @@ export async function review(options: ReviewOptions): Promise<void> {
   if (warning) console.warn(`[pi-reviewer] ${warning}`);
 
   const context = await loadContext({ cwd });
-  const loadedPaths = [...context.conventions, ...context.reviewRules].map(f => f.path);
+  const loadedPaths = mergeContextFiles(context).map(f => f.path);
   if (loadedPaths.length > 0) {
     console.log(`[pi-reviewer] context loaded: ${loadedPaths.join(", ")}`);
   } else {

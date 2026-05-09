@@ -43,6 +43,7 @@ function buildSharedBase(minSeverity: MinSeverity): string[] {
 export function buildJSONSystemPrompt(
   context: ContextResult | string,
   minSeverity: MinSeverity = "INFO",
+  contextFiles?: ContextFile[],
 ): string {
   const base = [
     ...buildSharedBase(minSeverity),
@@ -74,6 +75,7 @@ export function buildJSONSystemPrompt(
   const sections: string[] = [base];
   if (conventionsStr.trim()) sections.push(`<conventions>\n${conventionsStr}\n</conventions>`);
   if (reviewRulesStr.trim()) sections.push(`<review_rules>\n${reviewRulesStr}\n</review_rules>`);
+  if (contextFiles && contextFiles.length > 0) sections.push(contextFiles.map(f => f.content).join("\n\n"));
 
   return sections.join("\n\n");
 }
@@ -82,7 +84,7 @@ export function buildJSONSystemPrompt(
  * Markdown system prompt — used by SSH-only mode.
  * Agent writes a human-readable markdown review and saves it to pi-review.md.
  */
-export function buildMarkdownSystemPrompt(minSeverity: MinSeverity = "INFO", context?: ContextResult | string): string {
+export function buildMarkdownSystemPrompt(minSeverity: MinSeverity = "INFO", context?: ContextResult | string, contextFiles?: ContextFile[]): string {
   const base = [
     ...buildSharedBase(minSeverity),
     "",
@@ -93,12 +95,12 @@ export function buildMarkdownSystemPrompt(minSeverity: MinSeverity = "INFO", con
     "After writing your review, save it to pi-review.md in the project root using the Write tool.",
   ].join("\n");
 
-  if (!context) return base;
-  const conventionsStr = typeof context === "string" ? context : mergeContent(context.conventions);
-  const reviewRulesStr = typeof context === "string" ? "" : mergeContent(context.reviewRules);
+  const conventionsStr = context ? (typeof context === "string" ? context : mergeContent(context.conventions)) : "";
+  const reviewRulesStr = context ? (typeof context === "string" ? "" : mergeContent(context.reviewRules)) : "";
   const sections: string[] = [base];
   if (conventionsStr.trim()) sections.push(`<conventions>\n${conventionsStr}\n</conventions>`);
   if (reviewRulesStr.trim()) sections.push(`<review_rules>\n${reviewRulesStr}\n</review_rules>`);
+  if (contextFiles && contextFiles.length > 0) sections.push(contextFiles.map(f => f.content).join("\n\n"));
   return sections.join("\n\n");
 }
 
