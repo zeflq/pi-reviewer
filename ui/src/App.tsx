@@ -7,6 +7,8 @@ import { FileTree, buildTree } from "./FileTree";
 import { ReviewHeader } from "./ReviewHeader";
 import { OrphanComments } from "./OrphanComments";
 import { SummaryPanel } from "./SummaryPanel";
+import { ContextPanel } from "./ContextPanel";
+import { SidePanelLayout } from "./SidePanelLayout";
 import { SettingsProvider } from "./SettingsContext";
 import { ScrollToTop } from "./ScrollToTop";
 
@@ -34,7 +36,7 @@ export default function App() {
 
   const [decisions, setDecisions] = useState<Record<number, DecisionState>>({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState<"summary" | "context" | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(data.theme ?? "dark");
   const [viewedFiles, setViewedFiles] = useState<Record<string, boolean>>({});
@@ -107,6 +109,9 @@ export default function App() {
     {} as Record<string, number>
   );
 
+  const contextGroups = data.contextGroups ?? [];
+  const contextCount = contextGroups.reduce((n, g) => n + g.files.length, 0);
+
   const [allCollapsed, setAllCollapsed] = useState(false);
 
   function jumpToNextPending() {
@@ -174,7 +179,6 @@ export default function App() {
         onThemeToggle={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
         sidebarOpen={sidebarOpen}
         onSidebarToggle={() => setSidebarOpen((o) => !o)}
-        onSummaryToggle={() => setSummaryOpen((o) => !o)}
         decidedCount={decidedCount}
         totalComments={totalComments}
         allDone={allDone}
@@ -187,16 +191,21 @@ export default function App() {
         severityCounts={severityCounts}
         allCollapsed={allCollapsed}
         onToggleCollapse={() => setAllCollapsed((c) => !c)}
+        onSummaryToggle={() => setActivePanel((p) => (p === "summary" ? null : "summary"))}
+        onContextToggle={() => setActivePanel((p) => (p === "context" ? null : "context"))}
+        contextCount={contextCount > 0 ? contextCount : undefined}
       />
       <div id="layout">
         {sidebarOpen && (
-          <FileTree
-            tree={tree}
-            collapsedFolders={collapsedFolders}
-            toggleFolder={toggleFolder}
-            selectedFile={selectedFile}
-            onSelectFile={setSelectedFile}
-          />
+          <SidePanelLayout side="left">
+            <FileTree
+              tree={tree}
+              collapsedFolders={collapsedFolders}
+              toggleFolder={toggleFolder}
+              selectedFile={selectedFile}
+              onSelectFile={setSelectedFile}
+            />
+          </SidePanelLayout>
         )}
         <div id="files">
           {totalComments === 0 && (
@@ -233,8 +242,15 @@ export default function App() {
             onDecide={onDecide}
           />
         </div>
-        {summaryOpen && (
-          <SummaryPanel summary={result.summary} onClose={() => setSummaryOpen(false)} />
+        {activePanel && (
+          <SidePanelLayout>
+            {activePanel === "summary" && (
+              <SummaryPanel summary={result.summary} onClose={() => setActivePanel(null)} />
+            )}
+            {activePanel === "context" && (
+              <ContextPanel groups={contextGroups} onClose={() => setActivePanel(null)} />
+            )}
+          </SidePanelLayout>
         )}
       </div>
       <ScrollToTop />

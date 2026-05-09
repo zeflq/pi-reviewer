@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { loadContext, walkUpContextFiles, collectProviderContext, CONTEXT_PROVIDER_EVENT } from "../../src/core/context.js";
-import type { ContextProviderEvent, MinimalEventBus } from "../../src/core/context.js";
+import type { ContextProviderEvent, MinimalEventBus, ContextGroup } from "../../src/core/context.js";
 import { localFs } from "../../src/core/ssh.js";
 
 const createdDirs: string[] = [];
@@ -323,7 +323,7 @@ describe("collectProviderContext", () => {
     expect(provider).toHaveBeenCalledWith({ cwd: "/project", diffFiles: ["src/foo.ts"] });
   });
 
-  it("returns files from a registered provider", async () => {
+  it("returns a group with files from a registered provider", async () => {
     const events = createStubEventBus();
     events.on(CONTEXT_PROVIDER_EVENT, ({ register }: ContextProviderEvent) => {
       register("test-ext", async () => [{ path: "docs/arch.md", content: "Architecture" }]);
@@ -331,10 +331,12 @@ describe("collectProviderContext", () => {
 
     const result = await collectProviderContext(events, "/project", []);
 
-    expect(result).toEqual([{ path: "docs/arch.md", content: "Architecture" }]);
+    expect(result).toEqual<ContextGroup[]>([
+      { name: "test-ext", files: [{ path: "docs/arch.md", content: "Architecture" }] },
+    ]);
   });
 
-  it("flattens results from multiple providers", async () => {
+  it("returns one group per provider", async () => {
     const events = createStubEventBus();
     events.on(CONTEXT_PROVIDER_EVENT, ({ register }: ContextProviderEvent) => {
       register("ext-a", async () => [{ path: "docs/a.md", content: "A" }]);
@@ -344,8 +346,19 @@ describe("collectProviderContext", () => {
     const result = await collectProviderContext(events, "/project", []);
 
     expect(result).toHaveLength(2);
-    expect(result[0].path).toBe("docs/a.md");
-    expect(result[1].path).toBe("docs/b.md");
+    expect(result[0]).toEqual({ name: "ext-a", files: [{ path: "docs/a.md", content: "A" }] });
+    expect(result[1]).toEqual({ name: "ext-b", files: [{ path: "docs/b.md", content: "B" }] });
+  });
+
+  it("omits groups when provider returns empty array", async () => {
+    const events = createStubEventBus();
+    events.on(CONTEXT_PROVIDER_EVENT, ({ register }: ContextProviderEvent) => {
+      register("empty-ext", async () => []);
+    });
+
+    const result = await collectProviderContext(events, "/project", []);
+
+    expect(result).toHaveLength(0);
   });
 
   it("passes diffFiles so providers can filter by changed files", async () => {
@@ -361,7 +374,7 @@ describe("collectProviderContext", () => {
     const withMatch = await collectProviderContext(events, "/project", ["src/auth/login.ts"]);
     const withoutMatch = await collectProviderContext(events, "/project", ["src/utils.ts"]);
 
-    expect(withMatch).toHaveLength(1);
-    expect(withoutMatch).toHaveLength(0);
+    expect(withMatch).toHaveLength(1); // 1 group
+    expect(withoutMatch).toHaveLength(0); // filtered out (empty files)
   });
 });
