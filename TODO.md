@@ -289,14 +289,16 @@ tests/
 
 ### 21. Pluggable context provider API ✅
 
-See [`docs/context-providers/README.md`](./docs/context-providers/README.md) for the full design.
+See [`extensions/pi-reviewer-doc-context/README.md`](./extensions/pi-reviewer-doc-context/README.md) for the Context Provider API.
 
 - [x] `ContextFile`, `ContextGroup`, `ContextProvider`, `ContextProviderEvent`, `CONTEXT_PROVIDER_EVENT`, `MinimalEventBus` exported from `src/core/context.ts`
-- [x] `collectProviderContext(events, cwd, diffFiles): Promise<ContextGroup[]>` — sync emit, async provider calls, groups filtered if empty
+- [x] `collectProviderContext(events, cwd, diffFiles, fs?): Promise<ContextGroup[]>` — sync emit, async provider calls, passes `fs` at call time, groups filtered if empty
 - [x] `mergeContextFiles(result: ContextResult): ContextFile[]` — replaces repeated `[...conventions, ...reviewRules]` spreads
 - [x] `extractDiffFiles(diff: string): string[]` added to `src/core/diff-resolver.ts`
 - [x] `buildJSONSystemPrompt` and `buildMarkdownSystemPrompt` accept optional `contextFiles: ContextFile[]`
 - [x] All 4 paths in `extensions/pi-reviewer/index.ts` wired: dry-run SSH, dry-run local, SSH, local
+- [x] SSH path passes `sshFs(remote)` to `collectProviderContext`; local path uses default `localFs()`
+- [x] Built-in and provider context paths merged into a single `Context: …` notify
 - [x] Refactors: `buildSSHDiffCommand` → `args.ts`, `resolveCurrentModelId` → `model.ts`, `extractAssistantText` → `src/core/output.ts`
 - [x] Tests: `extractDiffFiles`, `collectProviderContext`, `buildJSONSystemPrompt`/`buildMarkdownSystemPrompt` with context files, integration test in `tests/extensions/index.test.ts`
 
@@ -310,12 +312,16 @@ See [`docs/context-providers/README.md`](./docs/context-providers/README.md) for
 - [ ] ~~markdown-linked files~~ — superseded; context files are now typed `ContextFile[]` end-to-end, no separate `loadedFiles` field needed
 - [ ] Mark provider files as "loaded" if the agent called Read on them during the review — deferred, requires tool-call interception
 
-### 23. Built-in doc-context ContextProvider extension
+### 23. Built-in doc-context ContextProvider extension ✅
 
-- [ ] Create a new extension in pi-reviewer (e.g. `extensions/pi-reviewer/doc-context-provider.ts`) that registers a `ContextProvider` via `CONTEXT_PROVIDER_EVENT`
-- [ ] Scans `.pi/`, `.claude/`, `.agents/` config dirs for `.md` files that have a `description` frontmatter field
-- [ ] Decides which files to load eagerly based on `diffFiles` (diff-aware selection)
-- [ ] Injects file content directly into the system prompt (eager, unlike pi-context's `context-files` which is lazy/on-demand)
+- [x] Standalone pi extension `extensions/pi-reviewer-doc-context/` — no code dependency on pi-reviewer, only coupled via the `"pi-reviewer:collect-context-providers"` event string
+- [x] Scans configured doc dirs (default: `.pi/notes`, `.claude/notes`, `.agents/notes`) for `.md` files with a `description` frontmatter field; recurses one subdirectory level
+- [x] Keyword extraction from diff file paths (strip extension, split on `/`, `-`, `_`, `.`, camelCase, lowercase, min 3 chars); matched against description + file path
+- [x] SSH-transparent: provider receives `fs` (local or SSH) at call time via `ContextProvider` opts — no SSH-specific code in the extension
+- [x] Config at `~/.pi/pi-reviewer-doc-context/config.json` (`docDirs` field); entirely owned by this extension, pi-reviewer has no knowledge of it
+- [x] Local `Fs` interface (3 methods: `read`, `list`, `join`) — no import of `FsOps` from pi-reviewer src
+- [x] Tests: `extractKeywords`, `parseDescription`, `isRelevant` in `tests/extensions/doc-context-provider.test.ts`
+- [x] API documented in `extensions/pi-reviewer-doc-context/README.md`
 
 ### 10. Custom system prompt
 

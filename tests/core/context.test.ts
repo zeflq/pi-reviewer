@@ -314,18 +314,20 @@ describe("collectProviderContext", () => {
   it("calls registered provider with cwd and diffFiles", async () => {
     const events = createStubEventBus();
     const provider = vi.fn().mockResolvedValue([]);
-    events.on(CONTEXT_PROVIDER_EVENT, ({ register }: ContextProviderEvent) => {
+    events.on(CONTEXT_PROVIDER_EVENT, (data) => {
+      const { register } = data as ContextProviderEvent;
       register("test-ext", provider);
     });
 
     await collectProviderContext(events, "/project", ["src/foo.ts"]);
 
-    expect(provider).toHaveBeenCalledWith({ cwd: "/project", diffFiles: ["src/foo.ts"] });
+    expect(provider).toHaveBeenCalledWith(expect.objectContaining({ cwd: "/project", diffFiles: ["src/foo.ts"] }));
   });
 
   it("returns a group with files from a registered provider", async () => {
     const events = createStubEventBus();
-    events.on(CONTEXT_PROVIDER_EVENT, ({ register }: ContextProviderEvent) => {
+    events.on(CONTEXT_PROVIDER_EVENT, (data) => {
+      const { register } = data as ContextProviderEvent;
       register("test-ext", async () => [{ path: "docs/arch.md", content: "Architecture" }]);
     });
 
@@ -338,7 +340,8 @@ describe("collectProviderContext", () => {
 
   it("returns one group per provider", async () => {
     const events = createStubEventBus();
-    events.on(CONTEXT_PROVIDER_EVENT, ({ register }: ContextProviderEvent) => {
+    events.on(CONTEXT_PROVIDER_EVENT, (data) => {
+      const { register } = data as ContextProviderEvent;
       register("ext-a", async () => [{ path: "docs/a.md", content: "A" }]);
       register("ext-b", async () => [{ path: "docs/b.md", content: "B" }]);
     });
@@ -352,7 +355,8 @@ describe("collectProviderContext", () => {
 
   it("omits groups when provider returns empty array", async () => {
     const events = createStubEventBus();
-    events.on(CONTEXT_PROVIDER_EVENT, ({ register }: ContextProviderEvent) => {
+    events.on(CONTEXT_PROVIDER_EVENT, (data) => {
+      const { register } = data as ContextProviderEvent;
       register("empty-ext", async () => []);
     });
 
@@ -363,7 +367,8 @@ describe("collectProviderContext", () => {
 
   it("passes diffFiles so providers can filter by changed files", async () => {
     const events = createStubEventBus();
-    events.on(CONTEXT_PROVIDER_EVENT, ({ register, diffFiles }: ContextProviderEvent) => {
+    events.on(CONTEXT_PROVIDER_EVENT, (data) => {
+      const { register, diffFiles } = data as ContextProviderEvent;
       register("test-ext", async () =>
         diffFiles.some(f => f.startsWith("src/auth/"))
           ? [{ path: "docs/auth.md", content: "Auth docs" }]
