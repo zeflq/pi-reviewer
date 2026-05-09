@@ -66,6 +66,9 @@ export function detectOriginBase(cwd) {
         return "origin/main";
     }
 }
+export function extractDiffFiles(diff) {
+    return [...diff.matchAll(/^diff --git a\/.+ b\/(.+)$/gm)].map(m => m[1]);
+}
 export async function resolveDiff(options) {
     let cwd = options.cwd ?? process.cwd();
     if (options.dir) {

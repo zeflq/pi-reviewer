@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-import { loadContext, collectProviderContext } from "../../src/core/context.js";
+import { loadContext, collectProviderContext, mergeContextFiles } from "../../src/core/context.js";
 import { resolveDiff, detectCurrentBranch, detectOriginBase, extractDiffFiles } from "../../src/core/diff-resolver.js";
 import { filterDiff } from "../../src/core/diff-filter.js";
 import { formatForTerminal } from "../../src/core/output.js";
@@ -11,18 +11,12 @@ import { readVerbose, readMinSeverity, readModel, readThinking, readDefaultBranc
 import { loadContextSSH } from "../../src/core/context.js";
 import { readSshFlag, resolveSshState } from "../../src/core/ssh.js";
 import type { ReviewCommandArgs } from "./args.js";
-import { parseArgs } from "./args.js";
+import { parseArgs, buildSSHDiffCommand } from "./args.js";
+import { resolveCurrentModelId } from "./model.js";
 import { setReviewFooter } from "./footer.js";
 import { runLocalReview } from "./run-local.js";
 import { runSSHReview, runSSHReviewAndWait } from "./run-ssh.js";
 import { handleUIReview } from "./ui-handler.js";
-
-function buildSSHDiffCommand(parsed: ReviewCommandArgs): string {
-  if (typeof parsed.pr === "number") return `gh pr diff ${parsed.pr}`;
-  if (parsed.diff) return `git diff ${parsed.diff}`;
-  if (parsed.branch) return `git diff $(git merge-base ${parsed.branch} HEAD)`;
-  return `git diff $(git merge-base $(git symbolic-ref refs/remotes/origin/HEAD --short 2>/dev/null || echo origin/main) HEAD)`;
-}
 
 export function buildSSHSource(parsed: ReviewCommandArgs, cwd: string): string {
   if (typeof parsed.pr === "number") return `PR #${parsed.pr}`;
@@ -51,14 +45,8 @@ export default function (pi: ExtensionAPI): void {
           name: m.name as string,
           provider: m.provider as string,
         }));
-        const currentModelEntry = model
-          ? availableModels.find((m) => m.id === model || `${m.provider}/${m.id}` === model)
-          : ctx.model
-          ? { id: ctx.model.id as string, provider: ctx.model.provider as string }
-          : undefined;
-        const currentModelId = currentModelEntry
-          ? `${currentModelEntry.provider}/${currentModelEntry.id}`
-          : model;
+        const sessionModel = ctx.model ? { id: ctx.model.id as string, provider: ctx.model.provider as string } : undefined;
+        const currentModelId = resolveCurrentModelId(model, availableModels, sessionModel);
         const defaultModel = readModel();
 
         if (parsed.dryRun) {
@@ -93,7 +81,7 @@ export default function (pi: ExtensionAPI): void {
                 return loadContextSSH(s.remote, remoteCwd, gitRoot);
               }).catch(() => ({ conventions: [], reviewRules: [] }))
             : { conventions: [], reviewRules: [] };
-          const sshLoadedPaths = [...sshContext.conventions, ...sshContext.reviewRules].map(f => f.path);
+          const sshLoadedPaths = mergeContextFiles(sshContext).map(f => f.path);
           if (sshLoadedPaths.length > 0) notify(`Context: ${sshLoadedPaths.join(", ")}`);
 
           // diffFiles unavailable in SSH mode (agent fetches diff itself) — providers run with []
@@ -115,7 +103,7 @@ export default function (pi: ExtensionAPI): void {
           if (!result.diff) notify("Diff not captured — UI diff view will be empty", "warning");
           const { diff, warning } = filterDiff(result.diff ?? "");
           if (warning) notify(warning, "warning");
-          const conventions = [...sshContext.conventions, ...sshContext.reviewRules].map(f => f.content).join("\n\n");
+          const conventions = mergeContextFiles(sshContext).map(f => f.content).join("\n\n");
           let sshSaveTriggered = false;
           const injectionMsg = await handleUIReview({
             result, diff, conventions, source, ssh: true, cwd: ctx.cwd, notify,
@@ -147,9 +135,9 @@ export default function (pi: ExtensionAPI): void {
         if (warning) notify(warning, "warning");
         notify("Loading context…");
         const context = await loadContext({ cwd: parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd, gitRoot: parsed.dir ? ctx.cwd : undefined });
-        const loadedPaths = [...context.conventions, ...context.reviewRules].map(f => f.path);
+        const loadedPaths = mergeContextFiles(context).map(f => f.path);
         if (loadedPaths.length > 0) notify(`Context: ${loadedPaths.join(", ")}`);
-        const conventions = [...context.conventions, ...context.reviewRules].map(f => f.content).join("\n\n");
+        const conventions = mergeContextFiles(context).map(f => f.content).join("\n\n");
         const diffFiles = extractDiffFiles(diff);
         const contextFiles = await collectProviderContext(pi.events, ctx.cwd, diffFiles);
         if (contextFiles.length > 0) notify(`Provider context: ${contextFiles.map(f => f.path).join(", ")}`);

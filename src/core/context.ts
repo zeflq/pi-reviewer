@@ -93,6 +93,11 @@ export async function walkUpContextFiles(
   return result;
 }
 
+/** Merges conventions and reviewRules into a single ordered array. */
+export function mergeContextFiles(result: ContextResult): ContextFile[] {
+  return [...result.conventions, ...result.reviewRules];
+}
+
 export interface MinimalEventBus {
   emit(channel: string, data: unknown): void;
   on(channel: string, handler: (data: unknown) => void): () => void;

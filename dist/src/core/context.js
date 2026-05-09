@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import { localFs, sshExec, sshFs } from "./ssh.js";
 const CONFIG_DIRS = [".pi", ".claude", ".agents"];
+export const CONTEXT_PROVIDER_EVENT = "pi-reviewer:collect-context-providers";
 function findGitRoot(cwd) {
     try {
         return execSync("git rev-parse --show-toplevel", {
@@ -56,6 +57,19 @@ export async function walkUpContextFiles(fs, cwd, filenames, gitRoot) {
         }
     }
     return result;
+}
+/** Merges conventions and reviewRules into a single ordered array. */
+export function mergeContextFiles(result) {
+    return [...result.conventions, ...result.reviewRules];
+}
+export async function collectProviderContext(events, cwd, diffFiles) {
+    const registrations = [];
+    events.emit(CONTEXT_PROVIDER_EVENT, {
+        cwd,
+        diffFiles,
+        register: (name, provider) => registrations.push({ name, provider }),
+    });
+    return (await Promise.all(registrations.map(({ provider }) => provider({ cwd, diffFiles })))).flat();
 }
 export async function loadContext(options = {}) {
     const cwd = options.cwd ?? process.cwd();
