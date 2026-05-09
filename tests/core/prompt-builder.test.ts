@@ -4,7 +4,7 @@ import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildSSHUserPrompt, b
 
 describe("prompt-builder", () => {
   it("returns base prompt without sections when context is empty", () => {
-    const prompt = buildJSONSystemPrompt({ conventions: "", reviewRules: "" });
+    const prompt = buildJSONSystemPrompt({ conventions: [], reviewRules: [] });
 
     expect(prompt).toContain("You are a code reviewer");
     expect(prompt).toContain("Return only a JSON object matching this schema exactly");
@@ -13,7 +13,7 @@ describe("prompt-builder", () => {
   });
 
   it("appends conventions section when conventions is provided", () => {
-    const prompt = buildJSONSystemPrompt({ conventions: "use tabs", reviewRules: "" });
+    const prompt = buildJSONSystemPrompt({ conventions: [{ path: "AGENTS.md", content: "use tabs" }], reviewRules: [] });
 
     expect(prompt).toContain("<conventions>");
     expect(prompt).toContain("use tabs");
@@ -21,7 +21,7 @@ describe("prompt-builder", () => {
   });
 
   it("appends review rules section when reviewRules is provided", () => {
-    const prompt = buildJSONSystemPrompt({ conventions: "", reviewRules: "always check res.ok" });
+    const prompt = buildJSONSystemPrompt({ conventions: [], reviewRules: [{ path: "REVIEW.md", content: "always check res.ok" }] });
 
     expect(prompt).toContain("<review_rules>");
     expect(prompt).toContain("always check res.ok");
@@ -29,7 +29,10 @@ describe("prompt-builder", () => {
   });
 
   it("appends both sections when both are provided", () => {
-    const prompt = buildJSONSystemPrompt({ conventions: "use tabs", reviewRules: "always check res.ok" });
+    const prompt = buildJSONSystemPrompt({
+      conventions: [{ path: "AGENTS.md", content: "use tabs" }],
+      reviewRules: [{ path: "REVIEW.md", content: "always check res.ok" }],
+    });
 
     expect(prompt).toContain("<conventions>");
     expect(prompt).toContain("use tabs");
@@ -66,27 +69,27 @@ describe("prompt-builder", () => {
   });
 
   it("system prompt includes JSON keys summary and comments", () => {
-    const prompt = buildJSONSystemPrompt({ conventions: "", reviewRules: "" });
+    const prompt = buildJSONSystemPrompt({ conventions: [], reviewRules: [] });
 
     expect(prompt).toContain('"summary"');
     expect(prompt).toContain('"comments"');
   });
 
   it("buildJSONSystemPrompt with minSeverity WARN adds skip-INFO rule", () => {
-    const prompt = buildJSONSystemPrompt({ conventions: "", reviewRules: "" }, "WARN");
+    const prompt = buildJSONSystemPrompt({ conventions: [], reviewRules: [] }, "WARN");
 
     expect(prompt).toContain("skip INFO");
     expect(prompt).not.toContain("skip WARN");
   });
 
   it("buildJSONSystemPrompt with minSeverity CRITICAL adds skip-WARN-and-INFO rule", () => {
-    const prompt = buildJSONSystemPrompt({ conventions: "", reviewRules: "" }, "CRITICAL");
+    const prompt = buildJSONSystemPrompt({ conventions: [], reviewRules: [] }, "CRITICAL");
 
     expect(prompt).toContain("skip WARN and INFO");
   });
 
   it("buildJSONSystemPrompt with default minSeverity adds no skip rule", () => {
-    const prompt = buildJSONSystemPrompt({ conventions: "", reviewRules: "" });
+    const prompt = buildJSONSystemPrompt({ conventions: [], reviewRules: [] });
 
     expect(prompt).not.toContain("skip INFO");
     expect(prompt).not.toContain("skip WARN");
@@ -122,12 +125,12 @@ describe("buildMarkdownSystemPrompt", () => {
 });
 
 describe("buildSSHUserPrompt", () => {
-  it("includes read AGENTS.md instruction", () => {
+  it("does not include file-reading instructions (context loaded directly)", () => {
     const prompt = buildSSHUserPrompt("git diff HEAD~1");
 
-    expect(prompt).toContain("AGENTS.md");
-    expect(prompt).toContain("CLAUDE.md");
-    expect(prompt).toContain("REVIEW.md");
+    expect(prompt).not.toContain("AGENTS.md");
+    expect(prompt).not.toContain("CLAUDE.md");
+    expect(prompt).not.toContain("REVIEW.md");
   });
 
   it("includes the diff command", () => {

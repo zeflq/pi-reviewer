@@ -1,9 +1,11 @@
+import { execSync } from "node:child_process";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { loadContext } from "../../src/core/context.js";
+import { loadContext, walkUpContextFiles } from "../../src/core/context.js";
+import { localFs } from "../../src/core/ssh.js";
 
 const createdDirs: string[] = [];
 
@@ -25,9 +27,8 @@ describe("loadContext", () => {
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result.conventions).toBe(content);
-    expect(result.reviewRules).toBe("");
-    expect(result.loadedFiles).toEqual(["AGENTS.md"]);
+    expect(result.conventions).toEqual([{ path: "AGENTS.md", content }]);
+    expect(result.reviewRules).toEqual([]);
   });
 
   it("returns conventions from CLAUDE.md when AGENTS.md does not exist", async () => {
@@ -37,9 +38,8 @@ describe("loadContext", () => {
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result.conventions).toBe(content);
-    expect(result.reviewRules).toBe("");
-    expect(result.loadedFiles).toEqual(["CLAUDE.md"]);
+    expect(result.conventions).toEqual([{ path: "CLAUDE.md", content }]);
+    expect(result.reviewRules).toEqual([]);
   });
 
   it("prefers AGENTS.md over CLAUDE.md when both exist", async () => {
@@ -49,18 +49,16 @@ describe("loadContext", () => {
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result.conventions).toBe("agents content");
-    expect(result.loadedFiles).toEqual(["AGENTS.md"]);
+    expect(result.conventions).toEqual([{ path: "AGENTS.md", content: "agents content" }]);
   });
 
-  it("returns empty conventions when neither AGENTS.md nor CLAUDE.md exists", async () => {
+  it("returns empty arrays when neither AGENTS.md nor CLAUDE.md exists", async () => {
     const dir = await createTempDir();
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result.conventions).toBe("");
-    expect(result.reviewRules).toBe("");
-    expect(result.loadedFiles).toEqual([]);
+    expect(result.conventions).toEqual([]);
+    expect(result.reviewRules).toEqual([]);
   });
 
   it("returns reviewRules when REVIEW.md exists", async () => {
@@ -70,9 +68,8 @@ describe("loadContext", () => {
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result.conventions).toBe("conventions");
-    expect(result.reviewRules).toBe("# Review rules\n- Always check res.ok\n");
-    expect(result.loadedFiles).toEqual(["AGENTS.md", "REVIEW.md"]);
+    expect(result.conventions).toEqual([{ path: "AGENTS.md", content: "conventions" }]);
+    expect(result.reviewRules).toEqual([{ path: "REVIEW.md", content: "# Review rules\n- Always check res.ok\n" }]);
   });
 
   it("returns reviewRules even when no conventions file exists", async () => {
@@ -81,9 +78,8 @@ describe("loadContext", () => {
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result.conventions).toBe("");
-    expect(result.reviewRules).toBe("review only rules");
-    expect(result.loadedFiles).toEqual(["REVIEW.md"]);
+    expect(result.conventions).toEqual([]);
+    expect(result.reviewRules).toEqual([{ path: "REVIEW.md", content: "review only rules" }]);
   });
 
   it("uses process.cwd() when cwd option is not provided", async () => {
@@ -94,80 +90,200 @@ describe("loadContext", () => {
     try {
       process.chdir(dir);
       const result = await loadContext();
-      expect(result.conventions).toBe("project context");
+      expect(result.conventions[0].content).toBe("project context");
     } finally {
       process.chdir(oldCwd);
     }
   });
 
-  it("inlines linked .md files referenced in AGENTS.md", async () => {
+  it("loads AGENTS.md from .pi/ when not at root", async () => {
     const dir = await createTempDir();
-    await writeFile(path.join(dir, "AGENTS.md"), "Main content\n\n[api conventions](./docs/api.md)\n", "utf-8");
-    await mkdir(path.join(dir, "docs"));
-    await writeFile(path.join(dir, "docs", "api.md"), "API rules here", "utf-8");
+    await mkdir(path.join(dir, ".pi"));
+    await writeFile(path.join(dir, ".pi", "AGENTS.md"), "pi-dir conventions", "utf-8");
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result.conventions).toContain("Main content");
-    expect(result.conventions).toContain("API rules here");
-    expect(result.conventions).not.toContain("[api conventions](./docs/api.md)");
-    expect(result.loadedFiles).toEqual(["AGENTS.md", path.join("docs", "api.md")]);
+    expect(result.conventions).toEqual([{ path: path.join(".pi", "AGENTS.md"), content: "pi-dir conventions" }]);
   });
 
-  it("inlines nested linked .md files recursively", async () => {
+  it("prefers root AGENTS.md over .pi/AGENTS.md", async () => {
     const dir = await createTempDir();
-    await writeFile(path.join(dir, "AGENTS.md"), "Root\n\n[level1](./level1.md)\n", "utf-8");
-    await writeFile(path.join(dir, "level1.md"), "Level1\n\n[level2](./level2.md)\n", "utf-8");
-    await writeFile(path.join(dir, "level2.md"), "Level2 content", "utf-8");
+    await mkdir(path.join(dir, ".pi"));
+    await writeFile(path.join(dir, "AGENTS.md"), "root conventions", "utf-8");
+    await writeFile(path.join(dir, ".pi", "AGENTS.md"), "pi-dir conventions", "utf-8");
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result.conventions).toContain("Root");
-    expect(result.conventions).toContain("Level1");
-    expect(result.conventions).toContain("Level2 content");
-    expect(result.loadedFiles).toEqual(["AGENTS.md", "level1.md", "level2.md"]);
+    expect(result.conventions[0].content).toBe("root conventions");
   });
 
-  it("does not inline http links", async () => {
+  it("loads REVIEW.md from .pi/ when not at root", async () => {
     const dir = await createTempDir();
-    const content = "See [docs](https://example.com/docs.md) for more.\n";
-    await writeFile(path.join(dir, "AGENTS.md"), content, "utf-8");
+    await mkdir(path.join(dir, ".pi"));
+    await writeFile(path.join(dir, ".pi", "REVIEW.md"), "pi-dir review rules", "utf-8");
 
     const result = await loadContext({ cwd: dir });
 
-    expect(result.conventions).toBe(content);
+    expect(result.reviewRules).toEqual([{ path: path.join(".pi", "REVIEW.md"), content: "pi-dir review rules" }]);
+  });
+});
+
+describe("loadContext — monorepo (git root walk-up)", () => {
+  it("collects AGENTS.md from both root and package dir", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "pi-reviewer-mono-"));
+    createdDirs.push(root);
+    execSync("git init", { cwd: root, stdio: "ignore" });
+
+    const pkgDir = path.join(root, "packages", "api");
+    await mkdir(pkgDir, { recursive: true });
+    await writeFile(path.join(root, "AGENTS.md"), "root conventions", "utf-8");
+    await writeFile(path.join(pkgDir, "AGENTS.md"), "api conventions", "utf-8");
+
+    const result = await loadContext({ cwd: pkgDir });
+
+    expect(result.conventions).toHaveLength(2);
+    expect(result.conventions[0]).toEqual({ path: path.join("..", "..", "AGENTS.md"), content: "root conventions" });
+    expect(result.conventions[1]).toEqual({ path: "AGENTS.md", content: "api conventions" });
   });
 
-  it("ignores missing linked files gracefully", async () => {
-    const dir = await createTempDir();
-    const content = "Main\n\n[missing](./nonexistent.md)\n";
-    await writeFile(path.join(dir, "AGENTS.md"), content, "utf-8");
+  it("collects REVIEW.md from both root and package dir", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "pi-reviewer-mono-"));
+    createdDirs.push(root);
+    execSync("git init", { cwd: root, stdio: "ignore" });
 
-    const result = await loadContext({ cwd: dir });
+    const pkgDir = path.join(root, "packages", "api");
+    await mkdir(pkgDir, { recursive: true });
+    await writeFile(path.join(root, "REVIEW.md"), "root review rules", "utf-8");
+    await writeFile(path.join(pkgDir, "REVIEW.md"), "api review rules", "utf-8");
 
-    expect(result.conventions).toBe(content);
+    const result = await loadContext({ cwd: pkgDir });
+
+    expect(result.reviewRules).toHaveLength(2);
+    expect(result.reviewRules[0].content).toBe("root review rules");
+    expect(result.reviewRules[1].content).toBe("api review rules");
   });
 
-  it("prevents infinite loops from circular links", async () => {
-    const dir = await createTempDir();
-    await writeFile(path.join(dir, "AGENTS.md"), "Root\n\n[a](./a.md)\n", "utf-8");
-    await writeFile(path.join(dir, "a.md"), "A content\n\n[back](./AGENTS.md)\n", "utf-8");
+  it("works with only root AGENTS.md when running from a package dir", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "pi-reviewer-mono-"));
+    createdDirs.push(root);
+    execSync("git init", { cwd: root, stdio: "ignore" });
 
-    const result = await loadContext({ cwd: dir });
+    const pkgDir = path.join(root, "packages", "api");
+    await mkdir(pkgDir, { recursive: true });
+    await writeFile(path.join(root, "AGENTS.md"), "root conventions", "utf-8");
 
-    expect(result.conventions).toContain("Root");
-    expect(result.conventions).toContain("A content");
+    const result = await loadContext({ cwd: pkgDir });
+
+    expect(result.conventions).toHaveLength(1);
+    expect(result.conventions[0].content).toBe("root conventions");
   });
 
-  it("inlines links in REVIEW.md", async () => {
+  it("finds root AGENTS.md and package REVIEW.md when cwd is the package dir (--dir equivalent)", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "pi-reviewer-mono-"));
+    createdDirs.push(root);
+    execSync("git init", { cwd: root, stdio: "ignore" });
+
+    const pkgDir = path.join(root, "project-x");
+    await mkdir(pkgDir, { recursive: true });
+    await writeFile(path.join(root, "AGENTS.md"), "root conventions", "utf-8");
+    await writeFile(path.join(pkgDir, "REVIEW.md"), "package review rules", "utf-8");
+
+    const result = await loadContext({ cwd: pkgDir });
+
+    expect(result.conventions).toHaveLength(1);
+    expect(result.conventions[0].content).toBe("root conventions");
+    expect(result.reviewRules).toHaveLength(1);
+    expect(result.reviewRules[0].content).toBe("package review rules");
+  });
+
+  it("gitRoot override walks up to the specified boundary (--dir with nested git repo)", async () => {
+    const root = await createTempDir();
+    const pkgDir = path.join(root, "project-x");
+    await mkdir(pkgDir, { recursive: true });
+
+    await writeFile(path.join(root, "AGENTS.md"), "root conventions", "utf-8");
+    await writeFile(path.join(root, "REVIEW.md"), "root review rules", "utf-8");
+    await writeFile(path.join(pkgDir, "AGENTS.md"), "pkg conventions", "utf-8");
+
+    // gitRoot override forces walk-up to root even when pkgDir has its own .git
+    const result = await loadContext({ cwd: pkgDir, gitRoot: root });
+
+    expect(result.conventions).toHaveLength(2);
+    expect(result.conventions[0].content).toBe("root conventions");
+    expect(result.conventions[1].content).toBe("pkg conventions");
+    expect(result.reviewRules).toHaveLength(1);
+    expect(result.reviewRules[0].content).toBe("root review rules");
+  });
+});
+
+describe("walkUpContextFiles", () => {
+  it("returns empty array when no files exist", async () => {
     const dir = await createTempDir();
-    await writeFile(path.join(dir, "REVIEW.md"), "Rules\n\n[details](./review-details.md)\n", "utf-8");
-    await writeFile(path.join(dir, "review-details.md"), "Detailed rules", "utf-8");
 
-    const result = await loadContext({ cwd: dir });
+    const result = await walkUpContextFiles(localFs(), dir, ["AGENTS.md", "CLAUDE.md"], dir);
 
-    expect(result.reviewRules).toContain("Rules");
-    expect(result.reviewRules).toContain("Detailed rules");
-    expect(result.loadedFiles).toEqual(["REVIEW.md", "review-details.md"]);
+    expect(result).toEqual([]);
+  });
+
+  it("returns single file when found at cwd level", async () => {
+    const dir = await createTempDir();
+    await writeFile(path.join(dir, "AGENTS.md"), "conventions", "utf-8");
+
+    const result = await walkUpContextFiles(localFs(), dir, ["AGENTS.md", "CLAUDE.md"], dir);
+
+    expect(result).toEqual([{ path: "AGENTS.md", content: "conventions" }]);
+  });
+
+  it("picks first matching filename at each level", async () => {
+    const dir = await createTempDir();
+    await writeFile(path.join(dir, "AGENTS.md"), "agents", "utf-8");
+    await writeFile(path.join(dir, "CLAUDE.md"), "claude", "utf-8");
+
+    const result = await walkUpContextFiles(localFs(), dir, ["AGENTS.md", "CLAUDE.md"], dir);
+
+    expect(result).toEqual([{ path: "AGENTS.md", content: "agents" }]);
+  });
+
+  it("collects one file per directory level, root → cwd", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "pi-reviewer-walk-"));
+    createdDirs.push(root);
+    execSync("git init", { cwd: root, stdio: "ignore" });
+
+    const pkgDir = path.join(root, "packages", "api");
+    await mkdir(pkgDir, { recursive: true });
+    await writeFile(path.join(root, "AGENTS.md"), "root", "utf-8");
+    await writeFile(path.join(pkgDir, "AGENTS.md"), "api", "utf-8");
+
+    const result = await walkUpContextFiles(localFs(), pkgDir, ["AGENTS.md", "CLAUDE.md"], root);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].content).toBe("root");
+    expect(result[1].content).toBe("api");
+  });
+
+  it("stops at gitRoot — does not collect files above it", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "pi-reviewer-walk-"));
+    createdDirs.push(root);
+    execSync("git init", { cwd: root, stdio: "ignore" });
+
+    const pkgDir = path.join(root, "packages", "api");
+    await mkdir(pkgDir, { recursive: true });
+    await writeFile(path.join(root, "AGENTS.md"), "root", "utf-8");
+
+    // gitRoot is root, so walk stops at root even though parent dirs might have files
+    const result = await walkUpContextFiles(localFs(), pkgDir, ["AGENTS.md", "CLAUDE.md"], root);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].content).toBe("root");
+  });
+
+  it("finds files in config subdirs (.pi, .claude, .agents)", async () => {
+    const dir = await createTempDir();
+    await mkdir(path.join(dir, ".pi"));
+    await writeFile(path.join(dir, ".pi", "AGENTS.md"), "pi conventions", "utf-8");
+
+    const result = await walkUpContextFiles(localFs(), dir, ["AGENTS.md", "CLAUDE.md"], dir);
+
+    expect(result).toEqual([{ path: path.join(".pi", "AGENTS.md"), content: "pi conventions" }]);
   });
 });

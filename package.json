@@ -1,6 +1,6 @@
 {
   "name": "pi-reviewer",
-  "version": "0.4",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "bin": {

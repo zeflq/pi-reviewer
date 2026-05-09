@@ -1,97 +1,111 @@
-import { readFile, readdir } from "node:fs/promises";
-import path from "node:path";
+import { execSync } from "node:child_process";
+import { localFs, sshExec, sshFs, type FsOps } from "./ssh.js";
+
+const CONFIG_DIRS = [".pi", ".claude", ".agents"];
 
 export interface ContextOptions {
   cwd?: string;
+  gitRoot?: string; // override auto-detected git root (e.g. outer monorepo root when --dir is a nested repo)
+}
+
+export interface ContextFile {
+  path: string;    // relative to cwd (local) or relative to remoteCwd (SSH)
+  content: string;
 }
 
 export interface ContextResult {
-  conventions: string; // from AGENTS.md or CLAUDE.md
-  reviewRules: string; // from REVIEW.md
-  loadedFiles?: string[]; // all files loaded (root + inlined links), relative to cwd
+  conventions: ContextFile[]; // AGENTS.md / CLAUDE.md, root → cwd order
+  reviewRules: ContextFile[]; // REVIEW.md, root → cwd order
 }
 
-async function tryReadFile(filePath: string): Promise<string | null> {
+function findGitRoot(cwd: string): string | null {
   try {
-    return await readFile(filePath, "utf-8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw error;
-  }
-}
-
-async function findFileCaseInsensitive(dir: string, name: string): Promise<string | null> {
-  try {
-    const entries = await readdir(dir);
-    const match = entries.find((e) => e.toLowerCase() === name.toLowerCase());
-    return match ? path.join(dir, match) : null;
+    return execSync("git rev-parse --show-toplevel", {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
   } catch {
     return null;
   }
 }
 
-async function resolveLinks(
-  content: string,
-  baseDir: string,
-  visited: Set<string>,
-  loaded: string[]
-): Promise<string> {
-  const linkPattern = /\[([^\]]*)\]\(([^)]+\.md)\)/g;
-  const replacements: Array<{ match: string; replacement: string }> = [];
+async function readContextFile(
+  fs: FsOps,
+  dir: string,
+  filename: string,
+): Promise<{ path: string; content: string } | null> {
+  for (const candidate of [dir, ...CONFIG_DIRS.map(d => fs.join(dir, d))]) {
+    const entries = await fs.list(candidate);
+    const match = entries.find(e => e.toLowerCase() === filename.toLowerCase());
+    if (!match) continue;
+    const filePath = fs.join(candidate, match);
+    const content = await fs.read(filePath);
+    if (content !== null) return { path: filePath, content };
+  }
+  return null;
+}
 
-  for (const match of content.matchAll(linkPattern)) {
-    const [full, , href] = match;
-    if (href.startsWith("http")) continue;
-
-    const absPath = path.resolve(baseDir, href);
-    if (visited.has(absPath)) continue;
-
-    const linked = await tryReadFile(absPath);
-    if (linked === null) continue;
-
-    visited.add(absPath);
-    loaded.push(absPath);
-    const resolved = await resolveLinks(linked, path.dirname(absPath), visited, loaded);
-    replacements.push({ match: full, replacement: resolved.trim() });
+/**
+ * Walks from gitRoot down to cwd, collecting one matching file per directory level.
+ * filenames: tried in priority order at each level (first match wins).
+ * Returns files in root → cwd order.
+ */
+export async function walkUpContextFiles(
+  fs: FsOps,
+  cwd: string,
+  filenames: string[],
+  gitRoot: string,
+): Promise<ContextFile[]> {
+  const dirs: string[] = [];
+  let current = cwd;
+  while (true) {
+    dirs.unshift(current);
+    if (current === gitRoot) break;
+    const parent = fs.dirname(current);
+    if (parent === current) break;
+    current = parent;
   }
 
-  let result = content;
-  for (const { match, replacement } of replacements) {
-    result = result.replace(match, replacement);
+  const result: ContextFile[] = [];
+  const visited = new Set<string>();
+
+  for (const dir of dirs) {
+    for (const filename of filenames) {
+      const file = await readContextFile(fs, dir, filename);
+      if (file === null || visited.has(file.path)) continue;
+      visited.add(file.path);
+      result.push({ path: fs.relative(cwd, file.path), content: file.content });
+      break; // one file per directory level
+    }
   }
+
   return result;
 }
 
 export async function loadContext(options: ContextOptions = {}): Promise<ContextResult> {
   const cwd = options.cwd ?? process.cwd();
-  const loaded: string[] = [];
-  const visited = new Set<string>();
+  const gitRoot = options.gitRoot ?? findGitRoot(cwd) ?? cwd;
+  const fs = localFs();
 
-  let conventions = "";
-  for (const filename of ["AGENTS.md", "CLAUDE.md"]) {
-    const absPath = await findFileCaseInsensitive(cwd, filename);
-    if (absPath === null) continue;
-    const content = await tryReadFile(absPath);
-    if (content !== null) {
-      visited.add(absPath);
-      loaded.push(absPath);
-      conventions = await resolveLinks(content, cwd, visited, loaded);
-      break;
-    }
-  }
+  const [conventions, reviewRules] = await Promise.all([
+    walkUpContextFiles(fs, cwd, ["AGENTS.md", "CLAUDE.md"], gitRoot),
+    walkUpContextFiles(fs, cwd, ["REVIEW.md"], gitRoot),
+  ]);
 
-  const reviewAbsPath = await findFileCaseInsensitive(cwd, "REVIEW.md");
-  let reviewRules = "";
-  if (reviewAbsPath !== null) {
-    const reviewRaw = await tryReadFile(reviewAbsPath);
-    if (reviewRaw !== null) {
-      visited.add(reviewAbsPath);
-      loaded.push(reviewAbsPath);
-      reviewRules = await resolveLinks(reviewRaw, cwd, visited, loaded);
-    }
-  }
+  return { conventions, reviewRules };
+}
 
-  const loadedFiles = loaded.map((f) => path.relative(cwd, f));
+export async function loadContextSSH(remote: string, remoteCwd: string, gitRoot?: string): Promise<ContextResult> {
+  const fs = sshFs(remote);
+  const resolvedGitRoot = gitRoot ?? await sshExec(remote, `git -C ${JSON.stringify(remoteCwd)} rev-parse --show-toplevel`)
+    .then(out => out.trim())
+    .catch(() => remoteCwd);
 
-  return { conventions, reviewRules, loadedFiles };
+  const [conventions, reviewRules] = await Promise.all([
+    walkUpContextFiles(fs, remoteCwd, ["AGENTS.md", "CLAUDE.md"], resolvedGitRoot),
+    walkUpContextFiles(fs, remoteCwd, ["REVIEW.md"], resolvedGitRoot),
+  ]);
+
+  return { conventions, reviewRules };
 }
