@@ -25,7 +25,7 @@ export interface ContextResult {
 
 export const CONTEXT_PROVIDER_EVENT = "pi-reviewer:collect-context-providers";
 
-export type ContextProvider = (opts: { cwd: string; diffFiles: string[] }) => Promise<ContextFile[]>;
+export type ContextProvider = (opts: { cwd: string; diffFiles: string[]; fs: FsOps }) => Promise<ContextFile[]>;
 
 export interface ContextProviderEvent {
   cwd: string;
@@ -112,6 +112,7 @@ export async function collectProviderContext(
   events: MinimalEventBus,
   cwd: string,
   diffFiles: string[],
+  fs: FsOps = localFs(),
 ): Promise<ContextGroup[]> {
   const registrations: Array<{ name: string; provider: ContextProvider }> = [];
   events.emit(CONTEXT_PROVIDER_EVENT, {
@@ -122,7 +123,7 @@ export async function collectProviderContext(
   const groups = await Promise.all(
     registrations.map(async ({ name, provider }) => ({
       name,
-      files: await provider({ cwd, diffFiles }),
+      files: await provider({ cwd, diffFiles, fs }),
     })),
   );
   return groups.filter(g => g.files.length > 0);

@@ -103,10 +103,10 @@ describe("context provider integration", () => {
       modelRegistry: { getAvailable: () => [] },
     });
 
-    expect(provider).toHaveBeenCalledWith({
+    expect(provider).toHaveBeenCalledWith(expect.objectContaining({
       cwd: "/project",
       diffFiles: ["src/foo.ts"],
-    });
+    }));
   });
 
   it("no providers registered — system prompt is unchanged", async () => {

@@ -7,7 +7,7 @@ import { formatForTerminal } from "../../src/core/output.js";
 import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildSSHUserPrompt, buildUserPrompt } from "../../src/core/prompt-builder.js";
 import { readVerbose, readMinSeverity, readModel, readThinking, readDefaultBranch } from "../../src/core/ui/server/index.js";
 import { loadContextSSH } from "../../src/core/context.js";
-import { readSshFlag, resolveSshState } from "../../src/core/ssh.js";
+import { readSshFlag, resolveSshState, localFs, sshFs as makeSshFs } from "../../src/core/ssh.js";
 import { parseArgs, buildSSHDiffCommand } from "./args.js";
 import { resolveCurrentModelId } from "./model.js";
 import { setReviewFooter } from "./footer.js";
@@ -45,7 +45,7 @@ export default function (pi) {
                 const defaultModel = readModel();
                 if (parsed.dryRun) {
                     if (parsed.ssh) {
-                        const drySSHContextFiles = await collectProviderContext(pi.events, ctx.cwd, []);
+                        const drySSHContextFiles = (await collectProviderContext(pi.events, ctx.cwd, [])).flatMap(g => g.files);
                         notify(`System prompt:\n\n${buildMarkdownSystemPrompt(minSeverity, undefined, drySSHContextFiles)}`);
                         notify(`User prompt:\n\n${buildSSHUserPrompt(buildSSHDiffCommand(parsed))}`);
                     }
@@ -53,7 +53,7 @@ export default function (pi) {
                         const { diff, source, skippedFiles } = await resolveDiff({ cwd: ctx.cwd, diff: parsed.diff, branch: parsed.branch ?? readDefaultBranch(), pr: parsed.pr, dir: parsed.dir });
                         const context = await loadContext({ cwd: parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd, gitRoot: parsed.dir ? ctx.cwd : undefined });
                         const dryDiffFiles = extractDiffFiles(diff);
-                        const dryContextFiles = await collectProviderContext(pi.events, ctx.cwd, dryDiffFiles);
+                        const dryContextFiles = (await collectProviderContext(pi.events, ctx.cwd, dryDiffFiles)).flatMap(g => g.files);
                         notify(`Diff source: ${source}`);
                         notify(`System prompt:\n\n${buildJSONSystemPrompt(context, minSeverity, dryContextFiles)}`);
                         notify(`User prompt:\n\n${buildUserPrompt(diff, skippedFiles)}`);
@@ -67,20 +67,24 @@ export default function (pi) {
                     const userPrompt = buildSSHUserPrompt(diffCommand);
                     notify("Loading context…");
                     const sshFlag = readSshFlag();
-                    const sshContext = sshFlag
-                        ? await resolveSshState(sshFlag).then(s => {
-                            const remoteCwd = parsed.dir ? path.posix.join(s.remoteCwd, parsed.dir) : s.remoteCwd;
-                            const gitRoot = parsed.dir ? s.remoteCwd : undefined;
-                            return loadContextSSH(s.remote, remoteCwd, gitRoot);
-                        }).catch(() => ({ conventions: [], reviewRules: [] }))
+                    const sshState = sshFlag ? await resolveSshState(sshFlag).catch(() => null) : null;
+                    const sshRemoteCwd = sshState ? (parsed.dir ? path.posix.join(sshState.remoteCwd, parsed.dir) : sshState.remoteCwd) : ctx.cwd;
+                    const providerFs = sshState ? makeSshFs(sshState.remote) : localFs();
+                    const sshContext = sshState
+                        ? await loadContextSSH(sshState.remote, sshRemoteCwd, parsed.dir ? sshState.remoteCwd : undefined)
+                            .catch(() => ({ conventions: [], reviewRules: [] }))
                         : { conventions: [], reviewRules: [] };
-                    const sshLoadedPaths = mergeContextFiles(sshContext).map(f => f.path);
-                    if (sshLoadedPaths.length > 0)
-                        notify(`Context: ${sshLoadedPaths.join(", ")}`);
                     // diffFiles unavailable in SSH mode (agent fetches diff itself) — providers run with []
-                    const sshContextFiles = await collectProviderContext(pi.events, ctx.cwd, []);
-                    if (sshContextFiles.length > 0)
-                        notify(`Provider context: ${sshContextFiles.map(f => f.path).join(", ")}`);
+                    const sshProviderGroups = await collectProviderContext(pi.events, sshRemoteCwd, [], providerFs);
+                    const sshContextFiles = sshProviderGroups.flatMap(g => g.files);
+                    const allSshContextPaths = [...mergeContextFiles(sshContext).map(f => f.path), ...sshContextFiles.map(f => f.path)];
+                    if (allSshContextPaths.length > 0)
+                        notify(`Context: ${allSshContextPaths.join(", ")}`);
+                    const sshBuiltInFiles = mergeContextFiles(sshContext);
+                    const sshAllContextGroups = [
+                        ...(sshBuiltInFiles.length > 0 ? [{ name: "built-in", files: sshBuiltInFiles }] : []),
+                        ...sshProviderGroups,
+                    ];
                     if (!parsed.ui) {
                         // SSH-only: agent fetches diff, reviews, saves markdown
                         const systemPrompt = buildMarkdownSystemPrompt(minSeverity, sshContext, sshContextFiles);
@@ -102,6 +106,7 @@ export default function (pi) {
                     const injectionMsg = await handleUIReview({
                         result, diff, conventions, source, ssh: true, cwd: ctx.cwd, notify,
                         currentModel: currentModelId, currentThinking: thinking, defaultModel, availableModels, defaultThinking: readThinking(),
+                        contextGroups: sshAllContextGroups,
                         saveRemote: (md) => {
                             sshSaveTriggered = true;
                             pi.sendUserMessage(`Run \`git rev-parse --show-toplevel\` to get the project root path, then write the following content to that path + "/pi-review.md" (e.g. if the root is /some/path, write to /some/path/pi-review.md):\n\n${md}`);
@@ -131,20 +136,24 @@ export default function (pi) {
                     notify(warning, "warning");
                 notify("Loading context…");
                 const context = await loadContext({ cwd: parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd, gitRoot: parsed.dir ? ctx.cwd : undefined });
-                const loadedPaths = mergeContextFiles(context).map(f => f.path);
-                if (loadedPaths.length > 0)
-                    notify(`Context: ${loadedPaths.join(", ")}`);
                 const conventions = mergeContextFiles(context).map(f => f.content).join("\n\n");
                 const diffFiles = extractDiffFiles(diff);
-                const contextFiles = await collectProviderContext(pi.events, ctx.cwd, diffFiles);
-                if (contextFiles.length > 0)
-                    notify(`Provider context: ${contextFiles.map(f => f.path).join(", ")}`);
+                const providerGroups = await collectProviderContext(pi.events, ctx.cwd, diffFiles);
+                const contextFiles = providerGroups.flatMap(g => g.files);
+                const allContextPaths = [...mergeContextFiles(context).map(f => f.path), ...contextFiles.map(f => f.path)];
+                if (allContextPaths.length > 0)
+                    notify(`Context: ${allContextPaths.join(", ")}`);
                 const systemPrompt = buildJSONSystemPrompt(context, minSeverity, contextFiles);
+                const builtInFiles = mergeContextFiles(context);
+                const allContextGroups = [
+                    ...(builtInFiles.length > 0 ? [{ name: "built-in", files: builtInFiles }] : []),
+                    ...providerGroups,
+                ];
                 const userPrompt = buildUserPrompt(diff, skippedFiles);
                 stopLoader = setReviewFooter(ctx, source, { model: currentModelId, thinking });
                 const result = await runLocalReview({ systemPrompt, userPrompt, cwd: ctx.cwd, minSeverity, verbose, model, thinking, stopLoader, notify });
                 if (parsed.ui) {
-                    const injectionMsg = await handleUIReview({ result, diff, conventions, source, cwd: ctx.cwd, notify, currentModel: currentModelId, defaultModel, availableModels });
+                    const injectionMsg = await handleUIReview({ result, diff, conventions, source, cwd: ctx.cwd, notify, currentModel: currentModelId, defaultModel, availableModels, contextGroups: allContextGroups });
                     if (injectionMsg)
                         pi.sendUserMessage(injectionMsg);
                     return;

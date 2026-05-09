@@ -288,6 +288,14 @@ Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the review
 - Lock file diffs
 ```
 
+### Context providers
+
+Any pi extension can inject additional context into the review prompt by listening on the `"pi-reviewer:collect-context-providers"` event. Providers receive the list of changed files and a filesystem abstraction (works locally and over SSH), and return `{ path, content }` pairs that are appended to the system prompt.
+
+**[pi-reviewer-doc-context](./extensions/pi-reviewer-doc-context/README.md)** is the built-in context provider. It scans your project's doc dirs for `.md` files with a `description` frontmatter field and loads the ones relevant to the current diff.
+
+See [extensions/pi-reviewer-doc-context/README.md](./extensions/pi-reviewer-doc-context/README.md) for the doc file format, configuration, and the full Context Provider API.
+
 ---
 
 See [TODO.md](./TODO.md) for the full roadmap.

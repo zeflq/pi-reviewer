@@ -6,11 +6,11 @@ import { readTheme, readViewMode, readAutoCollapseViewed } from "../../config.js
 import { createRequestHandler } from "./routes.js";
 export { readTheme, readViewMode, readVerbose, readMinSeverity, readModel, readThinking, readDefaultBranch } from "../../config.js";
 const HEARTBEAT_MS = 45_000;
-export async function startUIServer(result, diff, source, ssh, modelConfig) {
+export async function startUIServer(result, diff, source, ssh, modelConfig, contextGroups) {
     const html = buildHTML(result, diff, source, ssh, readTheme(), readViewMode(), {
         ...modelConfig,
         autoCollapseViewed: readAutoCollapseViewed(),
-    });
+    }, contextGroups);
     let resolveAction;
     const actionPromise = new Promise((r) => { resolveAction = r; });
     let heartbeatTimer;

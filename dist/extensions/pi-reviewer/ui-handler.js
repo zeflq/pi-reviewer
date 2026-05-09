@@ -7,8 +7,8 @@ import { startUIServer } from "../../src/core/ui-server.js";
  * message at the right time (after any agent-side save has completed).
  */
 export async function handleUIReview(opts) {
-    const { result, diff, conventions, source, ssh, cwd, notify, saveRemote, currentModel, currentThinking, defaultModel, availableModels, defaultThinking } = opts;
-    const handle = await startUIServer(result, diff, source, ssh, { currentModel, currentThinking, defaultModel, availableModels, defaultThinking });
+    const { result, diff, conventions, source, ssh, cwd, notify, saveRemote, currentModel, currentThinking, defaultModel, availableModels, defaultThinking, contextGroups } = opts;
+    const handle = await startUIServer(result, diff, source, ssh, { currentModel, currentThinking, defaultModel, availableModels, defaultThinking }, contextGroups);
     notify(`Review UI → ${handle.url}`);
     const action = await handle.waitForAction();
     await handle.close();

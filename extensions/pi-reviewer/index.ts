@@ -9,7 +9,7 @@ import { formatForTerminal } from "../../src/core/output.js";
 import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildSSHUserPrompt, buildUserPrompt } from "../../src/core/prompt-builder.js";
 import { readVerbose, readMinSeverity, readModel, readThinking, readDefaultBranch } from "../../src/core/ui/server/index.js";
 import { loadContextSSH } from "../../src/core/context.js";
-import { readSshFlag, resolveSshState } from "../../src/core/ssh.js";
+import { readSshFlag, resolveSshState, localFs, sshFs as makeSshFs } from "../../src/core/ssh.js";
 import type { ReviewCommandArgs } from "./args.js";
 import { parseArgs, buildSSHDiffCommand } from "./args.js";
 import { resolveCurrentModelId } from "./model.js";
@@ -74,20 +74,18 @@ export default function (pi: ExtensionAPI): void {
 
           notify("Loading context…");
           const sshFlag = readSshFlag();
-          const sshContext = sshFlag
-            ? await resolveSshState(sshFlag).then(s => {
-                const remoteCwd = parsed.dir ? path.posix.join(s.remoteCwd, parsed.dir) : s.remoteCwd;
-                const gitRoot = parsed.dir ? s.remoteCwd : undefined;
-                return loadContextSSH(s.remote, remoteCwd, gitRoot);
-              }).catch(() => ({ conventions: [], reviewRules: [] }))
+          const sshState = sshFlag ? await resolveSshState(sshFlag).catch(() => null) : null;
+          const sshRemoteCwd = sshState ? (parsed.dir ? path.posix.join(sshState.remoteCwd, parsed.dir) : sshState.remoteCwd) : ctx.cwd;
+          const providerFs = sshState ? makeSshFs(sshState.remote) : localFs();
+          const sshContext = sshState
+            ? await loadContextSSH(sshState.remote, sshRemoteCwd, parsed.dir ? sshState.remoteCwd : undefined)
+                .catch(() => ({ conventions: [], reviewRules: [] }))
             : { conventions: [], reviewRules: [] };
-          const sshLoadedPaths = mergeContextFiles(sshContext).map(f => f.path);
-          if (sshLoadedPaths.length > 0) notify(`Context: ${sshLoadedPaths.join(", ")}`);
-
           // diffFiles unavailable in SSH mode (agent fetches diff itself) — providers run with []
-          const sshProviderGroups = await collectProviderContext(pi.events, ctx.cwd, []);
+          const sshProviderGroups = await collectProviderContext(pi.events, sshRemoteCwd, [], providerFs);
           const sshContextFiles = sshProviderGroups.flatMap(g => g.files);
-          if (sshContextFiles.length > 0) notify(`Provider context: ${sshContextFiles.map(f => f.path).join(", ")}`);
+          const allSshContextPaths = [...mergeContextFiles(sshContext).map(f => f.path), ...sshContextFiles.map(f => f.path)];
+          if (allSshContextPaths.length > 0) notify(`Context: ${allSshContextPaths.join(", ")}`);
           const sshBuiltInFiles = mergeContextFiles(sshContext);
           const sshAllContextGroups: ContextGroup[] = [
             ...(sshBuiltInFiles.length > 0 ? [{ name: "built-in", files: sshBuiltInFiles }] : []),
@@ -142,13 +140,12 @@ export default function (pi: ExtensionAPI): void {
         if (warning) notify(warning, "warning");
         notify("Loading context…");
         const context = await loadContext({ cwd: parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd, gitRoot: parsed.dir ? ctx.cwd : undefined });
-        const loadedPaths = mergeContextFiles(context).map(f => f.path);
-        if (loadedPaths.length > 0) notify(`Context: ${loadedPaths.join(", ")}`);
         const conventions = mergeContextFiles(context).map(f => f.content).join("\n\n");
         const diffFiles = extractDiffFiles(diff);
         const providerGroups = await collectProviderContext(pi.events, ctx.cwd, diffFiles);
         const contextFiles = providerGroups.flatMap(g => g.files);
-        if (contextFiles.length > 0) notify(`Provider context: ${contextFiles.map(f => f.path).join(", ")}`);
+        const allContextPaths = [...mergeContextFiles(context).map(f => f.path), ...contextFiles.map(f => f.path)];
+        if (allContextPaths.length > 0) notify(`Context: ${allContextPaths.join(", ")}`);
         const systemPrompt = buildJSONSystemPrompt(context, minSeverity, contextFiles);
         const builtInFiles = mergeContextFiles(context);
         const allContextGroups: ContextGroup[] = [
