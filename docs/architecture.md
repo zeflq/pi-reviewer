@@ -12,10 +12,14 @@ flowchart TD
         args["args.ts\nparseArgs()"]
         footer["footer.ts\nsetReviewFooter()"]
         index["index.ts\ncommand handler"]
-        runlocal["run-local.ts\nrunLocalReview()"]
-        runssh["run-ssh.ts\nrunSSHReview()\nrunSSHReviewAndWait()"]
-        uihandler["ui-handler.ts\nhandleUIReview()"]
         events["events.ts\ncreateEventAccumulator()"]
+        subgraph handlers["handlers/"]
+            runlocal["local.ts\nrunLocalReview()\nhandleLocalReview()"]
+            runssh["ssh.ts\nrunSSHReview()\nrunSSHReviewAndWait()\nhandleSSHReview()"]
+            uihandler["ui.ts\nhandleUIReview()"]
+            dryrun["dry-run.ts\nhandleDryRun()"]
+            ctxhelper["context.ts\nbuildContextGroups()"]
+        end
     end
 
     subgraph src["Source Layer (src/)"]
@@ -44,6 +48,8 @@ flowchart TD
     index --> runlocal --> events
     index --> runssh
     index --> uihandler --> uiserver --> browser
+    index --> dryrun
+    index --> ctxhelper
     index --> resolver --> filter --> git
     index --> context --> fs
     index --> prompt
@@ -105,7 +111,7 @@ sequenceDiagram
     actor User
     participant pi as pi TUI
     participant ext as index.ts
-    participant runssh as run-ssh.ts
+    participant runssh as handlers/ssh.ts
     participant agent as SSH agent (main pi process)
     participant remote as Remote machine (via SSH tools)
     participant claude as Claude API
@@ -168,7 +174,7 @@ In SSH+UI mode, the UI needs the full diff for rendering. Asking the agent to ec
 1. Print the entire diff to the terminal as part of the agent's response text
 2. Increase token count and slow down streaming
 
-Instead, `run-ssh.ts` listens to the `tool_result` event and captures any bash output that contains `diff --git` — the standard git diff format. This gives us the full diff silently, without it appearing in the agent's response.
+Instead, `handlers/ssh.ts` listens to the `tool_result` event and captures any bash output that contains `diff --git` — the standard git diff format. This gives us the full diff silently, without it appearing in the agent's response.
 
 ### Why `handleUIReview` returns the injection message instead of sending it
 

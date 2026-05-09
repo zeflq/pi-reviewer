@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/core/diff-resolver.js", async (importActual) => {
@@ -23,10 +24,45 @@ vi.mock("../../src/core/ssh.js", async (importActual) => {
   return { ...actual, readSshFlag: vi.fn().mockReturnValue(undefined) };
 });
 
+vi.mock("node:child_process", async (importActual) => {
+  const actual = await importActual<typeof import("node:child_process")>();
+  return { ...actual, spawn: vi.fn() };
+});
+
+vi.mock("node:fs/promises", async (importActual) => {
+  const actual = await importActual<typeof import("node:fs/promises")>();
+  return { ...actual, writeFile: vi.fn().mockResolvedValue(undefined), unlink: vi.fn().mockResolvedValue(undefined) };
+});
+
+vi.mock("../../extensions/pi-reviewer/footer.js", () => ({
+  setReviewFooter: vi.fn().mockReturnValue(vi.fn()),
+}));
+
+vi.mock("../../extensions/pi-reviewer/handlers/ui.js", () => ({
+  handleUIReview: vi.fn().mockResolvedValue(undefined),
+}));
+
+import { spawn } from "node:child_process";
 import { resolveDiff } from "../../src/core/diff-resolver.js";
 import { loadContext, CONTEXT_PROVIDER_EVENT } from "../../src/core/context.js";
 import type { ContextProviderEvent } from "../../src/core/context.js";
+import { readSshFlag } from "../../src/core/ssh.js";
+import { setReviewFooter } from "../../extensions/pi-reviewer/footer.js";
 import registerExtension from "../../extensions/pi-reviewer/index.js";
+
+// Emits a turn_end event so runLocalReview resolves successfully
+function makeFakeProcess(reviewJson = '{"summary":"LGTM","comments":[]}') {
+  const proc = Object.assign(new EventEmitter(), {
+    stdout: new EventEmitter(),
+    stderr: new EventEmitter(),
+  }) as any;
+  setImmediate(() => {
+    const line = JSON.stringify({ type: "turn_end", message: { role: "assistant", content: reviewJson } });
+    proc.stdout.emit("data", Buffer.from(line + "\n"));
+    proc.emit("close", 0, null);
+  });
+  return proc;
+}
 
 function createStubEventBus() {
   const handlers = new Map<string, Array<(data: unknown) => void>>();
@@ -127,5 +163,122 @@ describe("context provider integration", () => {
     );
     expect(systemPromptNotify![0]).toContain("use strict typing");
     expect(systemPromptNotify![0]).not.toContain("TEST EXTRA");
+  });
+});
+
+describe("command routing", () => {
+  let capturedHandler: ((args: string, ctx: unknown) => Promise<void>) | undefined;
+  let notifySpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(resolveDiff).mockResolvedValue({ diff: "diff --git a/foo.ts\n", source: "feature vs main" });
+    vi.mocked(loadContext).mockResolvedValue({ conventions: [], reviewRules: [] });
+    vi.mocked(spawn).mockReturnValue(makeFakeProcess() as any);
+    vi.mocked(setReviewFooter).mockReturnValue(vi.fn());
+
+    notifySpy = vi.fn();
+    capturedHandler = undefined;
+
+    const pi = {
+      events: createStubEventBus(),
+      registerCommand: vi.fn((_name: string, { handler }: { handler: typeof capturedHandler }) => {
+        capturedHandler = handler;
+      }),
+      on: vi.fn(),
+      sendUserMessage: vi.fn(),
+    };
+    registerExtension(pi as any);
+  });
+
+  it("local path: calls resolveDiff (not SSH)", async () => {
+    await capturedHandler!("", {
+      cwd: "/project",
+      ui: { notify: notifySpy },
+      model: undefined,
+      modelRegistry: { getAvailable: () => [] },
+    });
+    expect(resolveDiff).toHaveBeenCalled();
+    expect(readSshFlag).not.toHaveBeenCalled();
+  });
+
+  it("--ssh flag: calls readSshFlag (not resolveDiff)", async () => {
+    await capturedHandler!("--ssh", {
+      cwd: "/project",
+      ui: { notify: notifySpy },
+      model: undefined,
+      modelRegistry: { getAvailable: () => [] },
+    });
+    expect(readSshFlag).toHaveBeenCalled();
+    expect(resolveDiff).not.toHaveBeenCalled();
+  });
+});
+
+describe("error handling", () => {
+  let capturedHandler: ((args: string, ctx: unknown) => Promise<void>) | undefined;
+  let notifySpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(loadContext).mockResolvedValue({ conventions: [], reviewRules: [] });
+    vi.mocked(setReviewFooter).mockReturnValue(vi.fn());
+
+    notifySpy = vi.fn();
+    capturedHandler = undefined;
+
+    const pi = {
+      events: createStubEventBus(),
+      registerCommand: vi.fn((_name: string, { handler }: { handler: typeof capturedHandler }) => {
+        capturedHandler = handler;
+      }),
+      on: vi.fn(),
+      sendUserMessage: vi.fn(),
+    };
+    registerExtension(pi as any);
+  });
+
+  it("appends SSH hint when error is 'not a git repository' in local mode", async () => {
+    vi.mocked(resolveDiff).mockRejectedValue(new Error("not a git repository"));
+    await capturedHandler!("", {
+      cwd: "/project",
+      ui: { notify: notifySpy },
+      model: undefined,
+      modelRegistry: { getAvailable: () => [] },
+    });
+    const errorCall = notifySpy.mock.calls.find(c => String(c[0]).startsWith("Review failed:"));
+    expect(errorCall![0]).toContain("try adding --ssh");
+    expect(errorCall![1]).toBe("error");
+  });
+
+  it("no SSH hint when error is unrelated", async () => {
+    vi.mocked(resolveDiff).mockRejectedValue(new Error("network timeout"));
+    await capturedHandler!("", {
+      cwd: "/project",
+      ui: { notify: notifySpy },
+      model: undefined,
+      modelRegistry: { getAvailable: () => [] },
+    });
+    const errorCall = notifySpy.mock.calls.find(c => String(c[0]).startsWith("Review failed:"));
+    expect(errorCall![0]).not.toContain("try adding --ssh");
+  });
+
+  it("loaderState.stop is called on error after loader was set", async () => {
+    const stopFn = vi.fn();
+    vi.mocked(setReviewFooter).mockReturnValue(stopFn);
+    // resolveDiff resolves so we get past the loader setup, then spawn fails
+    vi.mocked(resolveDiff).mockResolvedValue({ diff: "diff --git\n", source: "x" });
+    vi.mocked(spawn).mockReturnValue((() => {
+      const proc = Object.assign(new EventEmitter(), { stdout: new EventEmitter(), stderr: new EventEmitter() }) as any;
+      setImmediate(() => proc.emit("close", 1, null));
+      return proc;
+    })() as any);
+
+    await capturedHandler!("", {
+      cwd: "/project",
+      ui: { notify: notifySpy },
+      model: undefined,
+      modelRegistry: { getAvailable: () => [] },
+    });
+    expect(stopFn).toHaveBeenCalled();
   });
 });

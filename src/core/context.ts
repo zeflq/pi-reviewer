@@ -126,7 +126,15 @@ export async function collectProviderContext(
       files: await provider({ cwd, diffFiles, fs }),
     })),
   );
-  return groups.filter(g => g.files.length > 0);
+  const merged = new Map<string, ContextFile[]>();
+  for (const { name, files } of groups) {
+    const existing = merged.get(name) ?? [];
+    const seen = new Set(existing.map(f => f.path));
+    merged.set(name, [...existing, ...files.filter(f => !seen.has(f.path))]);
+  }
+  return [...merged.entries()]
+    .filter(([, files]) => files.length > 0)
+    .map(([name, files]) => ({ name, files }));
 }
 
 export async function loadContext(options: ContextOptions = {}): Promise<ContextResult> {

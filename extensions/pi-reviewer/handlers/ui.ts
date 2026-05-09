@@ -1,8 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { type ReviewResult } from "../../src/core/output.js";
-import { startUIServer, type CommentDecision, type ModelInfo, type ContextGroup } from "../../src/core/ui-server.js";
+import { type ReviewResult } from "../../../src/core/output.js";
+import { startUIServer, type CommentDecision, type ModelInfo, type ContextGroup } from "../../../src/core/ui-server.js";
 
 export interface UIHandlerOptions {
   result: ReviewResult;

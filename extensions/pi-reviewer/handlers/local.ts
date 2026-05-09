@@ -4,9 +4,18 @@ import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { parseAgentResponse, type ReviewResult } from "../../src/core/output.js";
-import type { MinSeverity } from "../../src/core/prompt-builder.js";
-import { createEventAccumulator } from "./events.js";
+import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { parseAgentResponse, formatForTerminal, type ReviewResult } from "../../../src/core/output.js";
+import { loadContext, mergeContextFiles } from "../../../src/core/context.js";
+import { resolveDiff, extractDiffFiles } from "../../../src/core/diff-resolver.js";
+import { buildJSONSystemPrompt, buildUserPrompt, type MinSeverity } from "../../../src/core/prompt-builder.js";
+import { readDefaultBranch } from "../../../src/core/ui/server/index.js";
+import { createEventAccumulator } from "../events.js";
+import { setReviewFooter } from "../footer.js";
+import { handleUIReview } from "./ui.js";
+import { buildContextGroups } from "./context.js";
+import type { CommonHandlerOptions } from "./types.js";
+import type { ReviewCommandArgs } from "../args.js";
 
 export interface RunLocalOptions {
   systemPrompt: string;
@@ -103,4 +112,54 @@ export async function runLocalReview(opts: RunLocalOptions): Promise<ReviewResul
   } finally {
     await unlink(tempPath).catch(() => undefined);
   }
+}
+
+export interface HandleLocalReviewOptions extends CommonHandlerOptions {
+  parsed: ReviewCommandArgs;
+  ctx: ExtensionContext;
+}
+
+export async function handleLocalReview(opts: HandleLocalReviewOptions): Promise<void> {
+  const { parsed, ctx, pi, loaderState, minSeverity, verbose, model, thinking, currentModelId, defaultModel, availableModels, defaultThinking, notify } = opts;
+
+  notify("Fetching diff…");
+  const { diff, source, warning, skippedFiles } = await resolveDiff({
+    cwd: ctx.cwd,
+    diff: parsed.diff,
+    branch: parsed.branch ?? readDefaultBranch(),
+    pr: parsed.pr,
+    dir: parsed.dir,
+  });
+  if (warning) notify(warning, "warning");
+
+  notify("Loading context…");
+  const context = await loadContext({
+    cwd: parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd,
+    gitRoot: parsed.dir ? ctx.cwd : undefined,
+  });
+  const conventions = mergeContextFiles(context).map(f => f.content).join("\n\n");
+  const diffFiles = extractDiffFiles(diff);
+  const { groups: allContextGroups, contextFiles, contextPaths } = await buildContextGroups(pi.events, ctx.cwd, context, diffFiles);
+  if (contextPaths.length > 0) notify(`Context: ${contextPaths.join(", ")}`);
+
+  const systemPrompt = buildJSONSystemPrompt(context, minSeverity, contextFiles);
+  const userPrompt = buildUserPrompt(diff, skippedFiles);
+
+  loaderState.stop = setReviewFooter(ctx, source, { model: currentModelId, thinking });
+  const result = await runLocalReview({ systemPrompt, userPrompt, cwd: ctx.cwd, minSeverity, verbose, model, thinking, stopLoader: loaderState.stop, notify });
+
+  if (parsed.ui) {
+    const injectionMsg = await handleUIReview({
+      result, diff, conventions, source, cwd: ctx.cwd, notify,
+      currentModel: currentModelId, defaultModel, availableModels,
+      defaultThinking, contextGroups: allContextGroups,
+    });
+    if (injectionMsg) pi.sendUserMessage(injectionMsg);
+    return;
+  }
+
+  const formatted = formatForTerminal(result);
+  const date = new Date().toISOString().replace("T", " ").slice(0, 19);
+  await writeFile(path.join(ctx.cwd, "pi-review.md"), `# Pi Review — ${source}\n\n> ${date}\n\n---\n\n${formatted}\n`, "utf-8");
+  notify("Review saved → pi-review.md");
 }

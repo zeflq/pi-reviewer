@@ -1,76 +1,50 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
-}));
-
-import { execSync } from "node:child_process";
 import { buildSSHSource } from "../../extensions/pi-reviewer/index.js";
 
-const execSyncMock = vi.mocked(execSync);
-
 describe("buildSSHSource", () => {
-  beforeEach(() => {
-    execSyncMock.mockReset();
-  });
-
   it("returns PR label for --pr", () => {
-    const result = buildSSHSource({ pr: 42 } as any, "/repo");
+    const result = buildSSHSource({ pr: 42 } as any);
     expect(result).toBe("PR #42");
-    expect(execSyncMock).not.toHaveBeenCalled();
   });
 
   it("returns git diff label for --diff", () => {
-    const result = buildSSHSource({ diff: "HEAD~2" } as any, "/repo");
+    const result = buildSSHSource({ diff: "HEAD~2" } as any);
     expect(result).toBe("git diff HEAD~2");
-    expect(execSyncMock).not.toHaveBeenCalled();
   });
 
   it("returns 'HEAD vs <branch>' for --branch", () => {
-    execSyncMock.mockReturnValueOnce("feat/x\n"); // detectCurrentBranch
-
-    const result = buildSSHSource({ branch: "develop" } as any, "/repo");
-
-    expect(result).toBe("feat/x vs develop");
+    const result = buildSSHSource({ branch: "develop" } as any);
+    expect(result).toBe("HEAD vs develop");
   });
 
-  it("returns 'current vs origin/main' by default (auto-detect both)", () => {
-    execSyncMock
-      .mockReturnValueOnce("feat/api\n")    // detectCurrentBranch
-      .mockReturnValueOnce("origin/main\n"); // detectOriginBase
-
-    const result = buildSSHSource({} as any, "/repo");
-
-    expect(result).toBe("feat/api vs origin/main");
+  it("uses detectedBase when no branch configured", () => {
+    const result = buildSSHSource({} as any, { head: "feat/orders", detectedBase: "origin/main" });
+    expect(result).toBe("feat/orders vs origin/main");
   });
 
-  it("falls back to HEAD when current branch detection fails", () => {
-    execSyncMock
-      .mockImplementationOnce(() => { throw new Error("not a git repo"); }) // detectCurrentBranch
-      .mockReturnValueOnce("origin/main\n"); // detectOriginBase
-
-    const result = buildSSHSource({} as any, "/repo");
-
-    expect(result).toBe("HEAD vs origin/main");
+  it("falls back to origin/HEAD when no branch and no detectedBase", () => {
+    const result = buildSSHSource({} as any);
+    expect(result).toBe("HEAD vs origin/HEAD");
   });
 
-  it("falls back to origin/main when base branch detection fails", () => {
-    execSyncMock
-      .mockReturnValueOnce("feat/x\n")                                        // detectCurrentBranch
-      .mockImplementationOnce(() => { throw new Error("symbolic-ref failed"); }); // detectOriginBase
-
-    const result = buildSSHSource({} as any, "/repo");
-
-    expect(result).toBe("feat/x vs origin/main");
+  it("uses branch opt from config over default", () => {
+    const result = buildSSHSource({} as any, { branch: "develop" });
+    expect(result).toBe("HEAD vs develop");
   });
 
-  it("falls back to HEAD vs origin/main when both detections fail", () => {
-    execSyncMock
-      .mockImplementationOnce(() => { throw new Error(); }) // detectCurrentBranch
-      .mockImplementationOnce(() => { throw new Error(); }); // detectOriginBase
+  it("prefers parsed.branch over opts.branch", () => {
+    const result = buildSSHSource({ branch: "feature/x" } as any, { branch: "develop" });
+    expect(result).toBe("HEAD vs feature/x");
+  });
 
-    const result = buildSSHSource({} as any, "/repo");
+  it("uses remote head from opts.head", () => {
+    const result = buildSSHSource({} as any, { head: "feat/orders", branch: "develop" });
+    expect(result).toBe("feat/orders vs develop");
+  });
 
-    expect(result).toBe("HEAD vs origin/main");
+  it("falls back to HEAD when opts.head is not provided", () => {
+    const result = buildSSHSource({} as any, { branch: "develop" });
+    expect(result).toBe("HEAD vs develop");
   });
 });

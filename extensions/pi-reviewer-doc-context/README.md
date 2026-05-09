@@ -7,7 +7,7 @@ A pi extension that automatically injects relevant documentation from your proje
 At review time, the extension:
 
 1. Extracts keywords from the diff file paths (e.g. `src/auth/login.ts` → `auth`, `login`)
-2. Scans the configured doc dirs for `.md` files that have a `description` frontmatter field
+2. Scans the configured doc dirs and one level of subdirectories for `.md` files with a `description` frontmatter field
 3. Loads any doc whose description or filename matches one of the keywords
 4. Injects the matching docs into the system prompt alongside `AGENTS.md` / `REVIEW.md`
 
@@ -31,13 +31,22 @@ The `description` line is matched against extracted diff keywords — keep it sp
 
 ## Configuration
 
-Doc dirs and other settings are stored in `~/.pi/pi-doc-review-context/config.json`.
+Doc dirs and other settings are stored in `~/.pi/pi-reviewer-doc-context/config.json`.
 
 | Field | Default | Description |
 |---|---|---|
 | `docDirs` | `[".pi/notes", ".claude/notes", ".agents/notes"]` | Directories to scan for doc files, relative to project root |
 
-Example:
+Each dir is scanned one level deep — files directly inside and files in immediate subdirectories are both picked up:
+
+```
+.pi/notes/
+├── api.md                      ← scanned
+└── backend/
+    └── proxy-error-handling.md ← scanned (one level deep)
+```
+
+Example config:
 
 ```json
 {
@@ -49,7 +58,7 @@ Example:
 
 ## Context Provider API
 
-pi-reviewer exposes a hook that lets any pi extension contribute additional context to the review agent's system prompt. `pi-doc-review-context` is the built-in implementation — you can build your own alongside it.
+pi-reviewer exposes a hook that lets any pi extension contribute additional context to the review agent's system prompt. `pi-reviewer-doc-context` is the built-in implementation — you can build your own alongside it.
 
 ### Event protocol
 

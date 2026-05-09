@@ -17,22 +17,9 @@ export function runSSHReview(opts) {
     pi.sendUserMessage(userPrompt);
 }
 export function runSSHReviewAndWait(opts) {
-    const { systemPrompt, userPrompt, pi, minSeverity, stopLoader, notify } = opts;
+    const { systemPrompt, userPrompt, diff, pi, minSeverity, stopLoader, notify } = opts;
     let done = false;
-    let capturedDiff;
     return new Promise((resolve, reject) => {
-        // Capture the diff from the bash tool result so we can pass it to the UI
-        // without asking the agent to echo it back in the JSON response.
-        pi.on("tool_result", async (event) => {
-            if (done || event.toolName !== "bash")
-                return;
-            const output = event.content
-                .map((c) => ("text" in c ? c.text : ""))
-                .join("");
-            if (output.includes("diff --git ")) {
-                capturedDiff = output;
-            }
-        });
         pi.on("before_agent_start", async () => {
             if (done)
                 return {};
@@ -50,7 +37,7 @@ export function runSSHReviewAndWait(opts) {
             }
             try {
                 const result = parseAgentResponse(text, minSeverity);
-                resolve({ ...result, ...(capturedDiff !== undefined ? { diff: capturedDiff } : {}) });
+                resolve({ ...result, diff });
             }
             catch (err) {
                 reject(err instanceof Error ? err : new Error(String(err)));

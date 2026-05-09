@@ -1,13 +1,25 @@
 import http from "node:http";
-import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
-import { homedir } from "node:os";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReviewResult } from "../../../src/core/output.js";
 import { buildHTML } from "../../../src/core/ui/template.js";
-import { startUIServer, openBrowser, type UIAction } from "../../../src/core/ui/server/index.js";
+import { startUIServer, type UIAction } from "../../../src/core/ui/server/index.js";
+import { applyConfigPatch } from "../../../src/core/config.js";
 
-const CONFIG_FILE = join(homedir(), ".pi", "pi-reviewer", "config.json");
+vi.mock("node:child_process", () => ({ exec: vi.fn() }));
+
+vi.mock("../../../src/core/config.js", () => ({
+  readTheme: vi.fn().mockReturnValue("dark"),
+  readViewMode: vi.fn().mockReturnValue("split"),
+  readAutoCollapseViewed: vi.fn().mockReturnValue(false),
+  applyConfigPatch: vi.fn(),
+  readVerbose: vi.fn().mockReturnValue(false),
+  readMinSeverity: vi.fn().mockReturnValue("INFO"),
+  readModel: vi.fn().mockReturnValue(undefined),
+  readThinking: vi.fn().mockReturnValue(undefined),
+  readDefaultBranch: vi.fn().mockReturnValue(undefined),
+}));
+
+const applyConfigPatchMock = vi.mocked(applyConfigPatch);
 
 const RESULT: ReviewResult = {
   summary: "Looks good overall.",
@@ -98,23 +110,8 @@ function post(url: string, body: unknown): Promise<{ status: number }> {
 }
 
 describe("startUIServer", () => {
-  // Prevent actual browser from opening during tests
-  vi.spyOn({ openBrowser }, "openBrowser").mockImplementation(() => {});
-
-  // Save and restore config around every test to prevent disk pollution
-  let savedConfig: string | undefined;
-  beforeEach(() => {
-    try { savedConfig = readFileSync(CONFIG_FILE, "utf-8"); }
-    catch { savedConfig = undefined; }
-  });
   afterEach(() => {
-    try {
-      if (savedConfig !== undefined) {
-        writeFileSync(CONFIG_FILE, savedConfig, "utf-8");
-      } else {
-        try { unlinkSync(CONFIG_FILE); } catch { /* didn't exist before */ }
-      }
-    } catch { /* ignore */ }
+    applyConfigPatchMock.mockClear();
   });
 
   it("starts a server and returns a localhost URL", async () => {
@@ -179,10 +176,11 @@ describe("startUIServer", () => {
     await handle.close();
   });
 
-  it("POST /config with valid patch returns 204", async () => {
+  it("POST /config calls applyConfigPatch with the patch and returns 204", async () => {
     const handle = await startUIServer(RESULT, DIFF);
     const { status } = await post(handle.url + "/config", { model: "openai/gpt-4o", theme: "light" });
     expect(status).toBe(204);
+    expect(applyConfigPatchMock).toHaveBeenCalledWith({ model: "openai/gpt-4o", theme: "light" });
     await handle.close();
   });
 
@@ -197,6 +195,7 @@ describe("startUIServer", () => {
       req.end("not-json");
     });
     expect(status).toBe(204);
+    expect(applyConfigPatchMock).not.toHaveBeenCalled();
     await handle.close();
   });
 
@@ -211,6 +210,7 @@ describe("startUIServer", () => {
       req.end("");
     });
     expect(status).toBe(204);
+    expect(applyConfigPatchMock).not.toHaveBeenCalled();
     await handle.close();
   });
 });

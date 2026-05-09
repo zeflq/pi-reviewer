@@ -2,11 +2,23 @@ import type { MinSeverity } from "../../src/core/prompt-builder.js";
 
 export type { MinSeverity };
 
-export function buildSSHDiffCommand(parsed: ReviewCommandArgs): string {
+export function buildSSHOriginBaseCommand(g: string): string {
+  return `${g} symbolic-ref refs/remotes/origin/HEAD --short 2>/dev/null || { ${g} show-ref --verify --quiet refs/remotes/origin/main 2>/dev/null && echo origin/main || echo origin/master; }`;
+}
+
+export function buildSSHDiffCommand(
+  parsed: ReviewCommandArgs,
+  opts: { remoteCwd?: string; branch?: string } = {},
+): string {
+  const g = opts.remoteCwd ? `git -C ${JSON.stringify(opts.remoteCwd)}` : "git";
   if (typeof parsed.pr === "number") return `gh pr diff ${parsed.pr}`;
-  if (parsed.diff) return `git diff ${parsed.diff}`;
-  if (parsed.branch) return `git diff $(git merge-base ${parsed.branch} HEAD)`;
-  return `git diff $(git merge-base $(git symbolic-ref refs/remotes/origin/HEAD --short 2>/dev/null || echo origin/main) HEAD)`;
+  if (parsed.diff) return `${g} diff ${parsed.diff}`;
+  const branch = parsed.branch ?? opts.branch;
+  const detectBase = branch
+    ? `$(${g} merge-base ${branch} HEAD)`
+    : `$(${g} merge-base $(${buildSSHOriginBaseCommand(g)}) HEAD)`;
+  // Mirror local withUntrackedFiles: temporarily stage untracked files so they appear in the diff
+  return `_u=$(${g} ls-files --others --exclude-standard); [ -n "$_u" ] && ${g} add -N -- $_u 2>/dev/null; ${g} diff ${detectBase}; [ -n "$_u" ] && ${g} rm -r --cached --ignore-unmatch -- $_u 2>/dev/null; true`;
 }
 
 export interface ReviewCommandArgs {

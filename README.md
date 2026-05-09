@@ -30,7 +30,7 @@ Progress is shown in the pi TUI as the review runs — diff fetch, context load,
 
 ### SSH mode (`--ssh`)
 
-For reviewing code on a remote machine. Instead of spawning a subprocess, SSH mode runs directly inside the current pi agent session — which already has SSH bash tool access to the remote. The agent fetches the diff on the remote, runs the review, and saves `pi-review.md` there. No local git access needed. Requires an SSH extension (e.g. [ssh.ts](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/examples/extensions/ssh.ts)) to be active.
+For reviewing code on a remote machine. Instead of spawning a subprocess, SSH mode runs directly inside the current pi agent session — which already has SSH bash tool access to the remote. No local git access needed. Requires an SSH extension (e.g. [ssh.ts](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/examples/extensions/ssh.ts)) to be active.
 
 ```
 /review --ssh
@@ -38,7 +38,7 @@ For reviewing code on a remote machine. Instead of spawning a subprocess, SSH mo
 /review --ssh --branch dev
 ```
 
-pi-reviewer reads `AGENTS.md` / `CLAUDE.md` and `REVIEW.md` from the remote project root over SSH before starting the agent, then injects them into the system prompt. The agent fetches the diff, runs the review, and saves `pi-review.md` directly on the remote.
+Before starting the agent, pi-reviewer fetches everything over SSH in parallel: the diff (including untracked files), `AGENTS.md` / `CLAUDE.md`, `REVIEW.md`, and any context provider files. The diff is then passed directly to the agent in the prompt — the agent reviews only, no extra round-trip to fetch it. The agent saves `pi-review.md` directly on the remote.
 
 > **Note:** `--model` and `--thinking` have no effect in SSH mode. Because the review runs inside the existing pi session (not a subprocess), the model and thinking level are fixed to whatever the parent session is using.
 
@@ -59,7 +59,7 @@ The UI includes a file tree sidebar, split and unified diff views, severity brea
 
 Theme, view mode, default model, and thinking level are all remembered across reviews via `~/.pi/pi-reviewer/config.json` and can be changed from the settings panel inside the UI.
 
-`--ssh --ui` works the same as local `--ui` — the diff is captured silently from the agent's tool output and displayed in the browser without a second SSH round-trip.
+`--ssh --ui` works the same as local `--ui` — the diff is pre-fetched before the agent starts and passed directly to the browser UI.
 
 ### Fallback UI
 
@@ -184,7 +184,7 @@ Then inside the pi TUI:
 
 | Option | Description | Example |
 |---|---|---|
-| `--branch <name>` | Compare current branch against this branch (default: auto-detected from `origin/HEAD`) | `--branch dev` |
+| `--branch <name>` | Compare current branch against this branch (default: auto-detected from `origin/HEAD`) — prefer `origin/<name>` to avoid empty diffs when already on that branch | `--branch origin/dev` |
 | `--pr <number>` | Fetch and review a specific PR diff via `gh` CLI (requires [GitHub CLI](https://cli.github.com)) | `--pr 42` |
 | `--diff <ref>` | Review changes since a specific git ref | `--diff HEAD~1` |
 | `--ssh` | SSH mode: agent fetches diff and conventions on the remote (requires SSH extension) | `--ssh` |
@@ -209,7 +209,7 @@ Persistent settings are stored in `~/.pi/pi-reviewer/config.json`. All fields ar
   "model": "anthropic/claude-sonnet-4-6",
   "thinking": "low",
   "minSeverity": "INFO",
-  "defaultBranch": "main",
+  "branch": "origin/develop",
   "autoCollapseViewed": false,
   "verbose": false
 }
@@ -222,13 +222,15 @@ Persistent settings are stored in `~/.pi/pi-reviewer/config.json`. All fields ar
 | `model` | `"provider/id"` string | _(parent session's model)_ | Settings panel in `--ui`, or edit directly |
 | `thinking` | `"off"` \| `"minimal"` \| `"low"` \| `"medium"` \| `"high"` \| `"xhigh"` | _(parent session's level)_ | Settings panel in `--ui`, or edit directly |
 | `minSeverity` | `"INFO"` \| `"WARN"` \| `"CRITICAL"` | `"INFO"` | Edit directly — no UI |
-| `defaultBranch` | any branch name | _(auto-detected from `origin/HEAD`)_ | Edit directly — no UI |
+| `branch` | any branch name | _(auto-detected from `origin/HEAD`)_ | Edit directly — no UI — prefer `origin/<name>` format |
 | `autoCollapseViewed` | `true` \| `false` | `false` | Settings panel in `--ui` |
 | `verbose` | `true` \| `false` | `false` | Edit directly — no UI |
 
 **`minSeverity`** filters which findings the agent is asked to report. `"INFO"` (default) reports everything; `"WARN"` skips informational notes; `"CRITICAL"` only surfaces blockers. The `--min-severity` CLI flag uses lowercase (`info`, `warn`, `critical`) but the config file uses uppercase.
 
-**`defaultBranch`** sets the base branch used when no `--branch` flag is given. If unset, pi-reviewer auto-detects it from `git symbolic-ref refs/remotes/origin/HEAD`. Set this when auto-detection is unreliable (e.g. `origin/HEAD` not configured, monorepo with a non-standard base).
+**`branch`** sets the base branch used when no `--branch` flag is given. If unset, pi-reviewer auto-detects it from `git symbolic-ref refs/remotes/origin/HEAD`, then falls back to `origin/main`, then `origin/master`.
+
+Use the `origin/<name>` form (e.g. `"origin/develop"`) rather than a bare local branch name. With `origin/develop`, `git merge-base` correctly diffs against the last pushed state — so on the `develop` branch itself you see unpushed commits, and on a feature branch you see everything since it diverged. A bare `"develop"` compares against the local tip, which produces an empty diff when you are already on that branch.
 
 **`model`** and **`thinking`** default to whatever the parent pi session is using when not set. The `--model` and `--thinking` CLI flags override for a single run without touching this file.
 
@@ -240,7 +242,11 @@ Persistent settings are stored in `~/.pi/pi-reviewer/config.json`. All fields ar
 
 The status bar shows which branches are being compared:
 ```
+# Local mode
 Reviewing feature/my-branch vs origin/develop...
+
+# SSH mode (current branch unknown locally — remote HEAD is always the source)
+Reviewing HEAD vs develop...
 ```
 
 ### Diff size handling

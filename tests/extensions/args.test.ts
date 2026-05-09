@@ -13,13 +13,17 @@ describe("buildSSHDiffCommand", () => {
   });
 
   it("uses merge-base for --branch", () => {
-    expect(buildSSHDiffCommand({ branch: "main", dryRun: false, ssh: false, ui: false }))
-      .toBe("git diff $(git merge-base main HEAD)");
+    const cmd = buildSSHDiffCommand({ branch: "main", dryRun: false, ssh: false, ui: false });
+    expect(cmd).toContain("git diff $(git merge-base main HEAD)");
+    expect(cmd).toContain("git add -N");
+    expect(cmd).toContain("git rm -r --cached");
   });
 
   it("auto-detects origin default branch when no flags given", () => {
     const cmd = buildSSHDiffCommand({ dryRun: false, ssh: false, ui: false });
     expect(cmd).toContain("git symbolic-ref refs/remotes/origin/HEAD");
     expect(cmd).toContain("origin/main");
+    expect(cmd).toContain("git add -N");
+    expect(cmd).toContain("git rm -r --cached");
   });
 });
