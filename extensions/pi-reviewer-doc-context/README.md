@@ -7,7 +7,7 @@ A pi extension that automatically injects relevant documentation from your proje
 At review time, the extension:
 
 1. Extracts keywords from the diff file paths (e.g. `src/auth/login.ts` → `auth`, `login`)
-2. Scans the configured doc dirs and one level of subdirectories for `.md` files with a `description` frontmatter field
+2. Scans the configured doc dirs from the project root down to the working directory, one level of subdirectories deep, for `.md` files with a `description` frontmatter field
 3. Loads any doc whose description or filename matches one of the keywords
 4. Injects the matching docs into the system prompt alongside `AGENTS.md` / `REVIEW.md`
 
@@ -35,7 +35,7 @@ Doc dirs and other settings are stored in `~/.pi/pi-reviewer-doc-context/config.
 
 | Field | Default | Description |
 |---|---|---|
-| `docDirs` | `[".pi/notes", ".claude/notes", ".agents/notes"]` | Directories to scan for doc files, relative to project root |
+| `docDirs` | `[".pi/notes", ".claude/notes", ".agents/notes"]` | Directories to scan for doc files, relative to each scanned directory |
 
 Each dir is scanned one level deep — files directly inside and files in immediate subdirectories are both picked up:
 
@@ -54,6 +54,21 @@ Example config:
 }
 ```
 
+### Monorepo and --dir
+
+When `/review --dir packages/app` is used, the extension scans doc dirs at every level from the repo root down to the target directory. Paths are expressed relative to the working directory:
+
+```
+repo/
+├── .pi/notes/shared.md         → ../../.pi/notes/shared.md  (from packages/app)
+└── packages/
+    ├── .pi/notes/common.md     → ../.pi/notes/common.md
+    └── app/
+        └── .pi/notes/local.md  → .pi/notes/local.md
+```
+
+All matched docs are included in the system prompt regardless of which level they come from.
+
 ---
 
 ## Context Provider API
@@ -67,7 +82,7 @@ pi-reviewer emits `"pi-reviewer:collect-context-providers"` on `pi.events` when 
 ```typescript
 pi.events.on("pi-reviewer:collect-context-providers", (data: unknown) => {
   const { cwd, diffFiles, register } = data as ContextProviderEvent;
-  register("my-extension", async ({ cwd, diffFiles, fs }) => {
+  register("my-extension", async ({ cwd, diffFiles, fs, gitRoot }) => {
     if (!diffFiles.some(f => f.startsWith("src/api/"))) return [];
     const content = await fs.read(fs.join(cwd, "docs/api.md"));
     if (!content) return [];
@@ -91,6 +106,7 @@ type ContextProvider = (opts: {
   cwd: string;
   diffFiles: string[]; // file paths from diff --git headers
   fs: Fs;              // filesystem abstraction — works locally and over SSH
+  gitRoot?: string;    // monorepo root; walk up from cwd to here when set (e.g. --dir is used)
 }) => Promise<ContextFile[]>;
 
 interface ContextProviderEvent {
@@ -104,6 +120,7 @@ interface Fs {
   read: (path: string) => Promise<string | null>;
   list: (path: string) => Promise<string[]>;
   join: (...parts: string[]) => string;
+  dirname: (path: string) => string;
 }
 ```
 
@@ -121,6 +138,31 @@ register("my-extension", async ({ cwd, diffFiles, fs }) => {
 ```
 
 Return `[]` to contribute nothing for this review.
+
+### Monorepo walk-up
+
+When `gitRoot` is provided, scan from the repo root down to `cwd` so docs at any level are included. Use `fs.dirname` to walk up from `cwd` to `gitRoot`:
+
+```typescript
+register("my-extension", async ({ cwd, diffFiles, fs, gitRoot }) => {
+  const results: ContextFile[] = [];
+  // Walk from gitRoot (or cwd when no gitRoot) down to cwd
+  const dirs: string[] = [];
+  let current = cwd;
+  while (true) {
+    dirs.unshift(current);
+    if (!gitRoot || current === gitRoot) break;
+    const parent = fs.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  for (const dir of dirs) {
+    const content = await fs.read(fs.join(dir, "docs/summary.md"));
+    if (content) results.push({ path: fs.join(dir, "docs/summary.md"), content });
+  }
+  return results;
+});
+```
 
 ### SSH mode
 

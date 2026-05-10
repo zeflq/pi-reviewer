@@ -15,8 +15,9 @@ export async function buildContextGroups(
   context: ContextResult,
   diffFiles: string[],
   fs?: FsOps,
+  gitRoot?: string,
 ): Promise<ContextGroupsResult> {
-  const providerGroups = await collectProviderContext(events, cwd, diffFiles, fs);
+  const providerGroups = await collectProviderContext(events, cwd, diffFiles, fs, gitRoot);
   const contextFiles = providerGroups.flatMap(g => g.files);
   const builtInFiles = mergeContextFiles(context);
   const contextPaths = [...builtInFiles.map(f => f.path), ...contextFiles.map(f => f.path)];

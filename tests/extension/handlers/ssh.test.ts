@@ -22,6 +22,7 @@ vi.mock("../../../extensions/pi-reviewer/handlers/ui.js", () => ({
   handleUIReview: vi.fn().mockResolvedValue(undefined),
 }));
 
+import { collectProviderContext } from "../../../src/core/context.js";
 import { setReviewFooter } from "../../../extensions/pi-reviewer/footer.js";
 import { handleUIReview } from "../../../extensions/pi-reviewer/handlers/ui.js";
 import { handleSSHReview } from "../../../extensions/pi-reviewer/handlers/ssh.js";
@@ -82,8 +83,10 @@ function makeSyncAgentEndPi() {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.mocked(setReviewFooter).mockReturnValue(vi.fn());
   vi.mocked(handleUIReview).mockResolvedValue(undefined);
+  vi.mocked(collectProviderContext).mockResolvedValue([]);
 });
 
 describe("handleSSHReview — non-UI path (sshState = null)", () => {
@@ -113,6 +116,32 @@ describe("handleSSHReview — non-UI path (sshState = null)", () => {
     const opts = makeOpts();
     await handleSSHReview(opts);
     expect(setReviewFooter).toHaveBeenCalledWith(ctx, expect.any(String), expect.any(Object));
+  });
+});
+
+describe("handleSSHReview — gitRoot propagation (sshState = null)", () => {
+  it("passes undefined gitRoot when --dir is not set", async () => {
+    const opts = makeOpts();
+    await handleSSHReview(opts);
+    expect(collectProviderContext).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      expect.any(Array),
+      expect.anything(),
+      undefined,
+    );
+  });
+
+  it("passes ctx.cwd as gitRoot when --dir is set", async () => {
+    const opts = makeOpts({ dir: "packages/app" });
+    await handleSSHReview(opts);
+    expect(collectProviderContext).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      expect.any(Array),
+      expect.anything(),
+      "/project",
+    );
   });
 });
 

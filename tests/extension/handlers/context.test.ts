@@ -69,6 +69,6 @@ describe("buildContextGroups", () => {
   it("passes fs argument through to collectProviderContext", async () => {
     const fakeFs = { read: vi.fn(), list: vi.fn(), join: vi.fn(), dirname: vi.fn(), relative: vi.fn() } as any;
     await buildContextGroups(stubEvents, "/project", emptyContext, ["src/x.ts"], fakeFs);
-    expect(collectProviderContext).toHaveBeenCalledWith(stubEvents, "/project", ["src/x.ts"], fakeFs);
+    expect(collectProviderContext).toHaveBeenCalledWith(stubEvents, "/project", ["src/x.ts"], fakeFs, undefined);
   });
 });

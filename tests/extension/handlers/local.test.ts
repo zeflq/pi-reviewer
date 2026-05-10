@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("node:child_process", async (importActual) => {
@@ -202,5 +203,33 @@ describe("handleLocalReview — context paths notify", () => {
     await handleLocalReview(opts);
     const contextCall = opts.notify.mock.calls.find(c => String(c[0]).startsWith("Context:"));
     expect(contextCall).toBeUndefined();
+  });
+});
+
+describe("handleLocalReview — --dir cwd routing", () => {
+  it("passes nested dir as cwd and ctx.cwd as gitRoot when --dir is set", async () => {
+    const opts = makeOpts({ dir: "packages/app" });
+    await handleLocalReview(opts);
+    expect(buildContextGroups).toHaveBeenCalledWith(
+      expect.anything(),
+      path.resolve("/project", "packages/app"),
+      expect.anything(),
+      expect.anything(),
+      undefined,
+      "/project",
+    );
+  });
+
+  it("passes ctx.cwd as cwd and undefined gitRoot when --dir is not set", async () => {
+    const opts = makeOpts();
+    await handleLocalReview(opts);
+    expect(buildContextGroups).toHaveBeenCalledWith(
+      expect.anything(),
+      "/project",
+      expect.anything(),
+      expect.anything(),
+      undefined,
+      undefined,
+    );
   });
 });
