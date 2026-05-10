@@ -11,6 +11,7 @@ interface Fs {
   read: (path: string) => Promise<string | null>;
   list: (path: string) => Promise<string[]>;
   join: (...parts: string[]) => string;
+  dirname: (path: string) => string;
 }
 
 interface ContextFile {
@@ -21,7 +22,7 @@ interface ContextFile {
 interface ContextProviderEvent {
   cwd: string;
   diffFiles: string[];
-  register: (name: string, provider: (opts: { cwd: string; diffFiles: string[]; fs: Fs }) => Promise<ContextFile[]>) => void;
+  register: (name: string, provider: (opts: { cwd: string; diffFiles: string[]; fs: Fs; gitRoot?: string }) => Promise<ContextFile[]>) => void;
 }
 
 function readDocDirs(): string[] {
@@ -64,6 +65,7 @@ async function scanDocFiles(
   cwd: string,
   fs: Fs,
   docDirs: string[],
+  gitRoot?: string,
 ): Promise<Array<{ path: string; content: string; description: string }>> {
   const results: Array<{ path: string; content: string; description: string }> = [];
 
@@ -87,20 +89,39 @@ async function scanDocFiles(
     }
   }
 
-  for (const dir of docDirs) {
-    await scanDir(fs.join(cwd, dir), dir, 0);
+  // Walk from cwd up to gitRoot (or just cwd when no gitRoot), root-first
+  const dirs: string[] = [];
+  let current = cwd;
+  while (true) {
+    dirs.unshift(current);
+    if (!gitRoot || current === gitRoot) break;
+    const parent = fs.dirname(current);
+    if (parent === current) break;
+    current = parent;
   }
+
+  for (let i = 0; i < dirs.length; i++) {
+    const dir = dirs[i];
+    const levelsUp = dirs.length - 1 - i;
+    const upParts = Array.from<string>({ length: levelsUp }).fill("..");
+    for (const docDir of docDirs) {
+      const absDocDir = fs.join(dir, docDir);
+      const relDocDir = levelsUp > 0 ? fs.join(...upParts, docDir) : docDir;
+      await scanDir(absDocDir, relDocDir, 0);
+    }
+  }
+
   return results;
 }
 
 export default function (pi: ExtensionAPI): void {
   pi.events.on(CONTEXT_PROVIDER_EVENT, (data: unknown) => {
     const { register } = data as ContextProviderEvent;
-    register("doc-context", async ({ cwd, diffFiles, fs }): Promise<ContextFile[]> => {
+    register("doc-context", async ({ cwd, diffFiles, fs, gitRoot }): Promise<ContextFile[]> => {
       const keywords = extractKeywords(diffFiles);
       if (keywords.length === 0) return [];
       const docDirs = readDocDirs();
-      const docs = await scanDocFiles(cwd, fs, docDirs);
+      const docs = await scanDocFiles(cwd, fs, docDirs, gitRoot);
       return docs
         .filter(doc => isRelevant(doc.description, doc.path, keywords))
         .map(doc => ({ path: doc.path, content: doc.content }));

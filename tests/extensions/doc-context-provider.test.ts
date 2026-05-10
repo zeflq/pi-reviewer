@@ -1,4 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("node:fs", async (importActual) => {
+  const actual = await importActual<typeof import("node:fs")>();
+  return {
+    ...actual,
+    readFileSync: vi.fn().mockImplementation((path: unknown, ...args: unknown[]) => {
+      if (String(path).includes("pi-reviewer-doc-context")) {
+        throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+      }
+      return (actual.readFileSync as (path: unknown, ...args: unknown[]) => unknown)(path, ...args);
+    }),
+  };
+});
+
+import registerExtension from "../../extensions/pi-reviewer-doc-context/index.js";
 import { extractKeywords, parseDescription, isRelevant } from "../../extensions/pi-reviewer-doc-context/index.js";
 
 describe("extractKeywords", () => {
@@ -95,5 +110,117 @@ describe("isRelevant", () => {
 
   it("matches on any keyword, not all", () => {
     expect(isRelevant("Token expiry policy", "tokens.md", ["auth", "token", "deploy"])).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Walk-up behaviour via provider capture
+// ---------------------------------------------------------------------------
+
+const CONTEXT_PROVIDER_EVENT = "pi-reviewer:collect-context-providers";
+
+function makeFakeFsOps(files: Record<string, string>) {
+  return {
+    read: async (p: string): Promise<string | null> => files[p] ?? null,
+    list: async (p: string): Promise<string[]> => {
+      const prefix = p.endsWith("/") ? p : `${p}/`;
+      const seen = new Set<string>();
+      for (const key of Object.keys(files)) {
+        if (key.startsWith(prefix)) {
+          const segment = key.slice(prefix.length).split("/")[0];
+          if (segment) seen.add(segment);
+        }
+      }
+      return [...seen];
+    },
+    join: (...parts: string[]) => parts.join("/").replace(/\/+/g, "/"),
+    dirname: (p: string) => {
+      const i = p.lastIndexOf("/");
+      return i <= 0 ? "/" : p.slice(0, i);
+    },
+  };
+}
+
+function captureProvider() {
+  const handlers = new Map<string, Array<(data: unknown) => void>>();
+  const events = {
+    emit(channel: string, data: unknown) { for (const h of handlers.get(channel) ?? []) h(data); },
+    on(channel: string, handler: (data: unknown) => void) {
+      if (!handlers.has(channel)) handlers.set(channel, []);
+      handlers.get(channel)!.push(handler);
+      return () => {};
+    },
+  };
+
+  registerExtension({ events } as any);
+
+  let captured: ((opts: { cwd: string; diffFiles: string[]; fs: any; gitRoot?: string }) => Promise<{ path: string; content: string }[]>) | null = null;
+  events.emit(CONTEXT_PROVIDER_EVENT, {
+    cwd: "",
+    diffFiles: [],
+    register: (_name: string, provider: typeof captured) => { captured = provider; },
+  });
+
+  if (!captured) throw new Error("Provider was not registered");
+  return captured;
+}
+
+const docContent = (description: string) =>
+  `---\ndescription: ${description}\n---\n# Guide\n\ncontent`;
+
+describe("doc-context provider — walk-up (gitRoot)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("without gitRoot only scans cwd — parent doc not found", async () => {
+    const provider = captureProvider();
+    const fs = makeFakeFsOps({
+      "/repo/.pi/notes/deploy.md": docContent("deploy pipeline"),
+      "/repo/app/.pi/notes/auth.md": docContent("auth token handling"),
+    });
+    const files = await provider({ cwd: "/repo/app", diffFiles: ["deploy.ts", "auth.ts"], fs });
+    const paths = files.map(f => f.path);
+    expect(paths).toContain(".pi/notes/auth.md");
+    expect(paths).not.toContain("../.pi/notes/deploy.md");
+  });
+
+  it("with gitRoot finds doc at parent level", async () => {
+    const provider = captureProvider();
+    const fs = makeFakeFsOps({
+      "/repo/.pi/notes/deploy.md": docContent("deploy pipeline"),
+      "/repo/app/.pi/notes/auth.md": docContent("auth token handling"),
+    });
+    const files = await provider({ cwd: "/repo/app", diffFiles: ["deploy.ts", "auth.ts"], fs, gitRoot: "/repo" });
+    const paths = files.map(f => f.path);
+    expect(paths).toContain(".pi/notes/auth.md");
+    expect(paths).toContain("../.pi/notes/deploy.md");
+  });
+
+  it("parent doc path uses ../ prefix", async () => {
+    const provider = captureProvider();
+    const fs = makeFakeFsOps({
+      "/repo/.pi/notes/deploy.md": docContent("deploy pipeline"),
+    });
+    const files = await provider({ cwd: "/repo/app", diffFiles: ["deploy.ts"], fs, gitRoot: "/repo" });
+    expect(files[0]?.path).toBe("../.pi/notes/deploy.md");
+  });
+
+  it("returns empty when diffFiles is empty (no keywords)", async () => {
+    const provider = captureProvider();
+    const fs = makeFakeFsOps({
+      "/repo/.pi/notes/auth.md": docContent("auth token handling"),
+    });
+    const files = await provider({ cwd: "/repo", diffFiles: [], fs, gitRoot: "/repo" });
+    expect(files).toHaveLength(0);
+  });
+
+  it("irrelevant docs are filtered out", async () => {
+    const provider = captureProvider();
+    const fs = makeFakeFsOps({
+      "/repo/app/.pi/notes/deploy.md": docContent("deploy pipeline"),
+    });
+    const files = await provider({ cwd: "/repo/app", diffFiles: ["auth.ts"], fs });
+    expect(files).toHaveLength(0);
   });
 });
