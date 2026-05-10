@@ -38,7 +38,7 @@ export function isRelevant(description, filePath, keywords) {
     const haystack = `${description} ${filePath}`.toLowerCase();
     return keywords.some(kw => haystack.includes(kw));
 }
-async function scanDocFiles(cwd, fs, docDirs) {
+async function scanDocFiles(cwd, fs, docDirs, gitRoot) {
     const results = [];
     async function scanDir(absDir, relDir, depth) {
         let entries;
@@ -63,20 +63,39 @@ async function scanDocFiles(cwd, fs, docDirs) {
             }
         }
     }
-    for (const dir of docDirs) {
-        await scanDir(fs.join(cwd, dir), dir, 0);
+    // Walk from cwd up to gitRoot (or just cwd when no gitRoot), root-first
+    const dirs = [];
+    let current = cwd;
+    while (true) {
+        dirs.unshift(current);
+        if (!gitRoot || current === gitRoot)
+            break;
+        const parent = fs.dirname(current);
+        if (parent === current)
+            break;
+        current = parent;
+    }
+    for (let i = 0; i < dirs.length; i++) {
+        const dir = dirs[i];
+        const levelsUp = dirs.length - 1 - i;
+        const upParts = Array.from({ length: levelsUp }).fill("..");
+        for (const docDir of docDirs) {
+            const absDocDir = fs.join(dir, docDir);
+            const relDocDir = levelsUp > 0 ? fs.join(...upParts, docDir) : docDir;
+            await scanDir(absDocDir, relDocDir, 0);
+        }
     }
     return results;
 }
 export default function (pi) {
     pi.events.on(CONTEXT_PROVIDER_EVENT, (data) => {
         const { register } = data;
-        register("doc-context", async ({ cwd, diffFiles, fs }) => {
+        register("doc-context", async ({ cwd, diffFiles, fs, gitRoot }) => {
             const keywords = extractKeywords(diffFiles);
             if (keywords.length === 0)
                 return [];
             const docDirs = readDocDirs();
-            const docs = await scanDocFiles(cwd, fs, docDirs);
+            const docs = await scanDocFiles(cwd, fs, docDirs, gitRoot);
             return docs
                 .filter(doc => isRelevant(doc.description, doc.path, keywords))
                 .map(doc => ({ path: doc.path, content: doc.content }));

@@ -31,7 +31,9 @@ The `description` line is matched against extracted diff keywords — keep it sp
 
 ## Configuration
 
-Doc dirs and other settings are stored in `~/.pi/pi-reviewer-doc-context/config.json`.
+The extension works out of the box with no config file. By default it scans `.pi/notes`, `.claude/notes`, and `.agents/notes` relative to each directory it walks.
+
+To override the doc dirs, create `~/.pi/pi-reviewer-doc-context/config.json` manually:
 
 | Field | Default | Description |
 |---|---|---|

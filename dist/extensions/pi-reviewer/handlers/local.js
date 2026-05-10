@@ -106,7 +106,8 @@ export async function handleLocalReview(opts) {
     });
     const conventions = mergeContextFiles(context).map(f => f.content).join("\n\n");
     const diffFiles = extractDiffFiles(diff);
-    const { groups: allContextGroups, contextFiles, contextPaths } = await buildContextGroups(pi.events, ctx.cwd, context, diffFiles);
+    const providerCwd = parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd;
+    const { groups: allContextGroups, contextFiles, contextPaths } = await buildContextGroups(pi.events, providerCwd, context, diffFiles, undefined, parsed.dir ? ctx.cwd : undefined);
     if (contextPaths.length > 0)
         notify(`Context: ${contextPaths.join(", ")}`);
     const systemPrompt = buildJSONSystemPrompt(context, minSeverity, contextFiles);

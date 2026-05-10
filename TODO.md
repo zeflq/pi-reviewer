@@ -323,6 +323,13 @@ See [`extensions/pi-reviewer-doc-context/README.md`](./extensions/pi-reviewer-do
 - [x] Tests: `extractKeywords`, `parseDescription`, `isRelevant` in `tests/extensions/doc-context-provider.test.ts`
 - [x] API documented in `extensions/pi-reviewer-doc-context/README.md`
 
+### 24. User-configurable exclude patterns
+
+- [ ] Add `excludePatterns` field to `~/.pi/pi-reviewer/config.json` — array of glob/regex strings merged with `NOISE_PATTERNS` before `filterDiff` runs
+- [ ] Read and compile patterns in `readConfig`; pass to `filterDiff` alongside the built-in list
+- [ ] Surface excluded-by-user files in the existing `⚠` warning line, distinct from built-in noise exclusions
+- [ ] Update README configuration table with `excludePatterns` field
+
 ### 10. Custom system prompt
 
 - [ ] Add `system-prompt` input to `action.yml` (file path relative to project root)

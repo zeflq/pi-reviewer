@@ -5,7 +5,6 @@ AI-powered PR reviewer using the pi agent — model-agnostic, works with any pro
 - Review diffs locally, over SSH on a remote machine, or automatically on every pull request in CI
 - Findings structured by severity (critical / warn / info) and filtered against your project conventions
 - Interactive browser UI — inspect each finding against the diff, decide per-comment, then save or send to the agent
-- Model-agnostic — works with any provider (Anthropic, OpenAI, etc.)
 
 ![pi-reviewer demo](./docs/demo.gif)
 
@@ -26,8 +25,6 @@ The default. Fetches the diff and your project conventions locally, spawns a pi 
 /review --diff HEAD~1
 ```
 
-Progress is shown in the pi TUI as the review runs — diff fetch, context load, agent thinking, and writing the review are all surfaced as notifications.
-
 ### SSH mode (`--ssh`)
 
 For reviewing code on a remote machine. Instead of spawning a subprocess, SSH mode runs directly inside the current pi agent session — which already has SSH bash tool access to the remote. No local git access needed. Requires an SSH extension (e.g. [ssh.ts](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/examples/extensions/ssh.ts)) to be active.
@@ -38,139 +35,30 @@ For reviewing code on a remote machine. Instead of spawning a subprocess, SSH mo
 /review --ssh --branch dev
 ```
 
-Before starting the agent, pi-reviewer fetches everything over SSH in parallel: the diff (including untracked files), `AGENTS.md` / `CLAUDE.md`, `REVIEW.md`, and any context provider files. The diff is then passed directly to the agent in the prompt — the agent reviews only, no extra round-trip to fetch it. The agent saves `pi-review.md` directly on the remote.
+Before starting the agent, pi-reviewer fetches everything over SSH in parallel: the diff, `AGENTS.md` / `CLAUDE.md`, `REVIEW.md`, and any context provider files. The diff is passed directly to the agent — no extra round-trip needed. The agent saves `pi-review.md` directly on the remote.
 
-> **Note:** `--model` and `--thinking` have no effect in SSH mode. Because the review runs inside the existing pi session (not a subprocess), the model and thinking level are fixed to whatever the parent session is using.
+> **Note:** `--model` and `--thinking` have no effect in SSH mode — the model is fixed to whatever the parent session is using.
 
 ### UI mode (`--ui`)
 
-Opens a local browser-based review interface after the agent finishes. You can inspect every finding against the diff, decide per-comment (accept / reject / discuss), then click **Finish review** to open a panel with three options and an optional global comment:
-
-- **Save** — write decisions to `pi-review.md`
-- **Send** — inject accepted findings into the agent as a follow-up turn
-- **Save & Send** — both
+Opens a local browser-based review interface after the agent finishes. Inspect each finding against the diff, decide per-comment (accept / reject / discuss), then click **Finish review** to save decisions to `pi-review.md`, send accepted findings to the agent, or both. Works with `--ssh` too.
 
 ```
 /review --ui
 /review --ssh --ui
 ```
 
-The UI includes a file tree sidebar, split and unified diff views, severity breakdown in the header, and a summary overview panel. Cards change color after each decision (accepted → green tint, rejected → dimmed). A "jump to next pending" button moves through unreviewed comments quickly. Files can be marked as viewed once all their comments are resolved, and collapsed individually or all at once.
-
-Theme, view mode, default model, and thinking level are all remembered across reviews via `~/.pi/pi-reviewer/config.json` and can be changed from the settings panel inside the UI.
-
-`--ssh --ui` works the same as local `--ui` — the diff is pre-fetched before the agent starts and passed directly to the browser UI.
-
-### Fallback UI
-
-If the diff is empty or the agent returns no inline comments, the UI still opens with the summary panel — you can read the review and choose Save, Send, or close.
+Theme, view mode, default model, and thinking level are remembered across reviews and can be changed from the settings panel inside the UI.
 
 ---
 
 ## CI Agent
 
-Runs on every pull request via GitHub Actions. The agent posts an inline review comment directly on the PR using the GitHub Reviews API.
-
-### Setup
-
-Run once in your project root:
-
-```bash
-npx github:zeflq/pi-reviewer init
-```
-
-This generates `.github/workflows/pi-review.yml`:
-
-```yaml
-name: Pi Reviewer
-
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  workflow_dispatch:
-    inputs:
-      min-severity:
-        description: 'Minimum severity to report (info, warn, critical)'
-        required: false
-        default: 'info'
-        type: choice
-        options:
-          - info
-          - warn
-          - critical
-
-jobs:
-  review:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: zeflq/pi-reviewer@main
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          pi-api-key: ${{ secrets.PI_API_KEY }}
-          min-severity: ${{ inputs.min-severity || 'info' }}
-```
-
-Commit it to your default branch, then add your API key to your repo secrets:
-- `PI_API_KEY` — your [pi](https://github.com/mariozechner/pi) API key, works with any AI provider (Anthropic, OpenAI, etc.)
-
-### CI usage
-
-Every pull request triggers an automatic review comment posted by `github-actions[bot]`.
-
-You can also trigger a review manually via **Actions → Pi Reviewer → Run workflow**, where you can select the minimum severity level to report (`info`, `warn`, or `critical`).
-
-### Inputs
-
-| Input | Required | Description |
-|---|---|---|
-| `github-token` | yes | GitHub token to post PR comments |
-| `pi-api-key` | yes | [pi](https://github.com/mariozechner/pi) API key — works with any AI provider (Anthropic, OpenAI, etc.) |
-| `model` | no | Model to use in `provider/modelId` format (e.g. `anthropic/claude-opus-4-6`) |
-| `post-comment` | no | Post review as a GitHub PR comment (default: `true`) |
-| `min-severity` | no | Minimum severity to report: `info`, `warn`, or `critical` (default: `info`) |
-
-### Bot identity
-
-By default, review comments appear under `github-actions[bot]` — the built-in GitHub Actions identity tied to `secrets.GITHUB_TOKEN`. No extra setup required.
-
-To post comments under a custom bot name, you need a **GitHub App**:
-
-1. Create a GitHub App at `github.com/settings/apps/new`
-   - Set **Pull requests** permission to **Write**
-   - Disable the webhook (not needed)
-2. Install the app on your repository
-3. Generate a **private key** and note the **App ID**
-4. Add two secrets to your repo:
-   - `BOT_APP_ID` — the App ID
-   - `BOT_PRIVATE_KEY` — the private key contents
-
-Then update your workflow to exchange the app credentials for a token before calling pi-reviewer:
-
-```yaml
-steps:
-  - uses: actions/checkout@v4
-
-  - uses: tibdex/github-app-token@v2
-    id: bot-token
-    with:
-      app_id: ${{ secrets.BOT_APP_ID }}
-      private_key: ${{ secrets.BOT_PRIVATE_KEY }}
-
-  - uses: zeflq/pi-reviewer@main
-    with:
-      github-token: ${{ steps.bot-token.outputs.token }}
-      pi-api-key: ${{ secrets.PI_API_KEY }}
-      min-severity: ${{ inputs.min-severity || 'info' }}
-```
-
-The review comment will then appear under your GitHub App's name (e.g. `my-bot[bot]`).
+Runs on every pull request via GitHub Actions and posts an inline review comment on the PR. See [CI.md](./CI.md) for setup, inputs, and custom bot identity.
 
 ---
 
-## Shared features
+## Options and configuration
 
 ### Extension options
 
@@ -184,23 +72,23 @@ Then inside the pi TUI:
 
 | Option | Description | Example |
 |---|---|---|
-| `--branch <name>` | Compare current branch against this branch (default: auto-detected from `origin/HEAD`) — prefer `origin/<name>` to avoid empty diffs when already on that branch | `--branch origin/dev` |
-| `--pr <number>` | Fetch and review a specific PR diff via `gh` CLI (requires [GitHub CLI](https://cli.github.com)) | `--pr 42` |
+| `--branch <name>` | Compare against this branch (default: auto-detected from `origin/HEAD`) | `--branch origin/dev` |
+| `--pr <number>` | Fetch and review a specific PR diff via `gh` CLI | `--pr 42` |
 | `--diff <ref>` | Review changes since a specific git ref | `--diff HEAD~1` |
-| `--ssh` | SSH mode: agent fetches diff and conventions on the remote (requires SSH extension) | `--ssh` |
+| `--ssh` | SSH mode: agent fetches diff and conventions on the remote | `--ssh` |
 | `--ui` | Open browser review UI after the agent finishes | `--ui` |
-| `--min-severity <level>` | Only report issues at this level and above: `info`, `warn`, or `critical` (default: `info`) | `--min-severity warn` |
-| `--model <id>` | Model to use for this review in `provider/id` format, overrides config default. **Local mode only** — ignored in `--ssh`. | `--model openai/gpt-4o` |
-| `--thinking <level>` | Agent thinking budget: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`. **Local mode only** — ignored in `--ssh`. | `--thinking low` |
-| `--dir <path>` | Run the review in a specific directory (e.g. a sub-project in a monorepo). The path must be a git repository. Context files (`AGENTS.md`, `REVIEW.md`) are loaded from the sub-project and all ancestor directories up to the outer project root. | `--dir packages/api` |
+| `--min-severity <level>` | Only report issues at this level and above: `info`, `warn`, or `critical` | `--min-severity warn` |
+| `--model <id>` | Model for this review in `provider/id` format. **Local mode only.** | `--model openai/gpt-4o` |
+| `--thinking <level>` | Thinking budget: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`. **Local mode only.** | `--thinking low` |
+| `--dir <path>` | Run the review in a subdirectory (e.g. a package in a monorepo). Context files are loaded from the sub-project and all ancestor directories up to the repo root. | `--dir packages/api` |
 | `--verbose` | Print full agent output to the console | |
 | `--dry-run` | Print the diff and prompt without calling the agent | |
 
-`--model` and `--thinking` are one-shot overrides — they apply to the current run only and do not update the saved default. To change the permanent default, use the settings panel inside `--ui`. You can also edit `~/.pi/pi-reviewer/config.json` directly — useful if a saved model is no longer available and you need to clear it without opening a review.
+`--model` and `--thinking` apply to the current run only. To change the permanent default, use the settings panel in `--ui` or edit `~/.pi/pi-reviewer/config.json` directly.
 
 ### Configuration
 
-Persistent settings are stored in `~/.pi/pi-reviewer/config.json`. All fields are optional. Example of a fully populated file:
+Persistent settings are stored in `~/.pi/pi-reviewer/config.json`. All fields are optional:
 
 ```json
 {
@@ -219,56 +107,38 @@ Persistent settings are stored in `~/.pi/pi-reviewer/config.json`. All fields ar
 |---|---|---|---|
 | `theme` | `"dark"` \| `"light"` | `"dark"` | Settings panel in `--ui` |
 | `viewMode` | `"split"` \| `"unified"` | `"split"` | Settings panel in `--ui` |
-| `model` | `"provider/id"` string | _(parent session's model)_ | Settings panel in `--ui`, or edit directly |
-| `thinking` | `"off"` \| `"minimal"` \| `"low"` \| `"medium"` \| `"high"` \| `"xhigh"` | _(parent session's level)_ | Settings panel in `--ui`, or edit directly |
-| `minSeverity` | `"INFO"` \| `"WARN"` \| `"CRITICAL"` | `"INFO"` | Edit directly — no UI |
-| `branch` | any branch name | _(auto-detected from `origin/HEAD`)_ | Edit directly — no UI — prefer `origin/<name>` format |
+| `model` | `"provider/id"` string | _(parent session's model)_ | Settings panel or edit directly |
+| `thinking` | `"off"` \| `"minimal"` \| `"low"` \| `"medium"` \| `"high"` \| `"xhigh"` | _(parent session's level)_ | Settings panel or edit directly |
+| `minSeverity` | `"INFO"` \| `"WARN"` \| `"CRITICAL"` | `"INFO"` | Edit directly |
+| `branch` | any branch name | _(auto-detected from `origin/HEAD`)_ | Edit directly |
 | `autoCollapseViewed` | `true` \| `false` | `false` | Settings panel in `--ui` |
-| `verbose` | `true` \| `false` | `false` | Edit directly — no UI |
+| `verbose` | `true` \| `false` | `false` | Edit directly |
 
-**`minSeverity`** filters which findings the agent is asked to report. `"INFO"` (default) reports everything; `"WARN"` skips informational notes; `"CRITICAL"` only surfaces blockers. The `--min-severity` CLI flag uses lowercase (`info`, `warn`, `critical`) but the config file uses uppercase.
+**`minSeverity`** — `"INFO"` reports everything; `"WARN"` skips informational notes; `"CRITICAL"` only surfaces blockers. The `--min-severity` flag uses lowercase, the config file uses uppercase.
 
-**`branch`** sets the base branch used when no `--branch` flag is given. If unset, pi-reviewer auto-detects it from `git symbolic-ref refs/remotes/origin/HEAD`, then falls back to `origin/main`, then `origin/master`.
-
-Use the `origin/<name>` form (e.g. `"origin/develop"`) rather than a bare local branch name. With `origin/develop`, `git merge-base` correctly diffs against the last pushed state — so on the `develop` branch itself you see unpushed commits, and on a feature branch you see everything since it diverged. A bare `"develop"` compares against the local tip, which produces an empty diff when you are already on that branch.
-
-**`model`** and **`thinking`** default to whatever the parent pi session is using when not set. The `--model` and `--thinking` CLI flags override for a single run without touching this file.
+**`branch`** — use the `origin/<name>` form (e.g. `"origin/develop"`) rather than a bare branch name. This ensures `git merge-base` diffs against the last pushed state, avoiding an empty diff when you're already on that branch.
 
 ### Diff coverage
 
-`/review` and `--branch` use `git merge-base` to diff from the point where your branch diverged — committed changes, staged files, and unstaged edits are all included. You don't need to commit before reviewing.
+`/review` and `--branch` use `git merge-base` to diff from where your branch diverged — committed changes, staged files, and unstaged edits are all included. You don't need to commit before reviewing.
 
-`--diff` and `--pr` use the exact ref or remote diff as-is (no working tree changes).
-
-The status bar shows which branches are being compared:
-```
-# Local mode
-Reviewing feature/my-branch vs origin/develop...
-
-# SSH mode (current branch unknown locally — remote HEAD is always the source)
-Reviewing HEAD vs develop...
-```
+`--diff` and `--pr` use the exact ref or remote diff as-is.
 
 ### Diff size handling
 
-Before the diff reaches the agent, pi-reviewer automatically filters out noise files (lockfiles, `dist/`, `build/`, `.next/`, `node_modules/`, minified files, `.d.ts` files) to keep the review focused.
+pi-reviewer automatically filters out noise files (lockfiles, `dist/`, `build/`, `.next/`, `node_modules/`, minified files, `.d.ts` files). If the remaining diff still exceeds 100k characters, whole file sections are dropped — never mid-hunk — and the agent is told which files were skipped.
 
-If the remaining diff still exceeds 100k characters, whole file sections are dropped — never sliced mid-hunk — and the agent is explicitly told which files were skipped so it can mention them in its summary as not reviewed.
-
-A warning is surfaced in the console whenever files are excluded or skipped:
 ```
 ⚠ 1 noise file excluded (package-lock.json) — 2 files skipped — diff exceeded 100,000 chars (src/big.ts, src/huge.ts)
 ```
 
 ### Project conventions
 
-Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the reviewer context about your conventions, patterns, and decisions. The agent reads it before every review — both in CI and locally via the pi extension.
+Create `AGENTS.md` or `CLAUDE.md` at your project root to give the reviewer context about your conventions. `REVIEW.md` is always loaded alongside it for review-specific rules.
 
-- `AGENTS.md` is checked first; `CLAUDE.md` is used as a fallback if `AGENTS.md` is not found.
-- Filenames are matched case-insensitively (`agents.md`, `Agents.md`, and `AGENTS.md` all work).
-- Files can also live in `.pi/`, `.claude/`, or `.agents/` subdirectories — e.g. `.pi/AGENTS.md`.
-- `REVIEW.md` is always loaded alongside `AGENTS.md`/`CLAUDE.md` when present — use it for review-specific rules that don't belong in your general conventions.
-- **Monorepo support:** pi-reviewer walks up from the working directory to the git root and collects `AGENTS.md`/`REVIEW.md` at every ancestor level (root first, package last). When using `--dir`, the walk-up extends to the outer project root so shared root conventions are always included alongside package-specific ones.
+- `AGENTS.md` is checked first; `CLAUDE.md` is the fallback. Matched case-insensitively.
+- Files can also live in `.pi/`, `.claude/`, or `.agents/` subdirectories.
+- **Monorepo support:** pi-reviewer walks up from the working directory to the git root and collects `AGENTS.md`/`REVIEW.md` at every level, root first. `--dir` extends the walk-up to the outer project root.
 
 **`AGENTS.md`** — general project conventions:
 ```markdown
@@ -280,7 +150,7 @@ Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the review
 - Prefix mutations with a verb: `update`, `delete`, `create`, `reset`
 ```
 
-**`REVIEW.md`** — review-only rules (what to flag, what to skip):
+**`REVIEW.md`** — review-only rules:
 ```markdown
 # Review Guidelines
 
@@ -296,11 +166,9 @@ Create `AGENTS.md` or `CLAUDE.md` at the root of your project to give the review
 
 ### Context providers
 
-Any pi extension can inject additional context into the review prompt by listening on the `"pi-reviewer:collect-context-providers"` event. Providers receive the list of changed files and a filesystem abstraction (works locally and over SSH), and return `{ path, content }` pairs that are appended to the system prompt.
+Any pi extension can inject additional context into the review prompt by listening on the `"pi-reviewer:collect-context-providers"` event — providers receive the changed files and a filesystem abstraction (works locally and over SSH) and return `{ path, content }` pairs appended to the system prompt.
 
-**[pi-reviewer-doc-context](./extensions/pi-reviewer-doc-context/README.md)** is the built-in context provider. It scans your project's doc dirs for `.md` files with a `description` frontmatter field and loads the ones relevant to the current diff.
-
-See [extensions/pi-reviewer-doc-context/README.md](./extensions/pi-reviewer-doc-context/README.md) for the doc file format, configuration, and the full Context Provider API.
+**[pi-reviewer-doc-context](./extensions/pi-reviewer-doc-context/README.md)** is the built-in provider. It scans your project's doc dirs for `.md` files with a `description` frontmatter field and loads the ones relevant to the current diff. See its README for the doc format, configuration, and the full provider API.
 
 ---
 

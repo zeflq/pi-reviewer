@@ -62,7 +62,7 @@ export async function walkUpContextFiles(fs, cwd, filenames, gitRoot) {
 export function mergeContextFiles(result) {
     return [...result.conventions, ...result.reviewRules];
 }
-export async function collectProviderContext(events, cwd, diffFiles, fs = localFs()) {
+export async function collectProviderContext(events, cwd, diffFiles, fs = localFs(), gitRoot) {
     const registrations = [];
     events.emit(CONTEXT_PROVIDER_EVENT, {
         cwd,
@@ -71,7 +71,7 @@ export async function collectProviderContext(events, cwd, diffFiles, fs = localF
     });
     const groups = await Promise.all(registrations.map(async ({ name, provider }) => ({
         name,
-        files: await provider({ cwd, diffFiles, fs }),
+        files: await provider({ cwd, diffFiles, fs, gitRoot }),
     })));
     const merged = new Map();
     for (const { name, files } of groups) {

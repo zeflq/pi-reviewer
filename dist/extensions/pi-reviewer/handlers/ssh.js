@@ -100,7 +100,8 @@ export async function handleSSHReview(opts) {
     if (sshDiffWarning)
         notify(sshDiffWarning, "warning");
     const sshDiffFiles = extractDiffFiles(rawSshDiff);
-    const { groups: sshAllContextGroups, contextFiles: sshContextFiles, contextPaths: allSshContextPaths } = await buildContextGroups(pi.events, sshRemoteCwd, sshContext, sshDiffFiles, providerFs);
+    const sshGitRoot = parsed.dir ? (sshState ? sshState.remoteCwd : ctx.cwd) : undefined;
+    const { groups: sshAllContextGroups, contextFiles: sshContextFiles, contextPaths: allSshContextPaths } = await buildContextGroups(pi.events, sshRemoteCwd, sshContext, sshDiffFiles, providerFs, sshGitRoot);
     if (allSshContextPaths.length > 0)
         notify(`Context: ${allSshContextPaths.join(", ")}`);
     const userPrompt = buildUserPrompt(sshDiff, sshSkippedFiles);
