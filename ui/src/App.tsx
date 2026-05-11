@@ -185,7 +185,6 @@ export default function App() {
         hasAccepted={hasAccepted}
         onJumpToNext={jumpToNextPending}
         onAction={doAction}
-        summary={result.summary}
         currentModel={data.currentModel}
         currentThinking={data.currentThinking}
         severityCounts={severityCounts}
