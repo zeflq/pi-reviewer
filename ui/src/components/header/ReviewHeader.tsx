@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { SubmitPanel } from "./SubmitPanel";
-import { SettingsPanel } from "./SettingsPanel";
+import { SettingsPanel } from "../panels/SettingsPanel";
 import { TokenUsageChip } from "./TokenUsageChip";
-import type { TokenUsage } from "./types";
+import type { TokenUsage } from "../../types";
 
 interface ReviewHeaderProps {
   source?: string;

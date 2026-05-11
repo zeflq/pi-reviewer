@@ -1,4 +1,15 @@
 import { extractAssistantText } from "../../src/core/output.js";
+function accumulateUsage(acc, u) {
+    acc.inputTokens += u.input;
+    acc.outputTokens += u.output;
+    acc.cacheReadTokens += u.cacheRead;
+    acc.cacheWriteTokens += u.cacheWrite;
+    acc.totalTokens += u.totalTokens;
+    acc.cost += u.cost.total;
+}
+function emptyUsage() {
+    return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 0, cost: 0 };
+}
 export function createEventAccumulator(onUnexpected, options) {
     let lastReviewText = "";
     let tokenUsage;
@@ -26,15 +37,9 @@ export function createEventAccumulator(onUnexpected, options) {
                     return;
                 }
                 if (msg?.usage) {
-                    const u = msg.usage;
-                    tokenUsage = {
-                        inputTokens: u.input,
-                        outputTokens: u.output,
-                        cacheReadTokens: u.cacheRead,
-                        cacheWriteTokens: u.cacheWrite,
-                        totalTokens: u.totalTokens,
-                        cost: u.cost.total,
-                    };
+                    if (!tokenUsage)
+                        tokenUsage = emptyUsage();
+                    accumulateUsage(tokenUsage, msg.usage);
                 }
                 const text = extractAssistantText(ev.message);
                 if (text)
@@ -77,4 +82,13 @@ export function createEventAccumulator(onUnexpected, options) {
             return apiError;
         },
     };
+}
+export function sumMessagesUsage(messages) {
+    const acc = emptyUsage();
+    for (const msg of messages) {
+        const m = msg;
+        if (m.role === "assistant" && m.usage)
+            accumulateUsage(acc, m.usage);
+    }
+    return acc.totalTokens > 0 ? acc : undefined;
 }

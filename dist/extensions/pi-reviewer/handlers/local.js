@@ -111,7 +111,7 @@ export async function handleLocalReview(opts) {
     const providerCwd = parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd;
     const { groups: allContextGroups, contextFiles, contextPaths } = await buildContextGroups(pi.events, providerCwd, context, diffFiles, undefined, parsed.dir ? ctx.cwd : undefined);
     if (contextPaths.length > 0)
-        notify(`Context: ${contextPaths.join(", ")}`);
+        notify(`Context:\n${contextPaths.map((p) => `  ${p}`).join("\n")}`);
     const systemPrompt = buildJSONSystemPrompt(context, minSeverity, contextFiles);
     const userPrompt = buildUserPrompt(diff, skippedFiles);
     loaderState.stop = setReviewFooter(ctx, source, { model: currentModelId, thinking });

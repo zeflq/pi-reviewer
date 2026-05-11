@@ -1,4 +1,4 @@
-import type { TokenUsage } from "./types";
+import type { TokenUsage } from "../../types";
 
 function formatCost(cost: number): string {
   if (cost === 0) return "$0";

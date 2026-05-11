@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ReviewComment } from "./types";
-import { renderMarkdown } from "./renderMarkdown";
+import { ReviewComment } from "../types";
+import { renderMarkdown } from "../utils/renderMarkdown";
 
 interface Props {
   comment: ReviewComment;

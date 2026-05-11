@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { ReviewComment } from "./types";
-import { ParsedFile, SplitRow, UnifiedRow, buildSplitRows, buildUnifiedRows } from "./diff-parser";
-import { CommentCard } from "./CommentCard";
-import { getLanguage, highlightLine } from "./highlight";
-import { useSettings } from "./SettingsContext";
+import { ReviewComment } from "../../types";
+import { ParsedFile, SplitRow, UnifiedRow, buildSplitRows, buildUnifiedRows } from "../../utils/diff-parser";
+import { CommentCard } from "../CommentCard";
+import { getLanguage, highlightLine } from "../../utils/highlight";
+import { useSettings } from "../../context/SettingsContext";
 
 const AUTO_COLLAPSE_THRESHOLD = 200;
 const TRUNCATE_THRESHOLD = 300;

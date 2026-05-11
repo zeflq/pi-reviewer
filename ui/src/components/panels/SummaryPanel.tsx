@@ -1,5 +1,5 @@
 import { marked } from "marked";
-import { SidePanel } from "./SidePanel";
+import { SidePanel } from "../sidebar/SidePanel";
 
 interface Props {
   summary: string;

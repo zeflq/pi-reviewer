@@ -1,16 +1,16 @@
 import { useState, useCallback, useEffect } from "react";
-import { parseDiff } from "./diff-parser";
-import { FileDiff } from "./FileDiff";
+import { parseDiff } from "./utils/diff-parser";
+import { FileDiff } from "./components/diff/FileDiff";
 import { ReviewComment, UIData } from "./types";
 import { mockData } from "./mockData";
-import { FileTree, buildTree } from "./FileTree";
-import { ReviewHeader } from "./ReviewHeader";
-import { OrphanComments } from "./OrphanComments";
-import { SummaryPanel } from "./SummaryPanel";
-import { ContextPanel } from "./ContextPanel";
-import { SidePanelLayout } from "./SidePanelLayout";
-import { SettingsProvider } from "./SettingsContext";
-import { ScrollToTop } from "./ScrollToTop";
+import { FileTree, buildTree } from "./components/sidebar/FileTree";
+import { ReviewHeader } from "./components/header/ReviewHeader";
+import { OrphanComments } from "./components/diff/OrphanComments";
+import { SummaryPanel } from "./components/panels/SummaryPanel";
+import { ContextPanel } from "./components/panels/ContextPanel";
+import { SidePanelLayout } from "./components/sidebar/SidePanelLayout";
+import { SettingsProvider } from "./context/SettingsContext";
+import { ScrollToTop } from "./components/ScrollToTop";
 
 declare global {
   interface Window {

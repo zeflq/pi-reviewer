@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
-import type { ModelInfo } from "./types";
+import type { ModelInfo } from "../types";
 
 export interface Settings {
   viewMode: "split" | "unified";

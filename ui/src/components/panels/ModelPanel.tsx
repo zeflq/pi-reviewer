@@ -1,4 +1,4 @@
-import { ModelInfo } from "./types";
+import { ModelInfo } from "../../types";
 
 interface ModelPanelProps {
   currentModel?: string;

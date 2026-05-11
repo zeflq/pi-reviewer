@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ReviewComment } from "./types";
-import { CommentCard } from "./CommentCard";
+import { ReviewComment } from "../../types";
+import { CommentCard } from "../CommentCard";
 
 interface DecisionState {
   decision: string;

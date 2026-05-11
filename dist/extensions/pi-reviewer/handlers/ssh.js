@@ -5,6 +5,7 @@ import { extractDiffFiles } from "../../../src/core/diff-resolver.js";
 import { filterDiff } from "../../../src/core/diff-filter.js";
 import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildUserPrompt } from "../../../src/core/prompt-builder.js";
 import { readSshFlag, resolveSshState, localFs, sshFs as makeSshFs, sshExec } from "../../../src/core/ssh.js";
+import { sumMessagesUsage } from "../events.js";
 import { readDefaultBranch } from "../../../src/core/ui/server/index.js";
 import { setReviewFooter } from "../footer.js";
 import { handleUIReview } from "./ui.js";
@@ -57,19 +58,7 @@ export function runSSHReviewAndWait(opts) {
             }
             try {
                 const result = parseAgentResponse(text, minSeverity);
-                let totalInput = 0, totalOutput = 0, totalCacheRead = 0, totalCacheWrite = 0, totalTokens = 0, totalCost = 0;
-                for (const msg of event.messages) {
-                    const am = msg;
-                    if (am.role === "assistant" && am.usage) {
-                        totalInput += am.usage.input;
-                        totalOutput += am.usage.output;
-                        totalCacheRead += am.usage.cacheRead;
-                        totalCacheWrite += am.usage.cacheWrite;
-                        totalTokens += am.usage.totalTokens;
-                        totalCost += am.usage.cost.total;
-                    }
-                }
-                const tokenUsage = totalTokens > 0 ? { inputTokens: totalInput, outputTokens: totalOutput, cacheReadTokens: totalCacheRead, cacheWriteTokens: totalCacheWrite, totalTokens, cost: totalCost } : undefined;
+                const tokenUsage = sumMessagesUsage(event.messages);
                 resolve({ ...result, diff, ...(tokenUsage ? { tokenUsage } : {}) });
             }
             catch (err) {
@@ -116,7 +105,7 @@ export async function handleSSHReview(opts) {
     const sshGitRoot = parsed.dir ? (sshState ? sshState.remoteCwd : ctx.cwd) : undefined;
     const { groups: sshAllContextGroups, contextFiles: sshContextFiles, contextPaths: allSshContextPaths } = await buildContextGroups(pi.events, sshRemoteCwd, sshContext, sshDiffFiles, providerFs, sshGitRoot);
     if (allSshContextPaths.length > 0)
-        notify(`Context: ${allSshContextPaths.join(", ")}`);
+        notify(`Context:\n${allSshContextPaths.map((p) => `  ${p}`).join("\n")}`);
     const userPrompt = buildUserPrompt(sshDiff, sshSkippedFiles);
     if (!parsed.ui) {
         const systemPrompt = buildMarkdownSystemPrompt(minSeverity, sshContext, sshContextFiles);

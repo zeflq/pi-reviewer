@@ -1,7 +1,7 @@
-import { SidePanel } from "./SidePanel";
+import { SidePanel } from "../sidebar/SidePanel";
 import { ContextGroupSection } from "./ContextGroupSection";
-import { countContextFiles } from "./context-panel-utils";
-import type { ContextGroup } from "./types";
+import { countContextFiles } from "../../utils/context-panel-utils";
+import type { ContextGroup } from "../../types";
 
 interface Props {
   groups: ContextGroup[];

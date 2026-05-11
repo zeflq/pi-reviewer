@@ -1,5 +1,5 @@
 import { ContextFileItem } from "./ContextFileItem";
-import type { ContextFile } from "./types";
+import type { ContextFile } from "../../types";
 
 interface Props {
   name: string;
