@@ -260,6 +260,14 @@ body {
   color: var(--text);
 }
 
+.icon-btn--active {
+  color: var(--link);
+}
+
+.icon-btn--active:hover:not(:disabled) {
+  color: var(--link);
+}
+
 .icon-btn:disabled {
   opacity: .35;
   cursor: not-allowed;
