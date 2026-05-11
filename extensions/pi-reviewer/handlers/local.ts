@@ -145,7 +145,7 @@ export async function handleLocalReview(opts: HandleLocalReviewOptions): Promise
   const { groups: allContextGroups, contextFiles, contextPaths } = await buildContextGroups(
     pi.events, providerCwd, context, diffFiles, undefined, parsed.dir ? ctx.cwd : undefined,
   );
-  if (contextPaths.length > 0) notify(`Context: ${contextPaths.join(", ")}`);
+  if (contextPaths.length > 0) notify(`Context:\n${contextPaths.map((p) => `  ${p}`).join("\n")}`);
 
   const systemPrompt = buildJSONSystemPrompt(context, minSeverity, contextFiles);
   const userPrompt = buildUserPrompt(diff, skippedFiles);
