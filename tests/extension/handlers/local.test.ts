@@ -187,7 +187,7 @@ describe("handleLocalReview — diff warning", () => {
 });
 
 describe("handleLocalReview — context paths notify", () => {
-  it("notifies context paths when files are present", async () => {
+  it("notifies context paths one per line when files are present", async () => {
     vi.mocked(buildContextGroups).mockResolvedValue({
       groups: [],
       contextFiles: [],
@@ -195,7 +195,7 @@ describe("handleLocalReview — context paths notify", () => {
     });
     const opts = makeOpts();
     await handleLocalReview(opts);
-    expect(opts.notify).toHaveBeenCalledWith("Context: AGENTS.md, docs/api.md");
+    expect(opts.notify).toHaveBeenCalledWith("Context:\n  AGENTS.md\n  docs/api.md");
   });
 
   it("does not send context notify when no files", async () => {

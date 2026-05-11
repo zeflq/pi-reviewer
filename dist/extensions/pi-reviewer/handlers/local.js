@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parseAgentResponse, formatForTerminal } from "../../../src/core/output.js";
-import { loadContext, mergeContextFiles } from "../../../src/core/context.js";
+import { loadContext } from "../../../src/core/context.js";
 import { resolveDiff, extractDiffFiles } from "../../../src/core/diff-resolver.js";
 import { buildJSONSystemPrompt, buildUserPrompt } from "../../../src/core/prompt-builder.js";
 import { readDefaultBranch } from "../../../src/core/ui/server/index.js";
@@ -106,7 +106,6 @@ export async function handleLocalReview(opts) {
         cwd: parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd,
         gitRoot: parsed.dir ? ctx.cwd : undefined,
     });
-    const conventions = mergeContextFiles(context).map(f => f.content).join("\n\n");
     const diffFiles = extractDiffFiles(diff);
     const providerCwd = parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd;
     const { groups: allContextGroups, contextFiles, contextPaths } = await buildContextGroups(pi.events, providerCwd, context, diffFiles, undefined, parsed.dir ? ctx.cwd : undefined);
@@ -118,7 +117,7 @@ export async function handleLocalReview(opts) {
     const result = await runLocalReview({ systemPrompt, userPrompt, cwd: ctx.cwd, minSeverity, verbose, model, thinking, stopLoader: loaderState.stop, notify });
     if (parsed.ui) {
         const injectionMsg = await handleUIReview({
-            result, diff, conventions, source, cwd: ctx.cwd, notify,
+            result, diff, source, cwd: ctx.cwd, notify,
             currentModel: currentModelId, defaultModel, availableModels,
             defaultThinking, contextGroups: allContextGroups,
         });

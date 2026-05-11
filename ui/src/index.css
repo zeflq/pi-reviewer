@@ -1147,6 +1147,41 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
   margin-bottom: 4px;
 }
 
+.submit-context {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.submit-context-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.submit-context-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.submit-context-group-name {
+  flex: 1;
+  color: var(--text-body);
+}
+
+.submit-context-group-count {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .submit-footer {
   display: flex;
   justify-content: flex-end;

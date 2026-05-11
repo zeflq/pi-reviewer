@@ -131,7 +131,7 @@ export default function App() {
     setDecisions((prev) => ({ ...prev, [idx]: { decision, discussText } }));
   }, []);
 
-  function doAction(type: string, globalComment: string) {
+  function doAction(type: string, globalComment: string, selectedGroups: string[]) {
     const list = result.comments.map((_: ReviewComment, i: number) => {
       const d = decisions[i] || {};
       return { index: i, decision: d.decision || "reject", discussText: d.discussText || "" };
@@ -139,7 +139,7 @@ export default function App() {
     fetch("/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, decisions: list, globalComment }),
+      body: JSON.stringify({ type, decisions: list, globalComment, selectedGroups }),
     }).then(() => setSubmitted(true));
   }
 
@@ -193,6 +193,7 @@ export default function App() {
         onSummaryToggle={() => setActivePanel((p) => (p === "summary" ? null : "summary"))}
         onContextToggle={() => setActivePanel((p) => (p === "context" ? null : "context"))}
         contextCount={contextCount > 0 ? contextCount : undefined}
+        contextGroups={data.contextGroups ?? []}
         tokenUsage={result.tokenUsage}
       />
       <div id="layout">

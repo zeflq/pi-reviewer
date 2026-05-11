@@ -1,26 +1,28 @@
 import { useState } from "react";
 import { SubmitPanel } from "./SubmitPanel";
 import { SettingsPanel } from "../panels/SettingsPanel";
+import type { ContextGroup } from "../../types";
 
 interface HeaderActionsProps {
   allDone: boolean;
   hasAccepted: boolean;
-  onAction: (type: string, globalComment: string) => void;
+  onAction: (type: string, globalComment: string, selectedGroups: string[]) => void;
   allCollapsed: boolean;
   onToggleCollapse: () => void;
   onSummaryToggle: () => void;
   onContextToggle: () => void;
   contextCount?: number;
+  contextGroups: ContextGroup[];
 }
 
-export function HeaderActions({ allDone, hasAccepted, onAction, allCollapsed, onToggleCollapse, onSummaryToggle, onContextToggle, contextCount }: HeaderActionsProps) {
+export function HeaderActions({ allDone, hasAccepted, onAction, allCollapsed, onToggleCollapse, onSummaryToggle, onContextToggle, contextCount, contextGroups }: HeaderActionsProps) {
   const [submitOpen, setSubmitOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <>
       <span id="hdr2-sep" />
-      <button className="finish-btn" disabled={!allDone} onClick={() => setSubmitOpen(true)}>
+      <button className="finish-btn" disabled={!allDone} onClick={() => setSubmitOpen(true)} >
         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         Finish review
       </button>
@@ -56,7 +58,8 @@ export function HeaderActions({ allDone, hasAccepted, onAction, allCollapsed, on
       {submitOpen && (
         <SubmitPanel
           hasAccepted={hasAccepted}
-          onSubmit={(mode, comment) => { onAction(mode, comment); setSubmitOpen(false); }}
+          contextGroups={contextGroups}
+          onSubmit={(mode, comment, selectedGroups) => { onAction(mode, comment, selectedGroups); setSubmitOpen(false); }}
           onClose={() => setSubmitOpen(false)}
         />
       )}

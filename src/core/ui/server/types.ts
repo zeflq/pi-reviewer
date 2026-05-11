@@ -25,6 +25,7 @@ export interface UIAction {
   type: ActionType;
   decisions: CommentDecision[];
   globalComment?: string;
+  selectedGroups?: string[];
 }
 
 export interface UIServerHandle {

@@ -1,19 +1,23 @@
 import { useState } from "react";
+import { ContextGroupSelector } from "./ContextGroupSelector";
+import type { ContextGroup } from "../../types";
 
 type SubmitMode = "send" | "save" | "save-and-send";
 
 interface SubmitPanelProps {
   hasAccepted: boolean;
-  onSubmit: (mode: SubmitMode, globalComment: string) => void;
+  contextGroups: ContextGroup[];
+  onSubmit: (mode: SubmitMode, globalComment: string, selectedGroups: string[]) => void;
   onClose: () => void;
 }
 
-export function SubmitPanel({ hasAccepted, onSubmit, onClose }: SubmitPanelProps) {
+export function SubmitPanel({ hasAccepted, contextGroups, onSubmit, onClose }: SubmitPanelProps) {
   const [submitMode, setSubmitMode] = useState<SubmitMode>(hasAccepted ? "send" : "save");
   const [globalComment, setGlobalComment] = useState("");
+  const [selectedGroups, setSelectedGroups] = useState<string[]>(contextGroups.map((g) => g.name));
 
   function handleSubmit() {
-    onSubmit(submitMode, globalComment);
+    onSubmit(submitMode, globalComment, selectedGroups);
   }
 
   return (
@@ -85,6 +89,12 @@ export function SubmitPanel({ hasAccepted, onSubmit, onClose }: SubmitPanelProps
             All comments were rejected — accept or discuss at least one to enable Send.
           </div>
         )}
+
+        <ContextGroupSelector
+          groups={contextGroups}
+          selected={selectedGroups}
+          onChange={setSelectedGroups}
+        />
 
         <div className="submit-footer">
           <button className="action-btn" onClick={onClose} type="button">Cancel</button>

@@ -6,7 +6,7 @@ import path from "node:path";
 
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { parseAgentResponse, formatForTerminal, type ReviewResult } from "../../../src/core/output.js";
-import { loadContext, mergeContextFiles } from "../../../src/core/context.js";
+import { loadContext } from "../../../src/core/context.js";
 import { resolveDiff, extractDiffFiles } from "../../../src/core/diff-resolver.js";
 import { buildJSONSystemPrompt, buildUserPrompt, type MinSeverity } from "../../../src/core/prompt-builder.js";
 import { readDefaultBranch } from "../../../src/core/ui/server/index.js";
@@ -139,7 +139,6 @@ export async function handleLocalReview(opts: HandleLocalReviewOptions): Promise
     cwd: parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd,
     gitRoot: parsed.dir ? ctx.cwd : undefined,
   });
-  const conventions = mergeContextFiles(context).map(f => f.content).join("\n\n");
   const diffFiles = extractDiffFiles(diff);
   const providerCwd = parsed.dir ? path.resolve(ctx.cwd, parsed.dir) : ctx.cwd;
   const { groups: allContextGroups, contextFiles, contextPaths } = await buildContextGroups(
@@ -155,7 +154,7 @@ export async function handleLocalReview(opts: HandleLocalReviewOptions): Promise
 
   if (parsed.ui) {
     const injectionMsg = await handleUIReview({
-      result, diff, conventions, source, cwd: ctx.cwd, notify,
+      result, diff, source, cwd: ctx.cwd, notify,
       currentModel: currentModelId, defaultModel, availableModels,
       defaultThinking, contextGroups: allContextGroups,
     });

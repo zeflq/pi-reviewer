@@ -2,7 +2,7 @@ import path from "node:path";
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { parseAgentResponse, extractLastAssistantText, type ReviewResult } from "../../../src/core/output.js";
-import { loadContextSSH, mergeContextFiles } from "../../../src/core/context.js";
+import { loadContextSSH } from "../../../src/core/context.js";
 import { extractDiffFiles } from "../../../src/core/diff-resolver.js";
 import { filterDiff } from "../../../src/core/diff-filter.js";
 import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildUserPrompt, type MinSeverity } from "../../../src/core/prompt-builder.js";
@@ -157,10 +157,9 @@ export async function handleSSHReview(opts: HandleSSHReviewOptions): Promise<voi
   const systemPrompt = buildJSONSystemPrompt(sshContext, minSeverity, sshContextFiles);
   loaderState.stop = setReviewFooter(ctx, source, { model: currentModelId, thinking });
   const result = await runSSHReviewAndWait({ systemPrompt, userPrompt, diff: sshDiff, pi, minSeverity, stopLoader: loaderState.stop, notify });
-  const conventions = mergeContextFiles(sshContext).map(f => f.content).join("\n\n");
   let sshSaveTriggered = false;
   const injectionMsg = await handleUIReview({
-    result, diff: sshDiff, conventions, source, ssh: true, cwd: ctx.cwd, notify,
+    result, diff: sshDiff, source, ssh: true, cwd: ctx.cwd, notify,
     currentModel: currentModelId, currentThinking: thinking, defaultModel, availableModels,
     defaultThinking, contextGroups: sshAllContextGroups,
     saveRemote: (md) => {

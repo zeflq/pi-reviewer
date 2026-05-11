@@ -2,7 +2,7 @@ import { HeaderBrand } from "./HeaderBrand";
 import { HeaderSource } from "./HeaderSource";
 import { HeaderProgress } from "./HeaderProgress";
 import { HeaderActions } from "./HeaderActions";
-import type { TokenUsage } from "../../types";
+import type { TokenUsage, ContextGroup } from "../../types";
 
 interface ReviewHeaderProps {
   source?: string;
@@ -20,16 +20,17 @@ interface ReviewHeaderProps {
   allDone: boolean;
   hasAccepted: boolean;
   onJumpToNext: () => void;
-  onAction: (type: string, globalComment: string) => void;
+  onAction: (type: string, globalComment: string, selectedGroups: string[]) => void;
   allCollapsed: boolean;
   onToggleCollapse: () => void;
   onSummaryToggle: () => void;
   onContextToggle: () => void;
   contextCount?: number;
+  contextGroups: ContextGroup[];
 }
 
 export function ReviewHeader(props: ReviewHeaderProps) {
-  const { theme, onThemeToggle, source, ssh, sidebarOpen, onSidebarToggle, currentModel, currentThinking, tokenUsage, severityCounts, decidedCount, totalComments, allDone, hasAccepted, onJumpToNext, onAction, allCollapsed, onToggleCollapse, onSummaryToggle, onContextToggle, contextCount } = props;
+  const { theme, onThemeToggle, source, ssh, sidebarOpen, onSidebarToggle, currentModel, currentThinking, tokenUsage, severityCounts, decidedCount, totalComments, allDone, hasAccepted, onJumpToNext, onAction, allCollapsed, onToggleCollapse, onSummaryToggle, onContextToggle, contextCount, contextGroups } = props;
 
   return (
     <div id="sticky-top">
@@ -37,7 +38,7 @@ export function ReviewHeader(props: ReviewHeaderProps) {
       <div id="hdr2">
         <HeaderSource source={source} ssh={ssh} sidebarOpen={sidebarOpen} onSidebarToggle={onSidebarToggle} currentModel={currentModel} currentThinking={currentThinking} tokenUsage={tokenUsage} />
         <HeaderProgress severityCounts={severityCounts} decidedCount={decidedCount} totalComments={totalComments} allDone={allDone} onJumpToNext={onJumpToNext} />
-        <HeaderActions allDone={allDone} hasAccepted={hasAccepted} onAction={onAction} allCollapsed={allCollapsed} onToggleCollapse={onToggleCollapse} onSummaryToggle={onSummaryToggle} onContextToggle={onContextToggle} contextCount={contextCount} />
+        <HeaderActions allDone={allDone} hasAccepted={hasAccepted} onAction={onAction} allCollapsed={allCollapsed} onToggleCollapse={onToggleCollapse} onSummaryToggle={onSummaryToggle} onContextToggle={onContextToggle} contextCount={contextCount} contextGroups={contextGroups} />
       </div>
     </div>
   );

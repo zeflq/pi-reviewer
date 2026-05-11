@@ -7,7 +7,7 @@ import { startUIServer } from "../../../src/core/ui-server.js";
  * message at the right time (after any agent-side save has completed).
  */
 export async function handleUIReview(opts) {
-    const { result, diff, conventions, source, ssh, cwd, notify, saveRemote, currentModel, currentThinking, defaultModel, availableModels, defaultThinking, contextGroups } = opts;
+    const { result, diff, source, ssh, cwd, notify, saveRemote, currentModel, currentThinking, defaultModel, availableModels, defaultThinking, contextGroups } = opts;
     const handle = await startUIServer(result, diff, source, ssh, { currentModel, currentThinking, defaultModel, availableModels, defaultThinking }, contextGroups);
     notify(`Review UI → ${handle.url}`);
     const action = await handle.waitForAction();
@@ -26,9 +26,16 @@ export async function handleUIReview(opts) {
         }
     }
     if (action.type === "send" || action.type === "save-and-send") {
-        return buildInjectionMessage(result, action.decisions, conventions, action.globalComment);
+        const selectedConventions = buildConventions(contextGroups ?? [], action.selectedGroups);
+        return buildInjectionMessage(result, action.decisions, selectedConventions, action.globalComment);
     }
     return undefined;
+}
+function buildConventions(contextGroups, selectedGroups) {
+    const groups = selectedGroups
+        ? contextGroups.filter((g) => selectedGroups.includes(g.name))
+        : contextGroups;
+    return groups.flatMap((g) => g.files.map((f) => f.content)).join("\n\n");
 }
 function buildDecisionsMarkdown(result, decisions, source, globalComment) {
     const date = new Date().toISOString().replace("T", " ").slice(0, 19);
