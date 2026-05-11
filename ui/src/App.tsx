@@ -194,6 +194,7 @@ export default function App() {
         onSummaryToggle={() => setActivePanel((p) => (p === "summary" ? null : "summary"))}
         onContextToggle={() => setActivePanel((p) => (p === "context" ? null : "context"))}
         contextCount={contextCount > 0 ? contextCount : undefined}
+        tokenUsage={result.tokenUsage}
       />
       <div id="layout">
         {sidebarOpen && (

@@ -1,6 +1,7 @@
 import { extractAssistantText } from "../../src/core/output.js";
 export function createEventAccumulator(onUnexpected, options) {
     let lastReviewText = "";
+    let tokenUsage;
     let thinkingBuf = "";
     let textStarted = false;
     let hadThinking = false;
@@ -23,6 +24,17 @@ export function createEventAccumulator(onUnexpected, options) {
                 if (msg?.stopReason === "error") {
                     apiError = true;
                     return;
+                }
+                if (msg?.usage) {
+                    const u = msg.usage;
+                    tokenUsage = {
+                        inputTokens: u.input,
+                        outputTokens: u.output,
+                        cacheReadTokens: u.cacheRead,
+                        cacheWriteTokens: u.cacheWrite,
+                        totalTokens: u.totalTokens,
+                        cost: u.cost.total,
+                    };
                 }
                 const text = extractAssistantText(ev.message);
                 if (text)
@@ -54,6 +66,9 @@ export function createEventAccumulator(onUnexpected, options) {
         },
         getLastReviewText() {
             return lastReviewText;
+        },
+        getTokenUsage() {
+            return tokenUsage;
         },
         hadThinkingOnly() {
             return hadThinking && !lastReviewText;

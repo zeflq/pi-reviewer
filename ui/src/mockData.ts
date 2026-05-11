@@ -305,6 +305,14 @@ export const mockData: UIData = {
   result: {
     summary:
       "Overall the auth refactor is solid — replacing the legacy hash function and adding brute-force protection are clear wins. A few issues worth addressing before merge: the in-memory lockout map is lost on restart, the token HMAC doesn't include an expiry in the signed payload, and the user DB is read from disk on every lookup without any caching.",
+    tokenUsage: {
+      inputTokens: 18432,
+      outputTokens: 1247,
+      cacheReadTokens: 4096,
+      cacheWriteTokens: 512,
+      totalTokens: 24287,
+      cost: 0.0187,
+    },
     comments: [
       {
         file: "src/core/auth-service.ts",

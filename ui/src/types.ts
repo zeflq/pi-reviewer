@@ -16,9 +16,19 @@ export interface ReviewComment {
   side?: "LEFT" | "RIGHT";
 }
 
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  totalTokens: number;
+  cost: number;
+}
+
 export interface ReviewResult {
   summary: string;
   comments: ReviewComment[];
+  tokenUsage?: TokenUsage;
 }
 
 export interface CommentDecision {

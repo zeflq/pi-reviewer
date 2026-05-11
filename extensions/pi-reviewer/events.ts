@@ -1,8 +1,9 @@
-import { extractAssistantText, extractLastAssistantText } from "../../src/core/output.js";
+import { extractAssistantText, type TokenUsage } from "../../src/core/output.js";
 
 export interface EventAccumulator {
   process(line: string): void;
   getLastReviewText(): string;
+  getTokenUsage(): TokenUsage | undefined;
   hadThinkingOnly(): boolean;
   hadAPIError(): boolean;
 }
@@ -11,11 +12,28 @@ export interface EventAccumulatorOptions {
   onProgress?: (text: string) => void;
 }
 
+type RawUsage = { input: number; output: number; cacheRead: number; cacheWrite: number; totalTokens: number; cost: { total: number } };
+type RawUsageMessage = { role?: string; usage?: RawUsage };
+
+function accumulateUsage(acc: TokenUsage, u: RawUsage): void {
+  acc.inputTokens += u.input;
+  acc.outputTokens += u.output;
+  acc.cacheReadTokens += u.cacheRead;
+  acc.cacheWriteTokens += u.cacheWrite;
+  acc.totalTokens += u.totalTokens;
+  acc.cost += u.cost.total;
+}
+
+function emptyUsage(): TokenUsage {
+  return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 0, cost: 0 };
+}
+
 export function createEventAccumulator(
   onUnexpected: (line: string) => void,
   options?: EventAccumulatorOptions
 ): EventAccumulator {
   let lastReviewText = "";
+  let tokenUsage: TokenUsage | undefined;
   let thinkingBuf = "";
   let textStarted = false;
   let hadThinking = false;
@@ -40,10 +58,14 @@ export function createEventAccumulator(
       };
 
       if (ev?.type === "turn_end") {
-        const msg = ev.message as { stopReason?: string; model?: string } | undefined;
+        const msg = ev.message as (RawUsageMessage & { stopReason?: string }) | undefined;
         if (msg?.stopReason === "error") {
           apiError = true;
           return;
+        }
+        if (msg?.usage) {
+          if (!tokenUsage) tokenUsage = emptyUsage();
+          accumulateUsage(tokenUsage, msg.usage);
         }
         const text = extractAssistantText(ev.message);
         if (text) lastReviewText = text;
@@ -75,6 +97,10 @@ export function createEventAccumulator(
       return lastReviewText;
     },
 
+    getTokenUsage() {
+      return tokenUsage;
+    },
+
     hadThinkingOnly() {
       return hadThinking && !lastReviewText;
     },
@@ -83,4 +109,13 @@ export function createEventAccumulator(
       return apiError;
     },
   };
+}
+
+export function sumMessagesUsage(messages: unknown[]): TokenUsage | undefined {
+  const acc = emptyUsage();
+  for (const msg of messages) {
+    const m = msg as RawUsageMessage;
+    if (m.role === "assistant" && m.usage) accumulateUsage(acc, m.usage);
+  }
+  return acc.totalTokens > 0 ? acc : undefined;
 }

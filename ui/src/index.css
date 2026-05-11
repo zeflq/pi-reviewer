@@ -928,7 +928,7 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
   opacity: 0.6;
 }
 
-.reviewed-by {
+.meta-chip {
   font-size: 11px;
   color: var(--text-muted);
   padding: 2px 8px;
@@ -937,6 +937,10 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
   white-space: nowrap;
   cursor: default;
   user-select: none;
+}
+
+.token-cost {
+  opacity: 0.8;
 }
 
 /* ── Side panel shell (FileTree left, Summary/Context right) ─────────────── */

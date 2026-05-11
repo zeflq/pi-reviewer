@@ -89,6 +89,7 @@ export async function runLocalReview(opts: RunLocalOptions): Promise<ReviewResul
         }
 
         const reviewText = accumulator.getLastReviewText();
+        const usage = accumulator.getTokenUsage();
         if (!reviewText) {
           const modelLabel = model ? `"${model}"` : "the current model";
           if (accumulator.hadAPIError()) {
@@ -106,7 +107,8 @@ export async function runLocalReview(opts: RunLocalOptions): Promise<ReviewResul
           return;
         }
 
-        resolve(parseAgentResponse(reviewText, minSeverity));
+        const result = parseAgentResponse(reviewText, minSeverity);
+        resolve(usage ? { ...result, tokenUsage: usage } : result);
       });
     });
   } finally {

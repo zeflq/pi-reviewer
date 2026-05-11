@@ -7,6 +7,7 @@ import { extractDiffFiles } from "../../../src/core/diff-resolver.js";
 import { filterDiff } from "../../../src/core/diff-filter.js";
 import { buildJSONSystemPrompt, buildMarkdownSystemPrompt, buildUserPrompt, type MinSeverity } from "../../../src/core/prompt-builder.js";
 import { readSshFlag, resolveSshState, localFs, sshFs as makeSshFs, sshExec } from "../../../src/core/ssh.js";
+import { sumMessagesUsage } from "../events.js";
 import { readDefaultBranch } from "../../../src/core/ui/server/index.js";
 import { setReviewFooter } from "../footer.js";
 import { handleUIReview } from "./ui.js";
@@ -85,7 +86,8 @@ export function runSSHReviewAndWait(opts: RunSSHWaitOptions): Promise<ReviewResu
 
       try {
         const result = parseAgentResponse(text, minSeverity);
-        resolve({ ...result, diff });
+        const tokenUsage = sumMessagesUsage(event.messages);
+        resolve({ ...result, diff, ...(tokenUsage ? { tokenUsage } : {}) });
       } catch (err) {
         reject(err instanceof Error ? err : new Error(String(err)));
       }

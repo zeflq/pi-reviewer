@@ -61,6 +61,7 @@ export async function runLocalReview(opts) {
                     return;
                 }
                 const reviewText = accumulator.getLastReviewText();
+                const usage = accumulator.getTokenUsage();
                 if (!reviewText) {
                     const modelLabel = model ? `"${model}"` : "the current model";
                     if (accumulator.hadAPIError()) {
@@ -79,7 +80,8 @@ export async function runLocalReview(opts) {
                     reject(new Error(`pi process exited without producing a review.${parts.length ? `\n${parts.join("\n")}` : ""}`));
                     return;
                 }
-                resolve(parseAgentResponse(reviewText, minSeverity));
+                const result = parseAgentResponse(reviewText, minSeverity);
+                resolve(usage ? { ...result, tokenUsage: usage } : result);
             });
         });
     }

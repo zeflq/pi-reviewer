@@ -57,7 +57,20 @@ export function runSSHReviewAndWait(opts) {
             }
             try {
                 const result = parseAgentResponse(text, minSeverity);
-                resolve({ ...result, diff });
+                let totalInput = 0, totalOutput = 0, totalCacheRead = 0, totalCacheWrite = 0, totalTokens = 0, totalCost = 0;
+                for (const msg of event.messages) {
+                    const am = msg;
+                    if (am.role === "assistant" && am.usage) {
+                        totalInput += am.usage.input;
+                        totalOutput += am.usage.output;
+                        totalCacheRead += am.usage.cacheRead;
+                        totalCacheWrite += am.usage.cacheWrite;
+                        totalTokens += am.usage.totalTokens;
+                        totalCost += am.usage.cost.total;
+                    }
+                }
+                const tokenUsage = totalTokens > 0 ? { inputTokens: totalInput, outputTokens: totalOutput, cacheReadTokens: totalCacheRead, cacheWriteTokens: totalCacheWrite, totalTokens, cost: totalCost } : undefined;
+                resolve({ ...result, diff, ...(tokenUsage ? { tokenUsage } : {}) });
             }
             catch (err) {
                 reject(err instanceof Error ? err : new Error(String(err)));

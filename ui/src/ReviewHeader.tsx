@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { SubmitPanel } from "./SubmitPanel";
 import { SettingsPanel } from "./SettingsPanel";
+import { TokenUsageChip } from "./TokenUsageChip";
+import type { TokenUsage } from "./types";
 
 interface ReviewHeaderProps {
   source?: string;
@@ -24,6 +26,7 @@ interface ReviewHeaderProps {
   onToggleCollapse: () => void;
   onContextToggle: () => void;
   contextCount?: number;
+  tokenUsage?: TokenUsage;
 }
 
 export function ReviewHeader({
@@ -33,7 +36,7 @@ export function ReviewHeader({
   onJumpToNext, onAction, summary,
   currentModel, currentThinking,
   severityCounts, allCollapsed, onToggleCollapse,
-  onContextToggle, contextCount,
+  onContextToggle, contextCount, tokenUsage,
 }: ReviewHeaderProps) {
   const [submitOpen, setSubmitOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -80,10 +83,11 @@ export function ReviewHeader({
         <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, overflow: "hidden", minWidth: 0 }}>
           <span id="hdr2-source">{source ? (ssh ? `SSH · ${source}` : source) : ""}</span>
           {reviewedByLabel && (
-            <span className="reviewed-by" data-tooltip={[currentModel, currentThinking].filter(Boolean).join(" · ")}>
+            <span className="meta-chip reviewed-by" data-tooltip={[currentModel, currentThinking].filter(Boolean).join(" · ")}>
               {reviewedByLabel}
             </span>
           )}
+          {tokenUsage && <TokenUsageChip usage={tokenUsage} />}
         </div>
         {severityCounts && (
           <span className="sev-counts">

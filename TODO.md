@@ -282,6 +282,7 @@ tests/
 - [x] **Comment count badge by severity** — show `3 🔴 · 5 🟡 · 2 🔵` breakdown in the header progress area for at-a-glance severity distribution
 - [ ] **Expand context lines** — GitHub-style "…" button between diff hunks to load additional surrounding context lines without leaving the page
 - [ ] **Word-level diff highlighting** — within a changed line, highlight the exact words/tokens that differ rather than the whole line background
+- [x] **Token cost chip** — display total tokens and USD cost per review in the header (e.g. `1.2k tok · $0.0024`); tooltip shows input/output/cache-read breakdown; captured from `turn_end` usage in local mode and summed from `agent_end` messages in SSH mode
 - [x] **Empty state** — when the review has zero comments, show a clear "No issues found" message instead of a blank file list
 - [x] **Collapse all / Expand all** — single button in the header to collapse or expand every file at once
 - [x] **File tree folder compression** — collapse single-child directory chains into combined names (e.g. `providers/oauth/handlers`) à la VS Code; contained hover highlight with margin + border-radius; widen sidebar to 296 px; bump tree and comment body font size to 13 px
