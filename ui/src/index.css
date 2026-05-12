@@ -676,6 +676,18 @@ tr.hunk-hdr td {
   font-size: 11px;
 }
 
+/* Expand row */
+tr.expand-hdr td {
+  background: var(--bg);
+  color: var(--text-muted);
+  padding: 4px 8px;
+  font-size: 11px;
+  text-align: center;
+  letter-spacing: 0.04em;
+  border-top: 1px dashed var(--border);
+  border-bottom: 1px dashed var(--border);
+}
+
 /* Comment rows */
 tr.cmt-row td        { padding: 5px; background: var(--cmt-row-bg); }
 td.cmt-cell          { padding: 4px 8px; vertical-align: top; }
@@ -880,6 +892,20 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
 .dbtn-discuss.open .discuss-chevron {
   transform: rotate(180deg);
 }
+
+.dbtn-undo {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dbtn-undo:hover { color: var(--text); }
 
 /* ── Discuss area ────────────────────────────────────────────────────────── */
 .discuss-area {

@@ -170,6 +170,15 @@ export function FileDiff({ file, comments: fc, decisions, onDecide, selected, fo
       return;
     }
 
+    if (row.type === "expand") {
+      trows.push(
+        <tr key={`e${ri}`} className="expand-hdr">
+          <td colSpan={5}>··· {row.hiddenCount} hidden lines ({row.fromOln}–{row.toOln}) ···</td>
+        </tr>
+      );
+      return;
+    }
+
     const comments = splitPlacements.get(ri) ?? [];
     const hasCmt = comments.length > 0;
     const trCls = hasCmt ? "has-comment" : "";
@@ -239,6 +248,15 @@ export function FileDiff({ file, comments: fc, decisions, onDecide, selected, fo
       unifiedTrows.push(
         <tr key={`uh${ri}`} className="hunk-hdr">
           <td colSpan={4}>{row.label}</td>
+        </tr>
+      );
+      return;
+    }
+
+    if (row.type === "expand") {
+      unifiedTrows.push(
+        <tr key={`ue${ri}`} className="expand-hdr">
+          <td colSpan={4}>··· {row.hiddenCount} hidden lines ({row.fromOln}–{row.toOln}) ···</td>
         </tr>
       );
       return;

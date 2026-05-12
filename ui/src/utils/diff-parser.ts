@@ -1,11 +1,14 @@
 export interface SplitRow {
-  type: "hunk" | "ctx" | "change";
+  type: "hunk" | "ctx" | "change" | "expand";
   label?: string;
   content?: string;
   oln?: number;
   nln?: number;
   del?: { content: string; ln: number } | null;
   add?: { content: string; ln: number } | null;
+  hiddenCount?: number;
+  fromOln?: number;
+  toOln?: number;
 }
 
 export interface ParsedFile {
@@ -46,17 +49,21 @@ export function parseDiff(txt: string): ParsedFile[] {
 }
 
 export interface UnifiedRow {
-  type: "hunk" | "del" | "add" | "ctx";
+  type: "hunk" | "del" | "add" | "ctx" | "expand";
   label?: string;
   content?: string;
   oln?: number;
   nln?: number;
+  hiddenCount?: number;
+  fromOln?: number;
+  toOln?: number;
 }
 
 export function buildUnifiedRows(file: ParsedFile): UnifiedRow[] {
   const rows: UnifiedRow[] = [];
 
-  file.hunks.forEach(function (hunk) {
+  for (let hi = 0; hi < file.hunks.length; hi++) {
+    const hunk = file.hunks[hi];
     rows.push({ type: "hunk", label: "@@ -" + hunk.os + " +" + hunk.ns + " @@" + hunk.ctx });
 
     let o = hunk.os;
@@ -72,7 +79,13 @@ export function buildUnifiedRows(file: ParsedFile): UnifiedRow[] {
         rows.push({ type: "ctx", content: c, oln: o++, nln: n++ });
       }
     });
-  });
+
+    const next = file.hunks[hi + 1];
+    if (next) {
+      const hidden = next.os - o;
+      if (hidden > 0) rows.push({ type: "expand", hiddenCount: hidden, fromOln: o, toOln: next.os - 1 });
+    }
+  }
 
   return rows;
 }
@@ -80,7 +93,8 @@ export function buildUnifiedRows(file: ParsedFile): UnifiedRow[] {
 export function buildSplitRows(file: ParsedFile): SplitRow[] {
   const rows: SplitRow[] = [];
 
-  file.hunks.forEach(function (hunk) {
+  for (let hi = 0; hi < file.hunks.length; hi++) {
+    const hunk = file.hunks[hi];
     rows.push({ type: "hunk", label: "@@ -" + hunk.os + " +" + hunk.ns + " @@" + hunk.ctx });
 
     let dels: Array<{ content: string; ln: number }> = [];
@@ -110,7 +124,13 @@ export function buildSplitRows(file: ParsedFile): SplitRow[] {
     });
 
     flush();
-  });
+
+    const next = file.hunks[hi + 1];
+    if (next) {
+      const hidden = next.os - o;
+      if (hidden > 0) rows.push({ type: "expand", hiddenCount: hidden, fromOln: o, toOln: next.os - 1 });
+    }
+  }
 
   return rows;
 }

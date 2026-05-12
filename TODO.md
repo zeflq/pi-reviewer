@@ -278,9 +278,9 @@ tests/
 - [ ] **Re-run review** — button available before finishing; re-sends the same diff to the agent with optionally different settings (model, min-severity); replaces the current comments with the new result; useful when you edit `REVIEW.md` or want a stricter/looser severity pass before acting
 - [x] **Markdown rendering in comment bodies** — render backticks, bold, lists, and code blocks in comment body text instead of plain text; makes complex review comments significantly easier to scan
 - [ ] **Bulk decisions** — "Accept all INFO", "Reject all WARN", or "Reject all" buttons; reduces clicking on large diffs with many low-severity comments
-- [ ] **Decision undo indicator** — visual "changed" badge when a decision has been altered after first being set, so the user can track what they reconsidered
+- [x] **Decision undo indicator** — visual "changed" badge when a decision has been altered after first being set, so the user can track what they reconsidered
 - [x] **Comment count badge by severity** — show `3 🔴 · 5 🟡 · 2 🔵` breakdown in the header progress area for at-a-glance severity distribution
-- [ ] **Expand context lines** — GitHub-style "…" button between diff hunks to load additional surrounding context lines without leaving the page
+- [~] **Expand context lines** — GitHub-style "…" button between diff hunks to load additional surrounding context lines without leaving the page; currently shows `··· N hidden lines (X–Y) ···` indicator between hunks — content not expandable yet, requires a server endpoint to fetch raw file lines at the right git ref
 - [ ] **Word-level diff highlighting** — within a changed line, highlight the exact words/tokens that differ rather than the whole line background
 - [x] **Token cost chip** — display total tokens and USD cost per review in the header (e.g. `1.2k tok · $0.0024`); tooltip shows input/output/cache-read breakdown; captured from `turn_end` usage in local mode and summed from `agent_end` messages in SSH mode
 - [x] **Empty state** — when the review has zero comments, show a clear "No issues found" message instead of a blank file list
@@ -331,9 +331,3 @@ See [`extensions/pi-reviewer-doc-context/README.md`](./extensions/pi-reviewer-do
 - [ ] Surface excluded-by-user files in the existing `⚠` warning line, distinct from built-in noise exclusions
 - [ ] Update README configuration table with `excludePatterns` field
 
-### 10. Custom system prompt
-
-- [ ] Add `system-prompt` input to `action.yml` (file path relative to project root)
-- [ ] If file exists, use its content as-is instead of `buildSystemPrompt`
-- [ ] `AGENTS.md` / `CLAUDE.md` context is still appended unless the custom prompt already includes it
-- [ ] Update README inputs table + add usage example
