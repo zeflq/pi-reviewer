@@ -283,6 +283,7 @@ export const mockData: UIData = {
   contextGroups: [
     {
       name: "built-in",
+      description: "AGENTS.md / CLAUDE.md found in this repo",
       files: [
         { path: "AGENTS.md", content: "# Project conventions\n- Use strict TypeScript\n- All public functions must be typed\n- Prefer functional patterns over classes" },
         { path: "REVIEW.md", content: "# Review rules\n- Always check error handling\n- Validate inputs at system boundaries" },

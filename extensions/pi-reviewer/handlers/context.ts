@@ -22,7 +22,7 @@ export async function buildContextGroups(
   const builtInFiles = mergeContextFiles(context);
   const contextPaths = [...builtInFiles.map(f => f.path), ...contextFiles.map(f => f.path)];
   const groups: ContextGroup[] = [
-    ...(builtInFiles.length > 0 ? [{ name: BUILT_IN_GROUP, files: builtInFiles }] : []),
+    ...(builtInFiles.length > 0 ? [{ name: BUILT_IN_GROUP, description: "AGENTS.md / CLAUDE.md found in this repo", files: builtInFiles }] : []),
     ...providerGroups,
   ];
   return { groups, contextFiles, contextPaths };

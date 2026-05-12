@@ -5,6 +5,7 @@ export interface ContextFile {
 
 export interface ContextGroup {
   name: string;
+  description?: string;
   files: ContextFile[];
 }
 

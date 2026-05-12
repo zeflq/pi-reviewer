@@ -1193,12 +1193,47 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
 
 .submit-context-group-name {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--text-body);
 }
 
 .submit-context-group-count {
   font-size: 11px;
   color: var(--text-muted);
+}
+
+.info-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  cursor: default;
+  flex-shrink: 0;
+}
+
+.info-icon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--bg-subtle);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s;
+  z-index: 200;
+}
+
+.info-icon:hover::after {
+  opacity: 1;
 }
 
 .submit-footer {
