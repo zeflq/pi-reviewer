@@ -11,9 +11,9 @@ export function HeaderProgress({ severityCounts, decidedCount, totalComments, al
     <>
       {severityCounts && (
         <span className="sev-counts">
-          {severityCounts["critical"] ? <span className="sev-pip sev-critical">🔴 {severityCounts["critical"]}</span> : null}
-          {severityCounts["warn"] ? <span className="sev-pip sev-warn">🟡 {severityCounts["warn"]}</span> : null}
-          {severityCounts["info"] ? <span className="sev-pip sev-info">🔵 {severityCounts["info"]}</span> : null}
+          {severityCounts["critical"] ? <span className="sev-pip"><span className="sev-dot sev-dot--critical" />{severityCounts["critical"]}</span> : null}
+          {severityCounts["warn"] ? <span className="sev-pip"><span className="sev-dot sev-dot--warn" />{severityCounts["warn"]}</span> : null}
+          {severityCounts["info"] ? <span className="sev-pip"><span className="sev-dot sev-dot--info" />{severityCounts["info"]}</span> : null}
         </span>
       )}
       <span id="hdr2-sep" />

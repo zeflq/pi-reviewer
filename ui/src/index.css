@@ -10,24 +10,24 @@
   --link: #58a6ff;
   --sep: #21262d;
 
-  --del-bg: #220d0d;
-  --del-bg-empty: #1a0a0a;
-  --del-ln: #f85149;
+  --del-bg: #2d1018;
+  --del-bg-empty: #200c12;
+  --del-ln: #e06c75;
 
-  --add-bg: #122119;
-  --add-bg-empty: #0d1a10;
-  --add-ln: #3fb950;
+  --add-bg: #0e2318;
+  --add-bg-empty: #0a1b12;
+  --add-ln: #98c379;
 
   --ctx-bg: #0d1117;
   --hunk-bg: #1c2128;
   --cmt-row-bg: #0d1117;
 
-  --has-comment-del: #2d1515;
-  --has-comment-add: #0e2318;
+  --has-comment-del: #3d1422;
+  --has-comment-add: #112d1e;
   --has-comment-ctx: rgba(88, 166, 255, .06);
 
   --card-bg: #161b22;
-  --card-border: #484f58;
+  --card-border: #5e6670;
   --dbtn-hover-bg: #21262d;
   --dbtn-hover-text: #e6edf3;
   --textarea-bg: #0d1117;
@@ -173,8 +173,16 @@ body {
 }
 
 .sev-pip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   white-space: nowrap;
+}
+
+.sev-pip .sev-dot {
+  width: 10px;
+  height: 10px;
 }
 
 .empty-state {
@@ -718,21 +726,62 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
 .cc.decided-reject:hover { opacity: 0.75; }
 
 .cc-meta {
-  padding: 6px 14px 2px;
+  padding: 7px 14px 4px;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 11px;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: var(--text);
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
+.sev-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sev-dot--critical { background: #f85149; }
+.sev-dot--warn     { background: #d29922; }
+.sev-dot--info     { background: #388bfd; }
+
+.cc-location {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cc-sev {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.cc-sev--critical { color: #f85149; }
+.cc-sev--warn     { color: #d29922; }
+.cc-sev--info     { color: #388bfd; }
+
 .cc-status {
-  margin-left: auto;
   font-size: 11px;
   color: var(--text-muted);
   flex-shrink: 0;
 }
+
+.cc-copy {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.cc-copy:hover { color: var(--text); }
 .cc-snapped {
   margin-left: auto;
   font-size: 11px;
@@ -792,18 +841,45 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
 .dbtn {
   cursor: pointer;
   background: none;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: 4px;
   padding: 3px 10px;
   font-size: 11px;
   color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.dbtn:disabled       { opacity: .35; cursor: not-allowed; }
-.dbtn:hover          { background: var(--dbtn-hover-bg); color: var(--dbtn-hover-text); }
-.dbtn.a-accept       { background: var(--green-bg, #1a4731); border-color: var(--green-border, #238636); color: var(--green-text, #3fb950); }
-.dbtn.a-reject       { background: var(--red-bg,   #4a1a1a); border-color: var(--red-border,   #6e3232); color: var(--red-text,   #f85149); }
-.dbtn.a-discuss      { background: var(--green-bg, #1a4731); border-color: var(--green-border, #238636); color: var(--green-text, #3fb950); }
+.dbtn:disabled { opacity: .35; cursor: not-allowed; }
+
+.dbtn-accept {
+  border-color: #2ea043;
+  color: #3fb950;
+}
+.dbtn-accept:hover:not(:disabled) { background: rgba(46, 160, 67, 0.12); }
+.dbtn-accept.active { background: rgba(46, 160, 67, 0.15); }
+
+.dbtn-reject {
+  border-color: #8b2828;
+  color: #e06c75;
+}
+.dbtn-reject:hover:not(:disabled) { background: rgba(224, 108, 117, 0.12); }
+.dbtn-reject.active { background: rgba(224, 108, 117, 0.15); }
+
+.dbtn-discuss {
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.dbtn-discuss:hover:not(:disabled) { background: var(--bg-inset); color: var(--text); }
+.dbtn-discuss.active { color: var(--link); border-color: var(--link); }
+
+.discuss-chevron {
+  transition: transform 150ms ease;
+}
+.dbtn-discuss.open .discuss-chevron {
+  transform: rotate(180deg);
+}
 
 /* ── Discuss area ────────────────────────────────────────────────────────── */
 .discuss-area {
