@@ -480,6 +480,25 @@ body {
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  transition: transform 180ms ease;
+}
+
+.collapse-icon--collapsed {
+  transform: rotate(-90deg);
+}
+
+.file-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 200ms ease;
+}
+
+.file-body--collapsed {
+  grid-template-rows: 0fr;
+}
+
+.file-body > * {
+  overflow: hidden;
 }
 
 .fblock-viewed .diff-table {
