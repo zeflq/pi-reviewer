@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SubmitPanel } from "./SubmitPanel";
 import { SettingsPanel } from "../panels/SettingsPanel";
 import type { ContextGroup } from "../../types";
@@ -18,6 +18,12 @@ interface HeaderActionsProps {
 export function HeaderActions({ allDone, hasAccepted, onAction, allCollapsed, onToggleCollapse, onSummaryToggle, onContextToggle, contextCount, contextGroups }: HeaderActionsProps) {
   const [submitOpen, setSubmitOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = () => { if (allDone) setSubmitOpen(true); };
+    document.addEventListener("pi:open-finish", handler);
+    return () => document.removeEventListener("pi:open-finish", handler);
+  }, [allDone]);
 
   return (
     <>

@@ -11,6 +11,7 @@ import { ContextPanel } from "./components/panels/ContextPanel";
 import { SidePanelLayout } from "./components/sidebar/SidePanelLayout";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ScrollToTop } from "./components/ScrollToTop";
+import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 
 declare global {
   interface Window {
@@ -255,6 +256,7 @@ export default function App() {
         )}
       </div>
       <ScrollToTop />
+      <KeyboardShortcuts onDecide={onDecide} />
     </SettingsProvider>
   );
 }
