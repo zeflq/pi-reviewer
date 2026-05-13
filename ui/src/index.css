@@ -1348,13 +1348,13 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
 
 
 /* ── Scroll to top ───────────────────────────────────────────────────────── */
-.scroll-to-top {
+.scroll-to-top,
+.shortcuts-btn {
   position: fixed;
   bottom: 28px;
-  right: 28px;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 6px;
   background: var(--bg-inset);
   border: 1px solid var(--border);
   color: var(--text-muted);
@@ -1366,7 +1366,11 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
   transition: opacity 0.15s, border-color 0.15s;
   z-index: 100;
 }
-.scroll-to-top:hover {
+.scroll-to-top { right: 28px; }
+.shortcuts-btn { left: 28px; }
+
+.scroll-to-top:hover,
+.shortcuts-btn:hover {
   opacity: 1;
   border-color: var(--link);
   color: var(--link);

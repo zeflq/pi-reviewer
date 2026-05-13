@@ -94,7 +94,7 @@ function TreeNodes({ nodes, depth, collapsedFolders, toggleFolder, folderPrefix,
                 </span>
                 <FolderIcon />
                 <span className="tree-name">{node.name}</span>
-                {node.commentCount > 0 && <span className="cbadge">{node.commentCount}</span>}
+                {node.commentCount > 0 && collapsed && <span className="cbadge">{node.commentCount}</span>}
               </div>
               {!collapsed && (
                 <TreeNodes
