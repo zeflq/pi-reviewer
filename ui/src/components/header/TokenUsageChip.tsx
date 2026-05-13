@@ -19,10 +19,10 @@ interface TokenUsageChipProps {
 }
 
 export function TokenUsageChip({ usage }: TokenUsageChipProps) {
-  const tooltip = `${formatTokens(usage.inputTokens)} in · ${formatTokens(usage.outputTokens)} out · ${formatTokens(usage.cacheReadTokens)} cache read`;
+  const tooltip = `${formatTokens(usage.cacheReadTokens)} cache read · ${formatCost(usage.cost)}`;
   return (
     <span className="meta-chip token-cost" data-tooltip={tooltip}>
-      {formatTokens(usage.totalTokens)} tok · {formatCost(usage.cost)}
+      Turn {usage.turns}, {formatTokens(usage.inputTokens)}↑ {formatTokens(usage.outputTokens)}↓
     </span>
   );
 }

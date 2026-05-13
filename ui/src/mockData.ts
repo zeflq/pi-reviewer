@@ -313,6 +313,7 @@ export const mockData: UIData = {
       cacheWriteTokens: 512,
       totalTokens: 24287,
       cost: 0.0187,
+      turns: 4,
     },
     comments: [
       {

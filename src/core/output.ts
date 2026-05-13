@@ -22,6 +22,7 @@ export interface TokenUsage {
   cacheWriteTokens: number;
   totalTokens: number;
   cost: number;
+  turns: number;
 }
 
 export interface ReviewResult {

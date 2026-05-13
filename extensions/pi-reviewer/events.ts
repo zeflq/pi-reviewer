@@ -22,10 +22,11 @@ function accumulateUsage(acc: TokenUsage, u: RawUsage): void {
   acc.cacheWriteTokens += u.cacheWrite;
   acc.totalTokens += u.totalTokens;
   acc.cost += u.cost.total;
+  acc.turns += 1;
 }
 
 function emptyUsage(): TokenUsage {
-  return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 0, cost: 0 };
+  return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 0, cost: 0, turns: 0 };
 }
 
 export function createEventAccumulator(

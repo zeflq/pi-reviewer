@@ -1374,7 +1374,7 @@ td.sign-ctx { background: var(--ctx-bg); color: var(--text-muted); }
 
 /* ── Keyboard shortcuts ──────────────────────────────────────────────────── */
 .cc--active {
-  outline: 1px solid var(--link);
+  outline: 2px solid var(--link);
   outline-offset: 1px;
   border-radius: 4px;
 }
