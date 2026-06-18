@@ -2,3 +2,4 @@ onlyBuiltDependencies:
   - "@google/genai"
   - esbuild
   - protobufjs
+strictDepBuilds: false
