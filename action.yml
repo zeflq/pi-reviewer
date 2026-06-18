@@ -8,7 +8,7 @@ inputs:
     required: true
 
   pi-api-key:
-    description: "Pi platform API key"
+    description: "API key for the chosen model's provider (e.g. an Anthropic key for anthropic/* models, a DeepSeek key for deepseek/*). Used as the explicit key, overriding per-provider env vars."
     required: true
 
   model:
@@ -70,13 +70,7 @@ runs:
 
     - name: Install dependencies
       shell: bash
-      run: |
-        echo "=== pnpm config (debug) ==="
-        pnpm config list 2>&1 || true
-        echo "=== pnpm-workspace.yaml ==="
-        cat "${{ github.action_path }}/pnpm-workspace.yaml" 2>&1 || true
-        echo "=== install ==="
-        pnpm install --frozen-lockfile
+      run: pnpm install --frozen-lockfile
       working-directory: ${{ github.action_path }}
 
     - name: Run review
