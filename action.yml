@@ -40,18 +40,35 @@ runs:
   steps:
     - name: Setup pnpm
       if: ${{ inputs.install-deps == 'true' }}
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@v6
       with:
         version: 11.5.2
         run_install: false
 
+    - name: Resolve pnpm store and lockfile hash
+      if: ${{ inputs.install-deps == 'true' }}
+      id: pnpm-meta
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        echo "store-path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+        echo "lock-hash=$(sha256sum pnpm-lock.yaml | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache pnpm store
+      if: ${{ inputs.install-deps == 'true' }}
+      uses: actions/cache@v5
+      continue-on-error: true
+      with:
+        path: ${{ steps.pnpm-meta.outputs.store-path }}
+        key: ${{ runner.os }}-pi-reviewer-pnpm-${{ steps.pnpm-meta.outputs.lock-hash }}
+        restore-keys: |
+          ${{ runner.os }}-pi-reviewer-pnpm-
+
     - name: Setup Node
       if: ${{ inputs.setup-node == 'true' }}
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: "24"
-        cache: ${{ inputs.install-deps == 'true' && 'pnpm' || '' }}
-        cache-dependency-path: ${{ github.action_path }}/pnpm-lock.yaml
 
     - name: Install dependencies
       if: ${{ inputs.install-deps == 'true' }}
