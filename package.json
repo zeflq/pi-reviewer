@@ -12,7 +12,7 @@
     "dev:ui": "vite --config ui/vite.config.ts",
     "test": "vitest --run"
   },
-  "packageManager": "pnpm@11.5.2",
+  "packageManager": "pnpm@11.8.0",
   "pi": {
     "extensions": [
       "./extensions"
