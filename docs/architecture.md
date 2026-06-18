@@ -37,7 +37,7 @@ flowchart TD
         claude["Claude API"]
     end
 
-    tui["@mariozechner/pi-tui"]
+    tui["@earendil-works/pi-tui"]
     git["git / gh CLI"]
     fs["AGENTS.md / CLAUDE.md"]
     browser["Browser UI"]

@@ -60,6 +60,14 @@ Every pull request triggers an automatic review comment posted by `github-action
 | `model` | no | Model to use in `provider/modelId` format (e.g. `anthropic/claude-opus-4-6`) |
 | `post-comment` | no | Post review as a GitHub PR comment (default: `true`) |
 | `min-severity` | no | Minimum severity: `info`, `warn`, or `critical` (default: `info`) |
+| `setup-node` | no | Set up Node 24 via `actions/setup-node` (default: `true`). Disable if the runner image already provides Node. |
+| `install-deps` | no | Install the action's deps via pnpm (default: `true`). Disable only if `@earendil-works/*` is already resolvable from the action path — see [Skipping the install](#skipping-the-install) below. |
+
+The action runs on Node 24 (LTS). Deps are installed with [pnpm](https://pnpm.io), and the pnpm store is cached automatically via `actions/setup-node`'s `cache: pnpm` (keyed on `pnpm-lock.yaml`), so warm runs skip the download.
+
+### Skipping the install
+
+Set `install-deps: false` to skip dependency installation entirely — useful when the runner image already has everything the action needs. **Note:** the action imports `@earendil-works/pi-agent-core`, `@earendil-works/pi-ai`, and `@earendil-works/pi-coding-agent` in-process; Node's ESM resolver only finds packages by walking `node_modules` up from the action path, and ignores `NODE_PATH`. A globally-installed `pi` CLI on the image is therefore **not** picked up automatically. For `install-deps: false` to work, the `@earendil-works/*` packages must be resolvable from `${{ github.action_path }}` — e.g. by symlinking them into `action_path/node_modules`, or vendoring the action into the image. When in doubt, leave `install-deps` at its default and rely on the cache.
 
 ## Bot identity
 

@@ -7,18 +7,22 @@
     "pi-reviewer": "./dist/src/ci/bin.js"
   },
   "scripts": {
-    "build": "npm run build:ui && tsc -p tsconfig.json",
+    "build": "pnpm run build:ui && tsc -p tsconfig.json",
     "build:ui": "vite build --config ui/vite.config.ts",
     "dev:ui": "vite --config ui/vite.config.ts",
     "test": "vitest --run"
   },
+  "packageManager": "pnpm@11.5.2",
   "pi": {
     "extensions": [
       "./extensions"
     ]
   },
   "dependencies": {
-    "@mariozechner/pi-coding-agent": "^0.55.1",
+    "@earendil-works/pi-agent-core": "^0.79.6",
+    "@earendil-works/pi-ai": "^0.79.6",
+    "@earendil-works/pi-coding-agent": "^0.79.6",
+    "@earendil-works/pi-tui": "^0.79.6",
     "dompurify": "^3.4.2",
     "highlight.js": "^11.11.1"
   },

@@ -14,16 +14,16 @@ vi.mock("../../src/core/output.js", async (importActual) => {
   return { ...actual, sendOutput: vi.fn() };
 });
 
-vi.mock("@mariozechner/pi-agent-core", () => ({
+vi.mock("@earendil-works/pi-agent-core", () => ({
   Agent: vi.fn(),
 }));
 
-vi.mock("@mariozechner/pi-coding-agent", () => ({
+vi.mock("@earendil-works/pi-coding-agent", () => ({
   createReadOnlyTools: vi.fn().mockReturnValue([]),
 }));
 
-import { Agent } from "@mariozechner/pi-agent-core";
-import { createReadOnlyTools } from "@mariozechner/pi-coding-agent";
+import { Agent } from "@earendil-works/pi-agent-core";
+import { createReadOnlyTools } from "@earendil-works/pi-coding-agent";
 import { loadContext } from "../../src/core/context.js";
 import { resolveDiff } from "../../src/core/diff-resolver.js";
 import { sendOutput } from "../../src/core/output.js";

@@ -25,17 +25,38 @@ inputs:
     required: false
     default: "info"
 
+  setup-node:
+    description: "Set up Node via actions/setup-node. Set to false if the runner image already provides Node."
+    required: false
+    default: "true"
+
+  install-deps:
+    description: "Install the action's Node deps via pnpm. Set to false if @earendil-works/* is already resolvable from the action path (e.g. vendored or symlinked into action_path/node_modules)."
+    required: false
+    default: "true"
+
 runs:
   using: "composite"
   steps:
+    - name: Setup pnpm
+      if: ${{ inputs.install-deps == 'true' }}
+      uses: pnpm/action-setup@v4
+      with:
+        version: 11.5.2
+        run_install: false
+
     - name: Setup Node
+      if: ${{ inputs.setup-node == 'true' }}
       uses: actions/setup-node@v4
       with:
-        node-version: "20"
+        node-version: "24"
+        cache: ${{ inputs.install-deps == 'true' && 'pnpm' || '' }}
+        cache-dependency-path: ${{ github.action_path }}/pnpm-lock.yaml
 
     - name: Install dependencies
+      if: ${{ inputs.install-deps == 'true' }}
       shell: bash
-      run: npm ci
+      run: pnpm install --frozen-lockfile
       working-directory: ${{ github.action_path }}
 
     - name: Run review

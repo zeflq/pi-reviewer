@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { MinSeverity } from "../../../src/core/prompt-builder.js";
 import type { ModelInfo } from "../../../src/core/ui-server.js";
 

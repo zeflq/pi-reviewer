@@ -10,9 +10,9 @@ The Action is a standalone Node.js script (`src/review.ts`). It uses parts of al
 
 ### What it uses
 
-- **`@mariozechner/pi-agent-core`** — `Agent` class, runs the agent loop
-- **`@mariozechner/pi-ai`** — `getModel()` to resolve `"provider/modelId"` strings
-- **`@mariozechner/pi-coding-agent`** — `createReadOnlyTools(cwd)` only
+- **`@earendil-works/pi-agent-core`** — `Agent` class, runs the agent loop
+- **`@earendil-works/pi-ai`** — `getModel()` to resolve `"provider/modelId"` strings
+- **`@earendil-works/pi-coding-agent`** — `createReadOnlyTools(cwd)` only
 
 ```
 action.yml
@@ -57,7 +57,7 @@ The extension is loaded by `pi-coding-agent`'s extension system. It does **not**
 
 ### What it uses
 
-**`@mariozechner/pi-coding-agent`** — `ExtensionAPI` only.
+**`@earendil-works/pi-coding-agent`** — `ExtensionAPI` only.
 
 ```
 pi TUI

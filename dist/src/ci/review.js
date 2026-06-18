@@ -1,6 +1,6 @@
-import { Agent } from "@mariozechner/pi-agent-core";
-import { getModel } from "@mariozechner/pi-ai";
-import { createReadOnlyTools } from "@mariozechner/pi-coding-agent";
+import { Agent } from "@earendil-works/pi-agent-core";
+import { getModel } from "@earendil-works/pi-ai";
+import { createReadOnlyTools } from "@earendil-works/pi-coding-agent";
 import { loadContext, mergeContextFiles } from "../core/context.js";
 import { resolveDiff } from "../core/diff-resolver.js";
 import { sendOutput, extractLastAssistantText } from "../core/output.js";
