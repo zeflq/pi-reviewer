@@ -66,6 +66,10 @@ Every pull request triggers an automatic review comment posted by `github-action
 | `post-comment` | no | Post review as a GitHub PR comment (default: `true`) |
 | `min-severity` | no | Minimum severity: `info`, `warn`, or `critical` (default: `info`) |
 | `doc-dirs` | no | Comma-separated dirs to scan for docs to inject into the review (default: empty — inject nothing) |
+| `setup-node` | no | Set up Node 24 via `actions/setup-node` (default: `true`). Disable if the runner image already provides Node. |
+| `cache` | no | Cache the pnpm store across runs (default: `true`). Disable on runners where the cache service is unavailable or unwanted. |
+
+The action runs on Node 24 (LTS). Deps are installed with [pnpm](https://pnpm.io); the pnpm store is cached by a standalone `actions/cache` step keyed on a hash of `pnpm-lock.yaml`, so warm runs skip the download. The cache step uses `continue-on-error`, so a cache failure degrades to an uncached install rather than aborting the review.
 
 ## Doc context
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countContextFiles, flattenContextFiles } from "../../ui/src/context-panel-utils.js";
+import { countContextFiles, flattenContextFiles } from "../../ui/src/utils/context-panel-utils.js";
 import type { ContextGroup } from "../../ui/src/types.js";
 
 const groups: ContextGroup[] = [

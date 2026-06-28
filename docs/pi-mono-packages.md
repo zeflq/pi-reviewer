@@ -13,7 +13,7 @@ pi-coding-agent
 
 ---
 
-## 1. `@mariozechner/pi-ai` — The LLM Layer
+## 1. `@earendil-works/pi-ai` — The LLM Layer
 
 **Role:** Raw transport. Talks to AI providers, nothing more.
 
@@ -27,7 +27,7 @@ pi-coding-agent
 
 ---
 
-## 2. `@mariozechner/pi-agent-core` — The Agent Loop
+## 2. `@earendil-works/pi-agent-core` — The Agent Loop
 
 **Role:** Wraps `pi-ai` into a stateful, multi-turn, tool-calling agent.
 
@@ -44,7 +44,7 @@ pi-coding-agent
 
 ---
 
-## 3. `@mariozechner/pi-coding-agent` — The Coding CLI
+## 3. `@earendil-works/pi-coding-agent` — The Coding CLI
 
 **Role:** Builds the `pi` binary on top of `pi-agent-core`, adds coding tools and the extension system.
 

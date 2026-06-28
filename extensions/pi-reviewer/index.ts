@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { readVerbose, readMinSeverity, readModel, readThinking } from "../../src/core/ui/server/index.js";
 import { parseArgs } from "./args.js";
 import { resolveCurrentModelId } from "./model.js";

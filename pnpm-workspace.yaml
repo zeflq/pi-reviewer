@@ -1,0 +1,10 @@
+# pnpm 11 config: approve build scripts for native/postinstall deps.
+# onlyBuiltDependencies was removed in v11 and replaced by allowBuilds
+# (see https://pnpm.io/settings). strictDepBuilds defaults to true in v11,
+# making unapproved build scripts a hard error — set false so any future
+# unapproved package degrades to a warning instead of failing CI.
+allowBuilds:
+  "@google/genai": true
+  esbuild: true
+  protobufjs: true
+strictDepBuilds: false

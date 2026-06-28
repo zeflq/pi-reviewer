@@ -6,7 +6,7 @@ pi-reviewer has two parts that share a small core layer (`src/core/` — e.g. `d
 
 ### 1. GitHub Action (CI)
 
-Runs on every PR via GitHub Actions. Uses `Agent` from `@mariozechner/pi-agent-core` directly.
+Runs on every PR via GitHub Actions. Uses `Agent` from `@earendil-works/pi-agent-core` directly.
 
 ```
 pi-reviewer/
@@ -101,7 +101,7 @@ tests/
 - [x] Remove `src/hello.ts`
 - [x] Remove `src/cli.ts` and `src/cli.js`
 - [x] Remove `"bin"` field from `package.json`
-- [x] Refactor `src/review.ts` to use `Agent` from `@mariozechner/pi-agent-core` directly
+- [x] Refactor `src/review.ts` to use `Agent` from `@earendil-works/pi-agent-core` directly
 - [x] Update `tests/review.test.ts` to mock `Agent` instead of `createAgentSession`
 
 ### ✅ 2. Extract shared layer from `src/review.ts`
