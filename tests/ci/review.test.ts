@@ -213,6 +213,27 @@ describe("review", () => {
     await expect(review({ cwd: "/repo" })).rejects.toThrow(/No model configured/);
   });
 
+  it("surfaces a provider error attached to the last assistant message", async () => {
+    AgentMock.mockImplementation(function () {
+      return {
+        subscribe: vi.fn((cb: (event: unknown) => void) => {
+          cb({
+            type: "agent_end",
+            // agent_end has no top-level error; it lives on the message (e.g. 402)
+            messages: [
+              { role: "user", content: [{ type: "text", text: "diff" }] },
+              { role: "assistant", content: [], stopReason: "error", errorMessage: "402 This request requires more credits" },
+            ],
+          });
+          return vi.fn();
+        }),
+        prompt: vi.fn().mockResolvedValue(undefined),
+      } as any;
+    });
+
+    await expect(review({ cwd: "/repo" })).rejects.toThrow(/Agent failed: 402 This request requires more credits/);
+  });
+
   it("passes final agent response to sendOutput", async () => {
     AgentMock.mockImplementation(function () {
       return makeFakeAgent("Please fix null checks in src/a.ts") as any;

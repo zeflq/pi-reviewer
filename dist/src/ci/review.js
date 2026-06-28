@@ -90,15 +90,29 @@ export async function review(options) {
                 if (event.type !== "agent_end")
                     return;
                 const ev = event;
-                if (ev.stopReason === "error") {
-                    const msg = ev.errorMessage ?? "Agent ended with an error (no message)";
-                    console.error(`[pi-reviewer] agent error: ${msg}`);
-                    reject(new Error(`Agent failed: ${msg}`));
+                const msgs = Array.isArray(ev.messages) ? ev.messages : [];
+                const lastAssistant = [...msgs]
+                    .reverse()
+                    .find((m) => m?.role === "assistant");
+                // The error may surface on the agent_end event OR on the last assistant
+                // message (e.g. provider 402/429/401 — pi-agent-core attaches it there).
+                const errorMessage = (ev.stopReason === "error" ? ev.errorMessage : undefined) ??
+                    (lastAssistant?.stopReason === "error" ? lastAssistant.errorMessage : undefined);
+                if (errorMessage) {
+                    console.error(`[pi-reviewer] agent error: ${errorMessage}`);
+                    reject(new Error(`Agent failed: ${errorMessage}`));
                     return;
                 }
                 finalResponse = extractLastAssistantText(ev.messages);
                 if (!finalResponse.trim()) {
-                    console.error("[pi-reviewer] agent returned an empty response");
+                    let shape = typeof lastAssistant?.content;
+                    if (Array.isArray(lastAssistant?.content)) {
+                        shape = lastAssistant.content.map((p) => ({
+                            type: p?.type ?? typeof p,
+                            len: typeof p?.text === "string" ? p.text.length : typeof p?.thinking === "string" ? p.thinking.length : 0,
+                        }));
+                    }
+                    console.error(`[pi-reviewer] agent returned an empty response — stopReason=${ev.stopReason ?? "unknown"}, assistantMessages=${msgs.filter((m) => m?.role === "assistant").length}, lastAssistantContent=${JSON.stringify(shape)}`);
                     reject(new Error("Agent returned an empty response"));
                     return;
                 }
