@@ -18,7 +18,7 @@
     ]
   },
   "dependencies": {
-    "@mariozechner/pi-coding-agent": "^0.55.1",
+    "@mariozechner/pi-coding-agent": "^0.73.1",
     "dompurify": "^3.4.2",
     "highlight.js": "^11.11.1"
   },

@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { DEFAULT_DOC_DIRS, loadDocContext } from "../../src/core/doc-context.js";
+// Re-export the shared scanning helpers so consumers/tests of this extension
+// keep their existing import surface.
+export { extractKeywords, parseDescription, isRelevant } from "../../src/core/doc-context.js";
 const CONTEXT_PROVIDER_EVENT = "pi-reviewer:collect-context-providers";
 const CONFIG_FILE = join(homedir(), ".pi", "pi-reviewer-doc-context", "config.json");
 function readDocDirs() {
@@ -11,94 +15,11 @@ function readDocDirs() {
         }
     }
     catch { /* ignore */ }
-    return [".pi/notes", ".claude/notes", ".agents/notes"];
-}
-export function extractKeywords(diffFiles) {
-    const keywords = new Set();
-    for (const file of diffFiles) {
-        const withoutExt = file.replace(/\.[^/.]+$/, "");
-        for (const segment of withoutExt.split(/[/\-_.]/)) {
-            for (const word of segment.split(/(?=[A-Z])/)) {
-                const lower = word.toLowerCase();
-                if (lower.length >= 3)
-                    keywords.add(lower);
-            }
-        }
-    }
-    return [...keywords];
-}
-export function parseDescription(content) {
-    const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
-    if (!match)
-        return null;
-    const descMatch = match[1].match(/^description:\s*(.+)$/m);
-    return descMatch ? descMatch[1].trim() : null;
-}
-export function isRelevant(description, filePath, keywords) {
-    const haystack = `${description} ${filePath}`.toLowerCase();
-    return keywords.some(kw => haystack.includes(kw));
-}
-async function scanDocFiles(cwd, fs, docDirs, gitRoot) {
-    const results = [];
-    async function scanDir(absDir, relDir, depth) {
-        let entries;
-        try {
-            entries = await fs.list(absDir);
-        }
-        catch {
-            return;
-        }
-        for (const entry of entries) {
-            if (entry.endsWith(".md")) {
-                const content = await fs.read(fs.join(absDir, entry));
-                if (!content)
-                    continue;
-                const description = parseDescription(content);
-                if (!description)
-                    continue;
-                results.push({ path: fs.join(relDir, entry), content, description });
-            }
-            else if (depth < 1) {
-                await scanDir(fs.join(absDir, entry), fs.join(relDir, entry), depth + 1);
-            }
-        }
-    }
-    // Walk from cwd up to gitRoot (or just cwd when no gitRoot), root-first
-    const dirs = [];
-    let current = cwd;
-    while (true) {
-        dirs.unshift(current);
-        if (!gitRoot || current === gitRoot)
-            break;
-        const parent = fs.dirname(current);
-        if (parent === current)
-            break;
-        current = parent;
-    }
-    for (let i = 0; i < dirs.length; i++) {
-        const dir = dirs[i];
-        const levelsUp = dirs.length - 1 - i;
-        const upParts = Array.from({ length: levelsUp }).fill("..");
-        for (const docDir of docDirs) {
-            const absDocDir = fs.join(dir, docDir);
-            const relDocDir = levelsUp > 0 ? fs.join(...upParts, docDir) : docDir;
-            await scanDir(absDocDir, relDocDir, 0);
-        }
-    }
-    return results;
+    return DEFAULT_DOC_DIRS;
 }
 export default function (pi) {
     pi.events.on(CONTEXT_PROVIDER_EVENT, (data) => {
         const { register } = data;
-        register("doc-context", async ({ cwd, diffFiles, fs, gitRoot }) => {
-            const keywords = extractKeywords(diffFiles);
-            if (keywords.length === 0)
-                return [];
-            const docDirs = readDocDirs();
-            const docs = await scanDocFiles(cwd, fs, docDirs, gitRoot);
-            return docs
-                .filter(doc => isRelevant(doc.description, doc.path, keywords))
-                .map(doc => ({ path: doc.path, content: doc.content }));
-        });
+        register("doc-context", ({ cwd, diffFiles, fs, gitRoot }) => loadDocContext({ cwd, diffFiles, fs, gitRoot, docDirs: readDocDirs() }));
     });
 }

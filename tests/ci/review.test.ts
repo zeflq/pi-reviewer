@@ -75,6 +75,8 @@ describe("review", () => {
     delete process.env.GITHUB_REPOSITORY;
     delete process.env.PI_API_KEY;
     delete process.env.PI_REVIEWER_DOC_DIRS;
+    // model is mandatory — provide a default for tests that don't exercise it
+    process.env.PI_REVIEWER_MODEL = "anthropic/claude-opus-4-6";
   });
 
   it("dry-run logs source and prompt, without calling agent or output", async () => {
@@ -188,6 +190,27 @@ describe("review", () => {
     expect(parseDocDirs("")).toEqual([]);
     expect(parseDocDirs(".pi/notes, docs/review")).toEqual([".pi/notes", "docs/review"]);
     expect(parseDocDirs(".pi/notes\n\ndocs/review,")).toEqual([".pi/notes", "docs/review"]);
+  });
+
+  it("resolves a provider/modelId with slashes (OpenRouter) for the agent", async () => {
+    await review({ cwd: "/repo", model: "openrouter/openai/gpt-5.4-mini" });
+
+    expect(AgentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        initialState: expect.objectContaining({
+          model: expect.objectContaining({ provider: "openrouter", id: "openai/gpt-5.4-mini" }),
+        }),
+      })
+    );
+  });
+
+  it("throws on an invalid model format", async () => {
+    await expect(review({ cwd: "/repo", model: "gpt-5" })).rejects.toThrow(/Invalid model format/);
+  });
+
+  it("throws when no model is configured", async () => {
+    delete process.env.PI_REVIEWER_MODEL;
+    await expect(review({ cwd: "/repo" })).rejects.toThrow(/No model configured/);
   });
 
   it("passes final agent response to sendOutput", async () => {

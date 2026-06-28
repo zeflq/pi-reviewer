@@ -2,7 +2,7 @@
 
 ## Architecture
 
-pi-reviewer has two independent parts that share no code:
+pi-reviewer has two parts that share a small core layer (`src/core/` — e.g. `doc-context.ts`, consumed by both the CI path and the pi extension):
 
 ### 1. GitHub Action (CI)
 
@@ -43,7 +43,7 @@ jobs:
 Registers a `/review` command inside the pi TUI.
 **Local mode** spawns `pi --mode json -p --no-session` as a subprocess — accepts `--model` and `--thinking` to control the review agent independently of the parent session.
 **SSH mode** does not spawn a subprocess — it runs directly inside the current pi agent session, which already has SSH bash tool access to the remote machine. Because of this, `--model` and `--thinking` have no effect in SSH mode; the model and thinking level are fixed to whatever the parent session uses.
-No shared code with the GitHub Action.
+Shares the doc-context scanning logic with the GitHub Action via `src/core/doc-context.ts`; otherwise independent.
 
 ```
 pi-reviewer/
@@ -315,14 +315,25 @@ See [`extensions/pi-reviewer-doc-context/README.md`](./extensions/pi-reviewer-do
 
 ### 23. Built-in doc-context ContextProvider extension ✅
 
-- [x] Standalone pi extension `extensions/pi-reviewer-doc-context/` — no code dependency on pi-reviewer, only coupled via the `"pi-reviewer:collect-context-providers"` event string
+- [x] Pi extension `extensions/pi-reviewer-doc-context/` — coupled via the `"pi-reviewer:collect-context-providers"` event string; scanning logic shared with the CI path through `src/core/doc-context.ts` (see §25)
 - [x] Scans configured doc dirs (default: `.pi/notes`, `.claude/notes`, `.agents/notes`) for `.md` files with a `description` frontmatter field; recurses one subdirectory level
 - [x] Keyword extraction from diff file paths (strip extension, split on `/`, `-`, `_`, `.`, camelCase, lowercase, min 3 chars); matched against description + file path
 - [x] SSH-transparent: provider receives `fs` (local or SSH) at call time via `ContextProvider` opts — no SSH-specific code in the extension
 - [x] Config at `~/.pi/pi-reviewer-doc-context/config.json` (`docDirs` field); entirely owned by this extension, pi-reviewer has no knowledge of it
-- [x] Local `Fs` interface (3 methods: `read`, `list`, `join`) — no import of `FsOps` from pi-reviewer src
+- [x] ~~Local `Fs` interface, no import from pi-reviewer src~~ — superseded by §25: extension now imports `loadDocContext` + the `FsOps` type from `src/core/` so CI and the extension share one implementation
 - [x] Tests: `extractKeywords`, `parseDescription`, `isRelevant` in `tests/extensions/doc-context-provider.test.ts`
 - [x] API documented in `extensions/pi-reviewer-doc-context/README.md`
+
+### 25. Doc-context in CI + required, provider-agnostic model ✅
+
+- [x] Extract doc-context scanning into shared `src/core/doc-context.ts` (`extractKeywords`, `parseDescription`, `isRelevant`, `loadDocContext`) over the `FsOps` abstraction; extension refactored to consume it (no duplicate logic)
+- [x] CI doc-context is **opt-in**: `doc-dirs` action input → `PI_REVIEWER_DOC_DIRS` env → injected only when set (empty default = nothing injected); local/interactive mode keeps its opt-out defaults
+- [x] Wire `loadDocContext` into `src/ci/review.ts` via `buildJSONSystemPrompt(..., contextFiles)`
+- [x] Bump `@mariozechner/pi-coding-agent` → `^0.73.1` (pulls pi-ai/pi-agent-core 0.73.1 in lockstep) so the registry includes newer models (e.g. `openrouter/openai/gpt-5.4-mini`)
+- [x] `model` action input is now **required**; drop the hardcoded `anthropic/claude-opus-4-6` default — error clearly when unset
+- [x] Parse `provider/modelId` on the FIRST slash so OpenRouter ids with slashes resolve (`openrouter/openai/gpt-5.4-mini`)
+- [x] `pi-api-key` is forwarded to the model's endpoint — must match the model's provider (e.g. OpenRouter `sk-or-...`); clarified in CI.md
+- [x] Update `init.ts` generated workflow, `action.yml`, CI.md, and tests
 
 ### 24. User-configurable exclude patterns
 

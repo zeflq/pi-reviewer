@@ -1,5 +1,5 @@
 import { Agent } from "@mariozechner/pi-agent-core";
-import { getModel } from "@mariozechner/pi-ai";
+import { getModel, type Api, type Model } from "@mariozechner/pi-ai";
 import { createReadOnlyTools } from "@mariozechner/pi-coding-agent";
 
 import { loadContext, mergeContextFiles } from "../core/context.js";
@@ -74,17 +74,26 @@ export async function review(options: ReviewOptions): Promise<void> {
     return;
   }
 
-  let model;
   const modelStr = options.model ?? process.env.PI_REVIEWER_MODEL;
-  if (modelStr) {
-    const [provider, modelId] = modelStr.split("/");
-    if (!provider || !modelId) {
-      throw new Error(`Invalid model format "${modelStr}". Expected "provider/modelId" e.g. "anthropic/claude-opus-4-6"`);
-    }
-    model = getModel(provider as any, modelId as any);
+  if (!modelStr) {
+    throw new Error(
+      `No model configured. Set the "model" action input (or PI_REVIEWER_MODEL) to a "provider/modelId" — e.g. "openrouter/openai/gpt-5.4-mini".`,
+    );
   }
-
-  const resolvedModel = model ?? getModel("anthropic", "claude-opus-4-6");
+  // Split on the FIRST slash so OpenRouter ids that contain slashes survive
+  // (e.g. "openrouter/openai/gpt-5.4-mini" → provider "openrouter", id "openai/gpt-5.4-mini").
+  const slash = modelStr.indexOf("/");
+  if (slash <= 0 || slash === modelStr.length - 1) {
+    throw new Error(
+      `Invalid model format "${modelStr}". Expected "provider/modelId" — e.g. "anthropic/claude-opus-4-6" or "openrouter/openai/gpt-5.4-mini"`,
+    );
+  }
+  const provider = modelStr.slice(0, slash);
+  const modelId = modelStr.slice(slash + 1);
+  const resolvedModel = getModel(provider as Parameters<typeof getModel>[0], modelId as never) as Model<Api> | undefined;
+  if (!resolvedModel) {
+    throw new Error(`Unknown model "${modelStr}" — not found in the pi model registry.`);
+  }
   console.log(`[pi-reviewer] running agent (model: ${resolvedModel.api})`);
 
   const agent = new Agent({

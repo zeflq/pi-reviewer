@@ -12,8 +12,8 @@ inputs:
     required: true
 
   model:
-    description: "Model to use in provider/modelId format (e.g. anthropic/claude-opus-4-6)"
-    required: false
+    description: "Model to use in provider/modelId format (e.g. openrouter/openai/gpt-5.4-mini)"
+    required: true
 
   post-comment:
     description: "Post review as a GitHub PR comment"
