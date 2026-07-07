@@ -1,0 +1,19 @@
+{
+  // NOTE: Renovate reads this config from the default branch (main), not from PR branches.
+  // To test changes to this file in a PR, the branch name should be 'renovate/reconfigure'
+  // so renovate will pick up the modifications to renovate.json5 during the PR workflow run.
+  // https://docs.renovatebot.com/getting-started/installing-onboarding/#reconfigure-via-pr
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "prHourlyLimit": 2,
+  "commitMessageExtra": "from {{#if currentVersion}}{{{currentVersion}}}{{else}}{{{currentDigestShort}}}{{/if}} to {{#if newVersion}}{{{newVersion}}}{{else}}{{{newDigestShort}}}{{/if}}",
+  "minimumReleaseAge": "7 days",
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
+  // config:recommended already pins github-actions to commit SHAs via
+  // helpers:pinGitHubActionDigests, so the action.yml pins stay updated.
+  "enabledManagers": ["npm", "github-actions"]
+}
