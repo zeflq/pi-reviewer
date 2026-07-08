@@ -13,7 +13,17 @@
   "vulnerabilityAlerts": {
     "enabled": true
   },
-  // config:recommended already pins github-actions to commit SHAs via
-  // helpers:pinGitHubActionDigests, so the action.yml pins stay updated.
-  "enabledManagers": ["npm", "github-actions"]
+  // GitHub Actions: keep every `uses:` pinned to an immutable commit SHA
+  // (across action.yml and .github/workflows/*). The trailing `# vX.Y.Z`
+  // comments map each digest back to a version so Renovate can bump SHAs.
+  // config:recommended also pins via helpers:pinGitHubActionDigests; the
+  // packageRule below makes it explicit so it survives preset changes.
+  "enabledManagers": ["npm", "github-actions"],
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "description": "Keep GitHub Actions pinned to commit SHAs.",
+      "pinDigests": true
+    }
+  ]
 }
