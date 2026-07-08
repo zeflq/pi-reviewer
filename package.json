@@ -13,6 +13,9 @@
     "test": "vitest --run"
   },
   "packageManager": "pnpm@11.8.0",
+  "devEngines": {
+    "runtime": { "name": "node", "version": "^24.0.0", "onFail": "warn" }
+  },
   "pi": {
     "extensions": [
       "./extensions"
