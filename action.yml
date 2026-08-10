@@ -88,7 +88,7 @@ runs:
         PI_REVIEWER_MODEL: ${{ inputs.model }}
         MIN_SEVERITY: ${{ inputs.min-severity }}
         PI_REVIEWER_DOC_DIRS: ${{ inputs.doc-dirs }}
-      run: node ${{ github.action_path }}/dist/src/ci/action-entry.js
+      run: tsx ${{ github.action_path }}/src/ci/action-entry.ts
 
 branding:
   icon: "eye"
